@@ -2,6 +2,14 @@
 
 Autonomous delivery of infrastructure changes and features with full visibility, approval gates, and cost optimization.
 
+## Quick Links
+
+- **[Development Setup Guide](docs/SETUP.md)** - Complete setup from scratch
+- **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and components
+- **[Protocol Specification](docs/PROTOCOL.md)** - Message format and contracts
+- **[Roadmap](planning/ROADMAP.md)** - Phase breakdown and timeline
+- **[Verify Foundation](scripts/test-foundation.sh)** - Run `bash scripts/test-foundation.sh`
+
 ## Core Value Proposition
 
 - **Autonomous Orchestration:** Natural language requests become infrastructure changes
@@ -26,6 +34,21 @@ Proof-of-concept validation using a Kuma Uptime deployment use case:
 - **Poetry** (https://python-poetry.org/)
 - **Docker & Docker Compose**
 - **Git** (for audit trails)
+
+## Verification
+
+After setup, verify everything is working:
+
+```bash
+bash scripts/test-foundation.sh
+```
+
+This script checks:
+- System prerequisites (Python, Docker, Poetry)
+- Project structure and dependencies
+- Docker service health
+- Database schema and sample data
+- Protocol tests and code quality
 
 ## Quick Start
 
