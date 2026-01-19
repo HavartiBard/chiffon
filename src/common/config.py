@@ -3,7 +3,7 @@
 Loads environment variables from .env file and provides defaults for development.
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Config(BaseSettings):
@@ -12,6 +12,12 @@ class Config(BaseSettings):
     All critical settings have defaults suitable for local development.
     Production deployments should override via environment.
     """
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+    )
 
     # Database
     DATABASE_URL: str = "postgresql://agent:password@localhost:5432/agent_deploy"
@@ -46,8 +52,3 @@ class Config(BaseSettings):
     # Application
     APP_NAME: str = "Chiffon Agent Deploy"
     """Application name for branding."""
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True

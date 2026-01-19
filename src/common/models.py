@@ -5,10 +5,9 @@ Provides:
 - ExecutionLog: Step-by-step log of what agents did during task execution
 """
 
-from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import Column, String, Integer, DateTime, JSON, UUID, Enum, ForeignKey, func
+from sqlalchemy import JSON, UUID, Column, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import relationship
 
 from .database import Base
