@@ -10,7 +10,6 @@ from uuid import uuid4
 import pytest
 
 from src.common.exceptions import (
-    AgentProtocolError,
     AgentUnavailableError,
     AuthenticationFailedError,
     InvalidMessageFormatError,
@@ -27,7 +26,6 @@ from src.common.protocol import (
     WorkResult,
     WorkStatus,
 )
-
 
 # Fixtures
 

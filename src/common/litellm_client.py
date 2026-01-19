@@ -1,9 +1,8 @@
 """Python client wrapper for LiteLLM API."""
 
-import os
-import json
 import logging
-from typing import Optional, Dict, List, Any
+import os
+from typing import Any, Dict, List, Optional
 
 import requests
 
