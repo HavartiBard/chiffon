@@ -1,0 +1,40 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+RUN pip install --no-cache-dir litellm
+
+# Create config directory
+RUN mkdir -p /app/config
+
+# Create a health check endpoint wrapper
+RUN cat > /app/litellm_wrapper.py << 'WRAPPER'
+"""LiteLLM wrapper for FastAPI with health check."""
+import logging
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+
+app = FastAPI(title="LiteLLM Proxy")
+
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return JSONResponse({"status": "healthy"})
+
+@app.post("/v1/chat/completions")
+async def chat_completions(request: dict):
+    """Placeholder chat completions endpoint."""
+    return {"message": "LiteLLM proxy ready"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+WRAPPER
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+
+# Run LiteLLM
+CMD ["python", "-m", "litellm.proxy.proxy", "--port", "8000", "--debug"]
