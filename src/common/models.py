@@ -506,3 +506,77 @@ class IntentToWorkTypeMapping(BaseModel):
         default_factory=list,
         description="Alternative approaches with different resource requirements"
     )
+
+
+class FallbackDecision(BaseModel):
+    """Tracks the fallback decision for external AI routing with quota awareness.
+
+    Records:
+    - Which LLM (Claude or Ollama) was selected for a task
+    - Why the decision was made (quota critical, high complexity, etc)
+    - Resource status at decision time (quota remaining)
+    - Actual model used and cost tracking for audits
+
+    Attributes:
+        task_id: UUID of the task this decision applies to
+        decision: Selected action ("use_claude"|"use_ollama"|"no_fallback")
+        reason: Why decision was made ("quota_critical"|"high_complexity"|"local_sufficient"|"claude_failed")
+        quota_remaining_percent: Remaining budget fraction (0.0-1.0) at decision time
+        complexity_level: Task complexity assessment ("simple"|"medium"|"complex")
+        fallback_tier: Which fallback tier was used (0=primary Claude, 1=fallback Ollama, 2=failure)
+        model_used: Which LLM was actually used ("claude-opus-4.5"|"ollama/neural-chat")
+        tokens_used: Token count if available from LLM response
+        cost_usd: Estimated cost if available from LLM
+        error_message: Error description if fallback occurred
+        created_at: When decision was made
+    """
+    task_id: str = Field(..., description="UUID of task this decision applies to")
+    decision: str = Field(
+        ...,
+        pattern="^(use_claude|use_ollama|no_fallback)$",
+        description="Selected action: use_claude, use_ollama, or no_fallback"
+    )
+    reason: str = Field(
+        ...,
+        pattern="^(quota_critical|high_complexity|local_sufficient|claude_failed)$",
+        description="Why this decision was made"
+    )
+    quota_remaining_percent: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Quota remaining (0.0-1.0) at decision time"
+    )
+    complexity_level: str = Field(
+        ...,
+        pattern="^(simple|medium|complex)$",
+        description="Task complexity: simple, medium, or complex"
+    )
+    fallback_tier: int = Field(
+        ...,
+        ge=0,
+        le=2,
+        description="Fallback tier used: 0=primary Claude, 1=fallback Ollama, 2=failure"
+    )
+    model_used: str = Field(
+        ...,
+        description="LLM model used (claude-opus-4.5, ollama/neural-chat, etc)"
+    )
+    tokens_used: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description="Token count if available"
+    )
+    cost_usd: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        description="Estimated cost in USD if available"
+    )
+    error_message: Optional[str] = Field(
+        default=None,
+        description="Error message if fallback occurred"
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="When decision was made"
+    )
