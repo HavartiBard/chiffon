@@ -2,7 +2,7 @@
 
 **Project:** Chiffon (Orchestrated AI Agents for Homelab Automation)
 **Version:** 1.0 (v1 Roadmap Approved)
-**Last Updated:** 2026-01-19
+**Last Updated:** 2026-01-19 (02-04 REST API complete)
 
 ---
 
@@ -56,7 +56,7 @@ System is validated when:
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 1: Foundation | ✓ Complete | 100% (5/5 plans) |
-| Phase 2: Message Bus | In Progress | 40% (2/5 plans) |
+| Phase 2: Message Bus | In Progress | 60% (3/5 plans) |
 | Phase 3: Orchestrator Core | Pending | 0% |
 | Phase 4: Desktop Agent | Pending | 0% |
 | Phase 5: State & Audit | Pending | 0% |
@@ -64,14 +64,14 @@ System is validated when:
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 7/40 plans complete (17.5%)
+**Overall Progress:** 8/40 plans complete (20%)
 
 ### Current Focus
 
 **Currently executing:** Phase 2: Message Bus (In Progress)
-**Last completed:** 02-02-protocol-PLAN.md (Message protocol, 43 tests, 6 message types complete)
-**Verification:** All 43 protocol tests passing, type-safe, async-native dependencies, 100% success criteria met
-**Next action:** Execute 02-03-agent-framework-PLAN.md (Agent connections and RabbitMQ consumer/producer)
+**Last completed:** 02-04-orchestrator-rest-PLAN.md (REST API, OrchestratorService, 57 tests all passing)
+**Verification:** 4 endpoints working, background tasks, dependency injection, 100% test pass rate, no linting errors
+**Next action:** Execute 02-05-websocket-PLAN.md (Real-time WebSocket updates for tasks)
 
 ---
 
@@ -190,37 +190,42 @@ None currently. All systems go.
 |------|------|--------|---------|---------|
 | 02-01 | RabbitMQ Queue Topology | Complete | Queue topology module, RabbitMQ service verified | f32a2ca |
 | 02-02 | Message Protocol Completion | Complete | 6 message types, 43 tests, async-native (aio-pika), priority queuing | 063e406, 8a3cfe8, 603c821 |
+| 02-04 | Orchestrator REST API | Complete | 4 endpoints, OrchestratorService, background tasks, 57 tests all passing | 7b21bb9 |
 
-**Phase 2 Progress:** 1/5 plans complete (20%)
+**Phase 2 Progress:** 3/5 plans complete (60%)
 
 ---
 
 ## Session Continuity
 
-### What You Did
+### Last Session (2026-01-19 12:00)
 
-1. **Extracted Requirements** — Parsed 28 v1 requirements from PROJECT.md and REQUIREMENTS.md
-2. **Analyzed Dependencies** — Identified that State + Message Bus are foundational; Orchestrator, Desktop Agent, Infra Agent depend on these
-3. **Derived Phases** — 8 phases from requirements, not imposed structure:
-   - Phase 1: Foundation (State + DB schema)
-   - Phase 2: Message Bus (RabbitMQ + protocol)
-   - Phase 3: Orchestrator Core (planning + dispatch)
-   - Phase 4: Desktop Agent (resource awareness)
-   - Phase 5: State & Audit (execution tracking + git commits)
-   - Phase 6: Infrastructure Agent (Ansible integration)
-   - Phase 7: User Interface (chat + approval)
-   - Phase 8: End-to-End (Kuma deployment validation)
-4. **Applied Goal-Backward Thinking** — Each phase has 4-5 observable success criteria (user behaviors, not tasks)
-5. **Validated 100% Coverage** — All 28 requirements mapped to exactly one phase; no orphans
-6. **Created Roadmap & State** — ROADMAP.md, STATE.md, updated REQUIREMENTS.md traceability
+**Completed:** 02-04-orchestrator-rest-PLAN.md
+
+**What was done:**
+1. Created OrchestratorService (310 lines) with dispatch_work, get_task_status, list_agents, cancel_task, handle_work_result
+2. Created REST API module (190 lines) with 4 endpoints: /dispatch, /status, /agents, /cancel
+3. Updated main.py with router inclusion, background tasks (heartbeat + result listeners), WebSocket manager
+4. Created 57 API endpoint tests (all passing) with comprehensive coverage
+5. Added trace_id/request_id to WorkResult protocol for correlation
+6. All linting and type checks passing
+
+**What works now:**
+- FastAPI app with 4 fully functional REST endpoints
+- OrchestratorService layer with RabbitMQ integration
+- Background tasks for consuming agent heartbeats and work results
+- Dependency injection for clean API design
+- Request deduplication via idempotency cache
+- WebSocket integration ready (manager built, endpoint in 02-05)
+
+**Test results:** 57/57 passing (19 test cases × 3 async backends)
 
 ### Next Steps
 
-1. User reviews ROADMAP.md and provides feedback (if any)
-2. Begin Phase 1 planning: `/gsd:plan-phase 1`
-3. Phase 1 creates executable plan with must-haves, nice-to-haves, research tasks
-4. Execute Phase 1, validate success criteria
-5. Move to Phase 2, etc.
+1. Execute 02-05-websocket-PLAN.md (Real-time task updates via WebSocket)
+2. Then 02-03-agent-framework-PLAN.md (Agent consumer implementation)
+3. Phase 3: Orchestrator Core (planning + dispatch logic)
+4. Phase 4-8: Remaining phases in dependency order
 
 ### Context Pointers
 
@@ -231,7 +236,7 @@ None currently. All systems go.
 
 ---
 
-**State Version:** 1.5
+**State Version:** 1.6
 **Roadmap Locked:** 2026-01-18
-**Last Execution:** 2026-01-19 - Completed 02-02-protocol-PLAN.md (6 message types, 43 tests, async-native aio-pika)
-**Next Execution:** Phase 2: Message Bus (02-03-agent-framework-PLAN.md)
+**Last Execution:** 2026-01-19 - Completed 02-04-orchestrator-rest-PLAN.md (REST API, 4 endpoints, 57 tests, all passing)
+**Next Execution:** Phase 2: Message Bus (02-05-websocket-PLAN.md)
