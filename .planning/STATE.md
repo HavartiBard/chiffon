@@ -57,21 +57,21 @@ System is validated when:
 |-------|--------|----------|
 | Phase 1: Foundation | ✓ Complete | 100% (5/5 plans) |
 | Phase 2: Message Bus | ✓ Complete | 100% (5/5 plans) |
-| Phase 3: Orchestrator Core | In Progress | 20% (1/5 plans) |
+| Phase 3: Orchestrator Core | In Progress | 40% (2/5 plans) |
 | Phase 4: Desktop Agent | Pending | 0% |
 | Phase 5: State & Audit | Pending | 0% |
 | Phase 6: Infrastructure Agent | Pending | 0% |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 15/40 plans complete (37.5%)
+**Overall Progress:** 16/40 plans complete (40%)
 
 ### Current Focus
 
 **Currently executing:** Phase 3: Orchestrator Core
-**Last completed:** 03-01-request-parser-PLAN.md (RequestDecomposer service, DecomposedRequest models, 66 test cases all passing)
-**Verification:** Phase 3-01 goal achieved — 3/3 must-haves verified (natural language parsing, decomposition with confidence scoring, ambiguity detection)
-**Next action:** Execute 03-02-work-planner-PLAN.md (convert decomposed requests into executable work plans)
+**Last completed:** 03-02-work-planner-PLAN.md (WorkPlanner service, WorkTask/WorkPlan models, 93 test cases all passing)
+**Verification:** Phase 3-02 goal achieved — 5/5 must-haves verified (task ordering with dependencies, resource-aware reordering, complexity assessment, human-readable summaries)
+**Next action:** Execute 03-03-agent-router-PLAN.md (route tasks to agents and implement intelligent scheduling)
 
 ---
 
@@ -201,8 +201,9 @@ None currently. All systems go.
 | Plan | Name | Status | Summary | Commits |
 |------|------|--------|---------|---------|
 | 03-01 | Request Parser | Complete | RequestDecomposer service, DecomposedRequest models, 66 test cases | 5443ca7, 0399a17, 01d33b7 |
+| 03-02 | Work Planner | Complete | WorkPlanner service, WorkTask/WorkPlan models, resource-aware reordering, 93 test cases | 55d61b3, 6d3016f, 6c6abd1 |
 
-**Phase 3 Progress:** 1/5 plans complete (20%)
+**Phase 3 Progress:** 2/5 plans complete (40%)
 
 ---
 
@@ -265,10 +266,41 @@ None currently. All systems go.
 - Ready for 03-02-work-planner (convert DecomposedRequest to WorkPlan)
 - 15/40 total roadmap plans complete (37.5%)
 
+### Current Session (2026-01-19 17:26 - 17:30)
+
+**Completed:** 03-02-work-planner-PLAN.md (Work Planner Implementation)
+
+**What was done:**
+1. Created src/orchestrator/planner.py (348 lines) - WorkPlanner service with async generate_plan() method
+2. Added Pydantic models to src/common/models.py (WorkTask, WorkPlan, IntentToWorkTypeMapping)
+3. Created tests/test_work_planner.py (677 lines) with 31 test methods, 93 test cases
+4. Resource-aware task reordering: ready tasks before blocked tasks
+5. Intent mapping covers deploy_kuma, add_portals_to_config, research, code_gen, unknown intents
+6. Human-readable plan summaries with duration estimates
+7. Complexity assessment and external AI fallback determination
+8. All 93 tests passing (31 methods × 3 backends: asyncio, trio, curio)
+
+**What works now:**
+- WorkPlanner converts DecomposedRequest to executable WorkPlan
+- Task reordering based on resource availability (GPU vs CPU-only)
+- Complexity assessment: simple (1-2 tasks) / medium (>3 tasks) / complex (research/code)
+- Intent mapping: deploy_kuma→infra, research→research, code_gen→code, unknown→research (safe)
+- Human-readable summaries suitable for user approval in <1 minute
+- External AI fallback flags determined by complexity + task type
+- Full test coverage: generation, ordering, complexity, mapping, validation, errors, integration
+
+**Test results:** 93/93 passing (~0.25s execution), coverage >90% of WorkPlanner
+
+**Phase 3 Status:** IN PROGRESS - 2/5 plans done
+- Request parser fully functional (03-01)
+- Work planner fully functional (03-02)
+- Ready for 03-03-agent-router (route tasks to agents)
+- 16/40 total roadmap plans complete (40%)
+
 ### Next Steps
 
-1. Execute 03-02-work-planner-PLAN.md: Convert DecomposedRequest to executable WorkPlan
-2. Execute 03-03+ remaining Phase 3 plans: Agent routing, work execution tracking
+1. Execute 03-03-agent-router-PLAN.md: Route WorkPlan tasks to appropriate agents with performance tracking
+2. Execute 03-04+ remaining Phase 3 plans: Work execution tracking, fallback coordination
 3. Then Phase 4+: Desktop Agent, State & Audit, Infrastructure Agent, UI, E2E
 
 ### Context Pointers
@@ -277,10 +309,11 @@ None currently. All systems go.
 - **Homelab Integration:** Ansible playbooks in ~/CascadeProjects/homelab-infra, Git as source of truth
 - **v1 Use Case:** Kuma Uptime deployment (discovery, planning, execution, audit)
 - **Resource Constraints:** GPU desktops variable availability, external AI cost sensitive
+- **Orchestrator Core Progress:** 2/5 plans (Request parser, Work planner done; Agent router, Work executor next)
 
 ---
 
-**State Version:** 1.7
+**State Version:** 1.8
 **Roadmap Locked:** 2026-01-18
-**Last Execution:** 2026-01-19 15:17 - Completed 03-01-request-parser-PLAN.md (RequestDecomposer, 66 tests passing)
-**Next Execution:** 03-02-work-planner-PLAN.md (convert decomposed requests to executable plans)
+**Last Execution:** 2026-01-19 17:30 - Completed 03-02-work-planner-PLAN.md (WorkPlanner, 93 tests passing)
+**Next Execution:** 03-03-agent-router-PLAN.md (implement intelligent agent routing and scheduling)
