@@ -1,0 +1,405 @@
+openapi: 3.0.0
+info:
+  title: Chiffon Agent Protocol
+  description: |
+    JSON envelope-based message format for orchestrator ↔ agent communication.
+    All messages wrap in a MessageEnvelope with protocol versioning, tracing, and routing.
+  version: 1.0.0
+  contact:
+    name: Chiffon Project
+  license:
+    name: MIT
+
+paths: {}
+
+components:
+  schemas:
+    MessageEnvelope:
+      type: object
+      description: Base message envelope for all agent protocol messages
+      required:
+        - protocol_version
+        - message_id
+        - from_agent
+        - to_agent
+        - timestamp
+        - trace_id
+        - request_id
+        - type
+        - payload
+      properties:
+        protocol_version:
+          type: string
+          default: "1.0"
+          description: Protocol version
+        message_id:
+          type: string
+          format: uuid
+          description: Unique identifier for this message
+        from_agent:
+          type: string
+          enum:
+            - orchestrator
+            - infra
+            - desktop
+            - code
+            - research
+          description: Sender agent type
+        to_agent:
+          type: string
+          enum:
+            - orchestrator
+            - infra
+            - desktop
+            - code
+            - research
+          description: Recipient agent type
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when sent
+        trace_id:
+          type: string
+          format: uuid
+          description: Distributed trace ID for end-to-end logging
+        request_id:
+          type: string
+          format: uuid
+          description: Request ID for idempotency (retry safety)
+        type:
+          type: string
+          enum:
+            - work_request
+            - work_status
+            - work_result
+            - error
+          description: Message type
+        payload:
+          type: object
+          description: Type-specific message content
+        x_custom_fields:
+          type: object
+          default: {}
+          description: Custom fields for extensions
+      example:
+        protocol_version: "1.0"
+        message_id: "550e8400-e29b-41d4-a716-446655440001"
+        from_agent: orchestrator
+        to_agent: infra
+        timestamp: "2026-01-19T04:21:04Z"
+        trace_id: "550e8400-e29b-41d4-a716-446655440002"
+        request_id: "550e8400-e29b-41d4-a716-446655440003"
+        type: work_request
+        payload:
+          task_id: "550e8400-e29b-41d4-a716-446655440004"
+          work_type: run_playbook
+          parameters:
+            playbook: deploy_kuma.yml
+            extra_vars:
+              version: 1.4.0
+          hints:
+            max_duration_seconds: 300
+            max_memory_mb: 512
+        x_custom_fields: {}
+
+    WorkRequest:
+      type: object
+      description: Message to initiate work on an agent
+      required:
+        - task_id
+        - work_type
+        - parameters
+      properties:
+        task_id:
+          type: string
+          format: uuid
+          description: Unique identifier for this task
+        work_type:
+          type: string
+          description: Type of work to perform (e.g., deploy_service, run_playbook)
+        parameters:
+          type: object
+          description: Work type-specific parameters
+          additionalProperties: true
+        hints:
+          type: object
+          default: {}
+          description: Scheduling hints (max_duration_seconds, max_memory_mb)
+          additionalProperties: true
+      example:
+        task_id: "550e8400-e29b-41d4-a716-446655440004"
+        work_type: run_playbook
+        parameters:
+          playbook: deploy_kuma.yml
+          extra_vars:
+            version: "1.4.0"
+            environment: homelab
+        hints:
+          max_duration_seconds: 300
+          max_memory_mb: 512
+
+    Step:
+      type: object
+      description: A single step in work execution
+      required:
+        - number
+        - name
+      properties:
+        number:
+          type: integer
+          description: Step sequence number
+        name:
+          type: string
+          description: Human-readable step name
+        output:
+          type: string
+          default: ""
+          description: Step output/log
+      example:
+        number: 2
+        name: Configure Kuma settings
+        output: "Updating config.yaml...\nAdded uptime monitors: 3\n"
+
+    WorkStatus:
+      type: object
+      description: Status update during long-running work
+      required:
+        - task_id
+        - status
+        - progress_percent
+        - step
+      properties:
+        task_id:
+          type: string
+          format: uuid
+          description: Which task this status is for
+        status:
+          type: string
+          enum:
+            - running
+            - step_completed
+            - paused
+          description: Current status
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Progress as percentage 0-100
+        step:
+          $ref: "#/components/schemas/Step"
+      example:
+        task_id: "550e8400-e29b-41d4-a716-446655440004"
+        status: running
+        progress_percent: 50
+        step:
+          number: 2
+          name: Configure Kuma settings
+          output: "Updating config.yaml...\nAdded uptime monitors: 3\n"
+
+    ResourcesUsed:
+      type: object
+      description: Resources consumed during work execution
+      required:
+        - duration_seconds
+      properties:
+        duration_seconds:
+          type: integer
+          description: Total execution time in seconds
+        gpu_vram_mb:
+          type: integer
+          default: 0
+          description: GPU VRAM used in MB
+        cpu_time_ms:
+          type: integer
+          default: 0
+          description: CPU time used in milliseconds
+      example:
+        duration_seconds: 87
+        gpu_vram_mb: 0
+        cpu_time_ms: 12450
+
+    WorkResult:
+      type: object
+      description: Final result of completed work
+      required:
+        - task_id
+        - status
+        - exit_code
+        - resources_used
+      properties:
+        task_id:
+          type: string
+          format: uuid
+          description: Which task completed
+        status:
+          type: string
+          enum:
+            - success
+            - failed
+          description: Completion status
+        exit_code:
+          type: integer
+          description: Exit code (0 = success, >0 = failure)
+        output:
+          type: string
+          default: ""
+          description: Final output/logs from entire task
+        resources_used:
+          $ref: "#/components/schemas/ResourcesUsed"
+      example:
+        task_id: "550e8400-e29b-41d4-a716-446655440004"
+        status: success
+        exit_code: 0
+        output: "Deployment completed successfully.\nKuma instance running at https://kuma.homelab:3000\nMonitored services: 5"
+        resources_used:
+          duration_seconds: 87
+          gpu_vram_mb: 0
+          cpu_time_ms: 12450
+
+    ErrorMessage:
+      type: object
+      description: Error notification message
+      required:
+        - error_code
+        - error_message
+      properties:
+        error_code:
+          type: integer
+          minimum: 5001
+          maximum: 5999
+          description: Error code in range 5001-5999
+        error_message:
+          type: string
+          description: Human-readable error message
+        error_context:
+          type: object
+          nullable: true
+          description: Additional error context (varies by error code)
+          additionalProperties: true
+      example:
+        error_code: 5005
+        error_message: Resource limit exceeded
+        error_context:
+          limit_name: gpu_vram_mb
+          available: 128
+          required: 512
+
+    ErrorCodesRef:
+      type: object
+      description: Reference of all error codes
+      properties:
+        "5001":
+          type: object
+          properties:
+            name:
+              type: string
+              default: Timeout
+            meaning:
+              type: string
+              default: Response not received within deadline
+            retryable:
+              type: boolean
+              default: true
+            context_fields:
+              type: array
+              items:
+                type: string
+              default:
+                - attempted_retries
+                - last_attempt
+        "5002":
+          type: object
+          properties:
+            name:
+              type: string
+              default: Agent Unavailable
+            meaning:
+              type: string
+              default: No connection to agent or broker down
+            retryable:
+              type: boolean
+              default: true
+            context_fields:
+              type: array
+              items:
+                type: string
+              default:
+                - agent_id
+                - last_heartbeat
+        "5003":
+          type: object
+          properties:
+            name:
+              type: string
+              default: Invalid Message
+            meaning:
+              type: string
+              default: Malformed JSON or missing required fields
+            retryable:
+              type: boolean
+              default: false
+            context_fields:
+              type: array
+              items:
+                type: string
+              default:
+                - validation_error
+                - field_name
+        "5004":
+          type: object
+          properties:
+            name:
+              type: string
+              default: Authentication Failed
+            meaning:
+              type: string
+              default: Invalid bearer token or signature check failed
+            retryable:
+              type: boolean
+              default: false
+            context_fields:
+              type: array
+              items:
+                type: string
+              default:
+                - agent_id
+                - token_status
+        "5005":
+          type: object
+          properties:
+            name:
+              type: string
+              default: Resource Limit Exceeded
+            meaning:
+              type: string
+              default: GPU VRAM, CPU, or memory exceeded
+            retryable:
+              type: boolean
+              default: true
+            context_fields:
+              type: array
+              items:
+                type: string
+              default:
+                - limit_name
+                - available
+                - required
+        "5006":
+          type: object
+          properties:
+            name:
+              type: string
+              default: Unsupported Work Type
+            meaning:
+              type: string
+              default: Unknown work_type requested
+            retryable:
+              type: boolean
+              default: false
+            context_fields:
+              type: array
+              items:
+                type: string
+              default:
+                - work_type_requested
+                - supported_types
