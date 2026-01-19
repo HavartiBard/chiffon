@@ -1,0 +1,44 @@
+{
+  "litellm": {
+    "default_model": "claude-opus-4.5",
+    "fallback_strategy": [
+      "claude-opus-4.5",
+      "gpt-4-turbo",
+      "ollama/neural-chat"
+    ],
+    "log_level": "INFO",
+    "debug": false,
+    "api_timeout": 30,
+    "cache_config": {
+      "enable_cache": true,
+      "type": "in_memory",
+      "ttl": 3600
+    },
+    "quota_limits": {
+      "claude": {
+        "monthly_limit_usd": 100,
+        "fallback_after_80_percent": true,
+        "rpm_limit": 100
+      },
+      "gpt4": {
+        "monthly_limit_usd": 50,
+        "fallback_after_80_percent": true,
+        "rpm_limit": 50
+      }
+    },
+    "api_keys": {
+      "ANTHROPIC_API_KEY": "{{ env.ANTHROPIC_API_KEY }}",
+      "OPENAI_API_KEY": "{{ env.OPENAI_API_KEY }}"
+    },
+    "allowed_models": [
+      "claude-opus-4.5",
+      "gpt-4-turbo",
+      "ollama/neural-chat"
+    ]
+  },
+  "router": {
+    "strategy": "cost-based",
+    "fallback_on_quota_error": true,
+    "fallback_on_timeout": true
+  }
+}
