@@ -23,6 +23,8 @@ python-dotenv = "^1.0.0"
 litellm = "^1.0.0"
 psycopg2-binary = "^2.9.0"
 pydantic-core = "^2.0.0"
+psutil = "^7.2.1"
+types-psutil = "^7.2.1.20260116"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
