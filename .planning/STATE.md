@@ -57,21 +57,21 @@ System is validated when:
 |-------|--------|----------|
 | Phase 1: Foundation | ✓ Complete | 100% (5/5 plans) |
 | Phase 2: Message Bus | ✓ Complete | 100% (5/5 plans) |
-| Phase 3: Orchestrator Core | Pending | 0% |
+| Phase 3: Orchestrator Core | In Progress | 20% (1/5 plans) |
 | Phase 4: Desktop Agent | Pending | 0% |
 | Phase 5: State & Audit | Pending | 0% |
 | Phase 6: Infrastructure Agent | Pending | 0% |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 14/40 plans complete (35%)
+**Overall Progress:** 15/40 plans complete (37.5%)
 
 ### Current Focus
 
-**Currently executing:** Phase 2: Message Bus (COMPLETE)
-**Last completed:** 02-05-integration-PLAN.md (63 end-to-end integration tests, all passing, message bus fully validated)
-**Verification:** Phase 2 goal achieved — 5/5 must-haves verified (RabbitMQ deployed, protocol round-trip, REST API, error handling, agent framework ready)
-**Next action:** Plan Phase 3: Orchestrator Core (`/gsd:discuss-phase 3`)
+**Currently executing:** Phase 3: Orchestrator Core
+**Last completed:** 03-01-request-parser-PLAN.md (RequestDecomposer service, DecomposedRequest models, 66 test cases all passing)
+**Verification:** Phase 3-01 goal achieved — 3/3 must-haves verified (natural language parsing, decomposition with confidence scoring, ambiguity detection)
+**Next action:** Execute 03-02-work-planner-PLAN.md (convert decomposed requests into executable work plans)
 
 ---
 
@@ -196,6 +196,14 @@ None currently. All systems go.
 
 **Phase 2 Progress:** 5/5 plans complete (100%)
 
+### Phase 3: Orchestrator Core
+
+| Plan | Name | Status | Summary | Commits |
+|------|------|--------|---------|---------|
+| 03-01 | Request Parser | Complete | RequestDecomposer service, DecomposedRequest models, 66 test cases | 5443ca7, 0399a17, 01d33b7 |
+
+**Phase 3 Progress:** 1/5 plans complete (20%)
+
 ---
 
 ## Session Continuity
@@ -228,13 +236,40 @@ None currently. All systems go.
 - All 14 plans in Phase 1 + Phase 2 complete
 - 35% of total roadmap complete (14/40 plans)
 
+### Current Session (2026-01-19 14:32 - 15:17)
+
+**Completed:** 03-01-request-parser-PLAN.md (Request Parser Implementation)
+
+**What was done:**
+1. Created src/orchestrator/nlu.py (228 lines) - RequestDecomposer service with async decompose() method
+2. Added Pydantic models to src/common/models.py (Subtask, DecomposedRequest, RequestParsingConfig)
+3. Created tests/test_request_parser.py (659 lines) with 22 test methods, 66 test cases
+4. Fixed missing datetime import in models.py (found during Task 1 verification)
+5. Fixed duplicate Pydantic imports in models.py (cleanup during Task 2)
+6. All 66 tests passing (22 methods × 3 backends: asyncio, trio, curio)
+
+**What works now:**
+- RequestDecomposer parses natural language requests via Claude
+- Structured prompts with known agent types (infra, code, research, desktop) and examples
+- JSON response parsing resilient to markdown code blocks
+- Complexity assessment: simple|medium|complex based on intents and subtask count
+- Ambiguity detection flags unclear aspects for user review
+- Out-of-scope detection identifies capabilities not available
+- Comprehensive error handling with informative messages
+- Full test coverage: decomposition, complexity, ambiguities, out-of-scope, error scenarios
+
+**Test results:** 66/66 passing (~0.17s execution), coverage >90% of RequestDecomposer
+
+**Phase 3 Status:** IN PROGRESS - 1/5 plans done
+- Request parser fully functional and tested
+- Ready for 03-02-work-planner (convert DecomposedRequest to WorkPlan)
+- 15/40 total roadmap plans complete (37.5%)
+
 ### Next Steps
 
-1. Execute Phase 3 plans: Orchestrator Core
-   - Planning logic and work orchestration
-   - Multi-agent task routing
-   - Distributed agent registry
-2. Then Phase 4+: Desktop Agent, State & Audit, Infrastructure Agent, UI, E2E
+1. Execute 03-02-work-planner-PLAN.md: Convert DecomposedRequest to executable WorkPlan
+2. Execute 03-03+ remaining Phase 3 plans: Agent routing, work execution tracking
+3. Then Phase 4+: Desktop Agent, State & Audit, Infrastructure Agent, UI, E2E
 
 ### Context Pointers
 
@@ -245,7 +280,7 @@ None currently. All systems go.
 
 ---
 
-**State Version:** 1.6
+**State Version:** 1.7
 **Roadmap Locked:** 2026-01-18
-**Last Execution:** 2026-01-19 - Completed 02-03-agent-framework-PLAN.md (BaseAgent, TestAgent, 32 integration tests, all passing)
-**Next Execution:** Phase 2: Message Bus (02-04-orchestrator-rest-PLAN.md)
+**Last Execution:** 2026-01-19 15:17 - Completed 03-01-request-parser-PLAN.md (RequestDecomposer, 66 tests passing)
+**Next Execution:** 03-02-work-planner-PLAN.md (convert decomposed requests to executable plans)
