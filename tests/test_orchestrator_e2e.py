@@ -130,10 +130,10 @@ def mock_fallback():
 
     async def mock_should_use_external_ai(plan):
         decision = FallbackDecision(
-            task_id=None,
+            task_id=str(plan.plan_id),
             decision="use_ollama",
             reason="local_sufficient",
-            quota_remaining_percent=0.8,
+            quota_remaining_percent=80.0,
             complexity_level=plan.complexity_level,
             fallback_tier=1,
             model_used="ollama/neural-chat",

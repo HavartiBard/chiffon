@@ -146,6 +146,8 @@ class OrchestratorService:
 
         # Store for request → plan mappings (request_id → plan)
         self._request_plans: dict[str, WorkPlan] = {}  # Simple in-memory store, would use DB in production
+        # Store for request → decomposed_request mappings (request_id → decomposed_request)
+        self._decomposed_requests: dict[str, DecomposedRequest] = {}  # Simple in-memory store
 
     async def connect(self) -> None:
         """Initialize RabbitMQ connection and declare queue topology.
@@ -592,6 +594,9 @@ class OrchestratorService:
                     f"Decomposed request {request_id} into {len(decomposed.subtasks)} subtasks"
                 )
 
+                # Store decomposed request for later plan generation
+                self._decomposed_requests[request_id] = decomposed
+
                 # Check for ambiguities/out-of-scope
                 if decomposed.ambiguities or decomposed.out_of_scope:
                     return {
@@ -637,22 +642,27 @@ class OrchestratorService:
             if not self.planner:
                 raise ValueError("WorkPlanner not initialized")
 
+            # Retrieve decomposed request from in-memory store
+            decomposed_request = self._decomposed_requests.get(request_id)
+            if not decomposed_request:
+                raise ValueError(f"Decomposed request not found for request_id={request_id}")
+
             # Get available resources (simplified - would query agent pool)
             available_resources = {"gpu_vram_mb": 8192, "cpu_cores": 16}
 
-            # Generate plan
+            # Generate plan by calling WorkPlanner
             try:
-                # For now, create a basic plan structure
-                # In production, would retrieve decomposed request from DB/cache
-                plan_id = str(uuid4())
-                plan = WorkPlan(
-                    plan_id=plan_id,
-                    request_id=request_id,
-                    tasks=[],
-                    estimated_duration_seconds=300,
-                    complexity_level="simple",
-                    will_use_external_ai=False,
-                    human_readable_summary="Plan generated and ready for approval",
+                # Call WorkPlanner.generate_plan() with decomposed request
+                plan = await self.planner.generate_plan(decomposed_request, available_resources)
+
+                # Ensure plan has a proper plan_id and request_id
+                if not plan.plan_id:
+                    plan.plan_id = str(uuid4())
+                plan.request_id = request_id
+
+                self.logger.info(
+                    f"Generated plan {plan.plan_id} with {len(plan.tasks)} tasks, "
+                    f"complexity={plan.complexity_level}"
                 )
 
                 # Store plan mapping
@@ -668,7 +678,7 @@ class OrchestratorService:
                         self.logger.warning(f"Fallback check failed: {fallback_err}")
 
                 return {
-                    "plan_id": plan_id,
+                    "plan_id": plan.plan_id,
                     "request_id": request_id,
                     "tasks": [t.model_dump() for t in plan.tasks],
                     "human_readable_summary": plan.human_readable_summary,
@@ -736,6 +746,9 @@ class OrchestratorService:
     async def dispatch_plan(self, plan_id: str) -> dict:
         """Dispatch an approved plan to agents via routing.
 
+        Routes each task to the best available agent using AgentRouter.
+        Publishes tasks to RabbitMQ for execution.
+
         Args:
             plan_id: ID of plan to dispatch
 
@@ -747,6 +760,9 @@ class OrchestratorService:
         """
         try:
             self.logger.info(f"Dispatching plan {plan_id}")
+
+            if not self.router:
+                raise ValueError("AgentRouter not initialized")
 
             # Find plan
             plan = None
@@ -760,10 +776,13 @@ class OrchestratorService:
 
             dispatched_tasks = []
 
-            # Dispatch each task (simplified - would use router in full implementation)
+            # Dispatch each task via AgentRouter
             for task in plan.tasks:
                 try:
-                    # In full implementation, would use router.dispatch_with_retry()
+                    # Route task to best agent using AgentRouter
+                    agent_selection = await self.router.route_task(task)
+
+                    # Generate unique task ID and dispatch
                     task_id = uuid4()
                     dispatch_result = await self.dispatch_work(
                         task_id=task_id,
@@ -771,14 +790,32 @@ class OrchestratorService:
                         parameters=task.parameters,
                         priority=3,
                     )
-                    dispatched_tasks.append(dispatch_result)
-                    self.logger.info(f"Dispatched task {task.name} (task_id={task_id})")
+
+                    # Record routing decision (AgentRouter already does this)
+                    dispatched_tasks.append({
+                        **dispatch_result,
+                        "agent_id": str(agent_selection.agent_id),
+                        "agent_type": agent_selection.agent_type,
+                        "routing_score": agent_selection.score,
+                        "selection_reason": agent_selection.selected_reason,
+                    })
+
+                    self.logger.info(
+                        f"Dispatched task {task.name} (task_id={task_id}) "
+                        f"to agent {agent_selection.agent_id} (score={agent_selection.score})"
+                    )
                 except Exception as task_err:
                     self.logger.error(f"Failed to dispatch task {task.name}: {task_err}")
-                    dispatched_tasks.append({"name": task.name, "error": str(task_err)})
+                    dispatched_tasks.append({
+                        "name": task.name,
+                        "work_type": task.work_type,
+                        "error": str(task_err),
+                    })
 
             plan.status = "executing"
-            self.logger.info(f"Plan {plan_id} now executing ({len(dispatched_tasks)} tasks dispatched)")
+            self.logger.info(
+                f"Plan {plan_id} now executing ({len(dispatched_tasks)} tasks dispatched)"
+            )
 
             return {
                 "plan_id": plan_id,

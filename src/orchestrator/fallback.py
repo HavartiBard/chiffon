@@ -73,10 +73,10 @@ class ExternalAIFallback:
                     "using Claude"
                 )
                 decision = FallbackDecision(
-                    task_id=plan.plan_id,
+                    task_id=str(plan.plan_id),
                     decision="use_claude",
                     reason="quota_critical",
-                    quota_remaining_percent=remaining_quota,
+                    quota_remaining_percent=remaining_quota * 100,
                     complexity_level=plan.complexity_level,
                     fallback_tier=0,
                     model_used="claude-opus-4.5",
@@ -89,10 +89,10 @@ class ExternalAIFallback:
                     f"Complex plan detected, using Claude for better reasoning"
                 )
                 decision = FallbackDecision(
-                    task_id=plan.plan_id,
+                    task_id=str(plan.plan_id),
                     decision="use_claude",
                     reason="high_complexity",
-                    quota_remaining_percent=remaining_quota,
+                    quota_remaining_percent=remaining_quota * 100,
                     complexity_level=plan.complexity_level,
                     fallback_tier=0,
                     model_used="claude-opus-4.5",
@@ -104,10 +104,10 @@ class ExternalAIFallback:
                 f"Using Ollama for {plan.complexity_level} complexity plan"
             )
             decision = FallbackDecision(
-                task_id=plan.plan_id,
+                task_id=str(plan.plan_id),
                 decision="use_ollama",
                 reason="local_sufficient",
-                quota_remaining_percent=remaining_quota,
+                quota_remaining_percent=remaining_quota * 100,
                 complexity_level=plan.complexity_level,
                 fallback_tier=0,
                 model_used="ollama/neural-chat",
@@ -118,10 +118,10 @@ class ExternalAIFallback:
             self.logger.error(f"Error in should_use_external_ai: {e}")
             # On error, default to Ollama (safe fallback)
             decision = FallbackDecision(
-                task_id=plan.plan_id,
+                task_id=str(plan.plan_id),
                 decision="use_ollama",
                 reason="local_sufficient",
-                quota_remaining_percent=1.0,
+                quota_remaining_percent=100.0,
                 complexity_level=plan.complexity_level,
                 fallback_tier=0,
                 model_used="ollama/neural-chat",
