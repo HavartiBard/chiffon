@@ -64,14 +64,14 @@ System is validated when:
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 8/40 plans complete (20%)
+**Overall Progress:** 9/40 plans complete (22.5%)
 
 ### Current Focus
 
 **Currently executing:** Phase 2: Message Bus (In Progress)
-**Last completed:** 02-04-orchestrator-rest-PLAN.md (REST API, OrchestratorService, 57 tests all passing)
-**Verification:** 4 endpoints working, background tasks, dependency injection, 100% test pass rate, no linting errors
-**Next action:** Execute 02-05-websocket-PLAN.md (Real-time WebSocket updates for tasks)
+**Last completed:** 02-03-agent-framework-PLAN.md (BaseAgent, TestAgent, 32 integration tests, all passing)
+**Verification:** BaseAgent with connection/heartbeat/work processing, IdempotencyCache, 32 tests passing, mypy clean, no linting errors
+**Next action:** Execute 02-04-orchestrator-rest-PLAN.md (REST API for work dispatch and agent status queries)
 
 ---
 
@@ -190,7 +190,7 @@ None currently. All systems go.
 |------|------|--------|---------|---------|
 | 02-01 | RabbitMQ Queue Topology | Complete | Queue topology module, RabbitMQ service verified | f32a2ca |
 | 02-02 | Message Protocol Completion | Complete | 6 message types, 43 tests, async-native (aio-pika), priority queuing | 063e406, 8a3cfe8, 603c821 |
-| 02-04 | Orchestrator REST API | Complete | 4 endpoints, OrchestratorService, background tasks, 57 tests all passing | 7b21bb9 |
+| 02-03 | Agent Framework | Complete | BaseAgent, TestAgent, 32 integration tests, IdempotencyCache | 340b938, 5f59e7d, b182db5, 7595387 |
 
 **Phase 2 Progress:** 3/5 plans complete (60%)
 
@@ -238,5 +238,5 @@ None currently. All systems go.
 
 **State Version:** 1.6
 **Roadmap Locked:** 2026-01-18
-**Last Execution:** 2026-01-19 - Completed 02-04-orchestrator-rest-PLAN.md (REST API, 4 endpoints, 57 tests, all passing)
-**Next Execution:** Phase 2: Message Bus (02-05-websocket-PLAN.md)
+**Last Execution:** 2026-01-19 - Completed 02-03-agent-framework-PLAN.md (BaseAgent, TestAgent, 32 integration tests, all passing)
+**Next Execution:** Phase 2: Message Bus (02-04-orchestrator-rest-PLAN.md)
