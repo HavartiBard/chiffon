@@ -1,0 +1,43 @@
+{
+  "project_name": "agent-deploy",
+  "version": "0.1.0",
+  "workflow": {
+    "mode": "interactive",
+    "depth": "standard",
+    "parallelization": true
+  },
+  "tech_stack": {
+    "orchestrator_runtime": "python-fastapi",
+    "message_queue": "rabbitmq",
+    "database": "postgresql",
+    "container_runtime": "docker"
+  },
+  "resource_management": {
+    "desktop_agent_discovery": "agent_reporting",
+    "cost_routing": "quota_and_capability",
+    "external_ai_fallback": {
+      "enabled": true,
+      "quota_threshold_percent": 20,
+      "complex_reasoning_tasks": true,
+      "high_value_work": true
+    }
+  },
+  "approval_workflow": {
+    "v1_gates": "high",
+    "future_auto_approval": true,
+    "pre_approved_workflows": []
+  },
+  "homelab_integration": {
+    "infra_repo": "~/CascadeProjects/homelab-infra",
+    "ansible_playbooks": "ansible/",
+    "docker_stacks": "stacks/",
+    "portainer_enabled": true,
+    "git_source_of_truth": true
+  },
+  "observability": {
+    "audit_trail": "git",
+    "state_tracking": "postgresql",
+    "logging": "structured_json",
+    "post_mortem_scaffolding": true
+  }
+}
