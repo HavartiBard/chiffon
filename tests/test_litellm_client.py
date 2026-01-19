@@ -1,7 +1,6 @@
 """Tests for LiteLLM client wrapper."""
 
-import json
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 import pytest
 import requests
@@ -71,7 +70,7 @@ class TestLiteLLMClient:
 
         client = LiteLLMClient()
         messages = [{"role": "user", "content": "test"}]
-        result = client.call_llm("claude-opus-4.5", messages, temperature=0.3)
+        client.call_llm("claude-opus-4.5", messages, temperature=0.3)
 
         # Verify temperature was passed in payload
         call_args = mock_post.call_args
@@ -87,7 +86,7 @@ class TestLiteLLMClient:
 
         client = LiteLLMClient()
         messages = [{"role": "user", "content": "test"}]
-        result = client.call_llm("claude-opus-4.5", messages, max_tokens=100)
+        client.call_llm("claude-opus-4.5", messages, max_tokens=100)
 
         # Verify max_tokens was passed
         call_args = mock_post.call_args
@@ -237,7 +236,7 @@ class TestLiteLLMClient:
         mock_client_call.return_value = {"choices": [{"message": {"content": "response"}}]}
 
         messages = [{"role": "user", "content": "test"}]
-        result = call_llm(
+        call_llm(
             "claude-opus-4.5",
             messages,
             temperature=0.5,
