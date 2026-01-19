@@ -2,7 +2,7 @@
 
 **Project:** Chiffon (Orchestrated AI Agents for Homelab Automation)
 **Version:** 1.0 (v1 Roadmap Approved)
-**Last Updated:** 2026-01-19 (02-05 Message Bus Integration complete)
+**Last Updated:** 2026-01-19 (03-07 Quota Validation Fix complete)
 
 ---
 
@@ -57,14 +57,14 @@ System is validated when:
 |-------|--------|----------|
 | Phase 1: Foundation | ✓ Complete | 100% (5/5 plans) |
 | Phase 2: Message Bus | ✓ Complete | 100% (5/5 plans) |
-| Phase 3: Orchestrator Core | ✓ Complete | 100% (6/6 plans + 1 gap closure) |
+| Phase 3: Orchestrator Core | ✓ Complete | 100% (6/6 plans + 2 gap closures) |
 | Phase 4: Desktop Agent | Pending | 0% |
 | Phase 5: State & Audit | Pending | 0% |
 | Phase 6: Infrastructure Agent | Pending | 0% |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 21/40 plans complete (52.5%)
+**Overall Progress:** 22/40 plans complete (55%)
 
 ### Current Focus
 
@@ -212,8 +212,9 @@ None currently. All systems go.
 | 03-04 | External AI Fallback | Complete | ExternalAIFallback service, three-tier fallback (Claude→Ollama), 111 tests, cost tracking | d1da8be |
 | 03-05 | Orchestrator Service Integration | Complete | OrchestratorService with request→plan→approval→dispatch, 4 REST endpoints, 49/61 E2E tests | 36cc19d, 5866976, 70e33eb |
 | 03-06 | Integration Completion (Gap Closure) | Complete | Fixed generate_plan() and dispatch_plan() stubs, full WorkPlanner and AgentRouter integration, 61/61 E2E tests | 876dfc8 |
+| 03-07 | Quota Validation Field Fix (Gap Closure) | Complete | Fixed FallbackDecision quota field from percentage (0-100) to fraction (0.0-1.0), 111/111 fallback tests, 61/61 E2E tests | c3dbcac |
 
-**Phase 3 Progress:** 6/6 plans complete (100%)
+**Phase 3 Progress:** 6/6 plans + 2 gap closures complete (100%)
 
 ---
 
@@ -370,6 +371,38 @@ None currently. All systems go.
 
 **State Version:** 2.1
 **Roadmap Locked:** 2026-01-18
-**Last Execution:** 2026-01-19 17:43-18:18 - Completed Phase 3 gap closure (03-06: 61/61 E2E tests passing)
-**Session Duration:** ~35 minutes
+**Last Execution:** 2026-01-19 18:18+ - Completed Phase 3 gap closure (03-07: Quota validation fix)
+**Session Duration:** ~5 minutes (quick fix plan)
+**Completed Tasks:** 1/1 task (quota field fix)
 **Next Execution:** Phase 4: Desktop Agent (resource monitoring and metrics)
+
+### Current Session (2026-01-19 18:18 - 18:25)
+
+**Completed:** 03-07-quota-validation-fix-PLAN.md (Gap closure: Fix FallbackDecision quota field)
+
+**What was done:**
+1. Identified root cause: FallbackDecision.quota_remaining_percent was being multiplied by 100
+2. Pydantic model constraint requires values in range [0.0, 1.0], not [0, 100]
+3. Removed 4 instances of `* 100` multiplication in src/orchestrator/fallback.py
+4. Changed error fallback value from 100.0 to 1.0
+5. All 111 fallback integration tests now passing (previously 60 failing)
+6. All 61 E2E tests still passing (no regressions)
+
+**What works now:**
+- FallbackDecision quota_remaining_percent validates correctly
+- Quota-aware routing decisions work as designed
+- Requirement ORCH-05 fully satisfied: orchestrator falls back to Claude when quota <20%
+- No validation errors on FallbackDecision creation
+
+**Test results:** 111/111 fallback + 61/61 E2E = 172/172 tests passing
+
+**Phase 3 Status:** ✅ COMPLETE - 6/6 plans + 2 gap closures (100%)
+- 03-01: RequestDecomposer (66 tests)
+- 03-02: WorkPlanner (93 tests)
+- 03-03: AgentRouter (69 tests)
+- 03-04: ExternalAIFallback (111 tests)
+- 03-05: OrchestratorService & REST API (61 E2E tests)
+- 03-06: Integration Completion (gap closure)
+- 03-07: Quota Validation Fix (gap closure)
+
+**Total Roadmap Progress:** 22/40 plans complete (55%)
