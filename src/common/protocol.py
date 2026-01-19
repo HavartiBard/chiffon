@@ -162,6 +162,8 @@ class WorkResult(BaseModel):
     error_message: Optional[str] = Field(default=None, description="Error if status=failed")
     duration_ms: int = Field(description="Total work duration in milliseconds")
     agent_id: UUID = Field(description="Agent that executed the work")
+    trace_id: Optional[UUID] = Field(default=None, description="Trace ID for debugging (set by agent)")
+    request_id: Optional[UUID] = Field(default=None, description="Request ID for idempotency (set by agent)")
     resources_used: dict[str, Any] = Field(
         default_factory=dict,
         description="Resource consumption: {cpu_time_ms, memory_peak_mb, gpu_memory_used_mb}"

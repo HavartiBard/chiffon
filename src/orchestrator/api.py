@@ -1,0 +1,241 @@
+"""REST API endpoints for orchestrator operations.
+
+Provides:
+- POST /api/v1/dispatch: Submit work requests
+- GET /api/v1/status/{task_id}: Query task status
+- GET /api/v1/agents: List connected agents
+- POST /api/v1/cancel/{task_id}: Cancel in-flight tasks
+
+All responses use consistent JSON format with error codes for correlation.
+"""
+
+import logging
+from datetime import datetime
+from typing import Optional
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+
+from src.orchestrator.service import OrchestratorService
+
+logger = logging.getLogger(__name__)
+
+# Create router
+router = APIRouter(prefix="/api/v1", tags=["orchestration"])
+
+
+# Pydantic Models for REST API
+class DispatchRequest(BaseModel):
+    """Request to dispatch work to agents."""
+
+    task_id: UUID = Field(description="Task ID")
+    work_type: str = Field(description="Type of work (e.g., ansible, shell_script)")
+    parameters: dict = Field(default_factory=dict, description="Work parameters")
+    priority: int = Field(default=3, ge=1, le=5, description="Priority 1-5")
+
+
+class DispatchResponse(BaseModel):
+    """Response from work dispatch."""
+
+    trace_id: UUID = Field(description="Trace ID for correlation")
+    request_id: UUID = Field(description="Request ID for idempotency")
+    task_id: UUID = Field(description="Task ID")
+    status: str = Field(default="pending", description="Initial status")
+
+
+class TaskStatus(BaseModel):
+    """Task status response."""
+
+    task_id: UUID
+    status: str
+    progress: str = Field(default="", description="Human-readable progress")
+    output: str = Field(default="", description="Work output")
+    error_message: Optional[str] = None
+    exit_code: Optional[int] = None
+    duration_ms: Optional[int] = None
+    trace_id: Optional[UUID] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class Agent(BaseModel):
+    """Agent status response."""
+
+    agent_id: UUID
+    agent_type: str
+    status: str
+    resources: dict = Field(description="Resource metrics")
+    last_heartbeat_at: datetime
+
+
+class ErrorResponse(BaseModel):
+    """Standard error response."""
+
+    error_code: int = Field(ge=1000, le=9999, description="Error code")
+    error_message: str = Field(description="Error message")
+    trace_id: Optional[UUID] = None
+
+
+class CancelResponse(BaseModel):
+    """Response from cancel request."""
+
+    task_id: UUID
+    status: str = Field(default="cancelled")
+
+
+# Dependency injection for orchestrator service
+def get_orchestrator_service() -> OrchestratorService:
+    """Get orchestrator service from app state.
+
+    This is set by main.py during app startup.
+    Actual implementation is injected in main.py via app.dependency_overrides.
+    """
+    raise RuntimeError("Orchestrator service not initialized")
+
+
+@router.post("/dispatch", response_model=DispatchResponse)
+async def dispatch_work(
+    req: DispatchRequest,
+    service: OrchestratorService = Depends(get_orchestrator_service),
+) -> dict:
+    """Submit new work request for dispatch to agents.
+
+    Creates a task, publishes to RabbitMQ, returns trace/request IDs.
+
+    Args:
+        req: DispatchRequest with task_id, work_type, parameters, priority
+        service: Orchestrator service
+
+    Returns:
+        DispatchResponse with trace_id, request_id, task_id, status
+
+    Raises:
+        HTTPException: On validation or dispatch error
+    """
+    try:
+        # Validate priority
+        if not (1 <= req.priority <= 5):
+            logger.error(f"Invalid priority: {req.priority}")
+            raise ValueError("Priority must be 1-5")
+
+        # Dispatch work
+        result = await service.dispatch_work(
+            task_id=req.task_id,
+            work_type=req.work_type,
+            parameters=req.parameters,
+            priority=req.priority,
+        )
+
+        logger.info(
+            "Work dispatch successful",
+            extra={
+                "trace_id": result["trace_id"],
+                "task_id": result["task_id"],
+                "work_type": req.work_type,
+            },
+        )
+        return result
+
+    except ValueError as e:
+        error_msg = str(e)
+        logger.error(f"Validation error: {error_msg}")
+        raise HTTPException(status_code=400, detail=error_msg)
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Dispatch error: {error_msg}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal error: {error_msg}")
+
+
+@router.get("/status/{task_id}", response_model=TaskStatus)
+async def get_status(
+    task_id: UUID,
+    service: OrchestratorService = Depends(get_orchestrator_service),
+) -> dict:
+    """Query task status and progress.
+
+    Args:
+        task_id: Task to query
+        service: Orchestrator service
+
+    Returns:
+        TaskStatus with current state
+
+    Raises:
+        HTTPException: If task not found or query fails
+    """
+    try:
+        result = await service.get_task_status(task_id)
+        logger.info(f"Status query: {task_id} -> {result['status']}")
+        return result
+
+    except ValueError as e:
+        logger.warning(f"Task not found: {task_id}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Status query error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}")
+
+
+@router.get("/agents", response_model=list[Agent])
+async def list_agents(
+    agent_type: Optional[str] = None,
+    status: Optional[str] = None,
+    service: OrchestratorService = Depends(get_orchestrator_service),
+) -> list[dict]:
+    """List connected agents with resource status.
+
+    Args:
+        agent_type: Filter by agent type (optional)
+        status: Filter by status online/offline/busy (optional)
+        service: Orchestrator service
+
+    Returns:
+        List of Agent dicts
+
+    Raises:
+        HTTPException: On query error
+    """
+    try:
+        agents = await service.list_agents(agent_type=agent_type, status=status)
+        logger.info(f"Listed agents: {len(agents)} agents")
+        return agents
+
+    except Exception as e:
+        logger.error(f"Agent list error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}")
+
+
+@router.post("/cancel/{task_id}", response_model=CancelResponse)
+async def cancel_task(
+    task_id: UUID,
+    service: OrchestratorService = Depends(get_orchestrator_service),
+) -> dict:
+    """Cancel an in-flight task.
+
+    Args:
+        task_id: Task to cancel
+        service: Orchestrator service
+
+    Returns:
+        CancelResponse with task_id and status
+
+    Raises:
+        HTTPException: If task not found or cannot be cancelled
+    """
+    try:
+        result = await service.cancel_task(task_id)
+        logger.info(f"Task cancelled: {task_id}")
+        return result
+
+    except ValueError as e:
+        error_msg = str(e)
+        if "not found" in error_msg.lower():
+            logger.warning(f"Cancel: task not found: {task_id}")
+            raise HTTPException(status_code=404, detail=error_msg)
+        else:
+            logger.warning(f"Cancel: invalid state: {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+    except Exception as e:
+        logger.error(f"Cancel error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}")
