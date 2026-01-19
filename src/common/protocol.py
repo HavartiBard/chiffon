@@ -4,10 +4,10 @@ Defines JSON envelope format and message types for orchestrator <-> agent commun
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class MessageEnvelope(BaseModel):
@@ -16,6 +16,7 @@ class MessageEnvelope(BaseModel):
     model_config = ConfigDict(
         validate_by_name=True,
         use_enum_values=True,
+        arbitrary_types_allowed=False,
     )
 
     protocol_version: str = Field(default="1.0", description="Protocol version")
@@ -35,6 +36,12 @@ class MessageEnvelope(BaseModel):
         description="Message type",
         pattern="^(work_request|work_status|work_result|error)$",
     )
+    priority: int = Field(
+        default=3,
+        ge=1,
+        le=5,
+        description="Priority level 1-5 for RabbitMQ queue (1=critical, 5=background)"
+    )
     payload: dict[str, Any] = Field(description="Message payload (type-specific)")
     x_custom_fields: dict[str, Any] = Field(
         default_factory=dict, description="Custom fields for extensions"
@@ -49,6 +56,19 @@ class MessageEnvelope(BaseModel):
         if isinstance(v, str):
             return datetime.fromisoformat(v.replace("Z", "+00:00"))
         raise ValueError("Timestamp must be datetime or ISO 8601 string")
+
+    def to_json(self) -> str:
+        """Serialize to JSON string with ISO 8601 timestamps."""
+        return self.model_dump_json(
+            by_alias=False,
+            exclude_none=False,
+            indent=None,
+        )
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "MessageEnvelope":
+        """Deserialize from JSON string with validation."""
+        return cls.model_validate_json(json_str)
 
 
 class WorkRequest(BaseModel):
@@ -129,16 +149,50 @@ class WorkResult(BaseModel):
     model_config = ConfigDict(
         validate_by_name=True,
         use_enum_values=True,
+        arbitrary_types_allowed=False,
     )
 
-    task_id: UUID = Field(description="Task that completed")
+    task_id: UUID = Field(description="Task being reported on")
     status: str = Field(
         description="Completion status",
-        pattern="^(success|failed)$",
+        pattern="^(completed|failed|cancelled)$",
     )
-    exit_code: int = Field(description="Exit code (0=success, >0=failure)")
-    output: str = Field(default="", description="Final output/logs")
-    resources_used: ResourcesUsed = Field(description="Resources consumed")
+    exit_code: int = Field(description="Process exit code (0=success)")
+    output: str = Field(default="", description="Work output/stdout")
+    error_message: Optional[str] = Field(default=None, description="Error if status=failed")
+    duration_ms: int = Field(description="Total work duration in milliseconds")
+    agent_id: UUID = Field(description="Agent that executed the work")
+    resources_used: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Resource consumption: {cpu_time_ms, memory_peak_mb, gpu_memory_used_mb}"
+    )
+
+    @model_validator(mode="after")
+    def validate_status_and_error(self) -> "WorkResult":
+        """Ensure failed status has error_message."""
+        if self.status == "failed" and not self.error_message:
+            raise ValueError("error_message is required when status='failed'")
+        return self
+
+
+class StatusUpdate(BaseModel):
+    """Agent heartbeat status update."""
+
+    model_config = ConfigDict(
+        validate_by_name=True,
+        use_enum_values=True,
+        arbitrary_types_allowed=False,
+    )
+
+    agent_id: UUID = Field(description="Unique agent identifier")
+    agent_type: str = Field(pattern="^(orchestrator|infra|desktop|code|research)$")
+    status: str = Field(pattern="^(online|offline|busy)$")
+    current_task_id: Optional[UUID] = Field(default=None, description="Task currently being processed")
+    resources: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Resource metrics: cpu_percent, memory_percent, gpu_vram_available_gb, gpu_vram_total_gb"
+    )
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
 class ErrorMessage(BaseModel):
@@ -147,18 +201,20 @@ class ErrorMessage(BaseModel):
     model_config = ConfigDict(
         validate_by_name=True,
         use_enum_values=True,
+        arbitrary_types_allowed=False,
     )
 
-    error_code: int = Field(ge=5001, le=5999, description="Error code in range 5001-5999")
-    error_message: str = Field(description="Human-readable error message")
-    error_context: dict[str, Any] | None = Field(
-        default=None, description="Additional error context"
+    error_code: int = Field(ge=1000, le=9999, description="Numeric error code")
+    error_message: str = Field(description="Human-readable error description")
+    context: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional debugging context (original_message_id, affected_queue, etc)"
     )
 
     @field_validator("error_code")
     @classmethod
     def validate_error_code(cls, v: int) -> int:
         """Ensure error code is in valid range."""
-        if not (5001 <= v <= 5999):
-            raise ValueError("error_code must be between 5001 and 5999")
+        if not (1000 <= v <= 9999):
+            raise ValueError("error_code must be between 1000 and 9999")
         return v
