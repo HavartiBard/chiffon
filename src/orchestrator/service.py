@@ -260,7 +260,7 @@ class OrchestratorService:
                 raise RuntimeError("RabbitMQ channel not connected")
 
             # Use persistent delivery for high/critical priority (4-5)
-            # Use transient for lower priorities (1-3) for speed
+            # Use non-persistent for lower priorities (1-3) for speed
             is_persistent = priority >= 4
             message = aio_pika.Message(
                 body=envelope.to_json().encode(),
@@ -268,7 +268,7 @@ class OrchestratorService:
                 delivery_mode=(
                     aio_pika.DeliveryMode.PERSISTENT
                     if is_persistent
-                    else aio_pika.DeliveryMode.TRANSIENT
+                    else aio_pika.DeliveryMode.NOT_PERSISTENT
                 ),
             )
 
