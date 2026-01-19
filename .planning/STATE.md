@@ -57,21 +57,21 @@ System is validated when:
 |-------|--------|----------|
 | Phase 1: Foundation | ✓ Complete | 100% (5/5 plans) |
 | Phase 2: Message Bus | ✓ Complete | 100% (5/5 plans) |
-| Phase 3: Orchestrator Core | In Progress | 40% (2/5 plans) |
+| Phase 3: Orchestrator Core | In Progress | 60% (3/5 plans) |
 | Phase 4: Desktop Agent | Pending | 0% |
 | Phase 5: State & Audit | Pending | 0% |
 | Phase 6: Infrastructure Agent | Pending | 0% |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 16/40 plans complete (40%)
+**Overall Progress:** 17/40 plans complete (42.5%)
 
 ### Current Focus
 
 **Currently executing:** Phase 3: Orchestrator Core
-**Last completed:** 03-02-work-planner-PLAN.md (WorkPlanner service, WorkTask/WorkPlan models, 93 test cases all passing)
-**Verification:** Phase 3-02 goal achieved — 5/5 must-haves verified (task ordering with dependencies, resource-aware reordering, complexity assessment, human-readable summaries)
-**Next action:** Execute 03-03-agent-router-PLAN.md (route tasks to agents and implement intelligent scheduling)
+**Last completed:** 03-03-agent-router-PLAN.md (AgentRouter with intelligent routing, 69 tests passing)
+**Verification:** Phase 3-03 goal achieved — 5/5 must-haves verified (agent registry with capabilities, performance tracking, weighted scoring algorithm, routing decisions logged, all 69 tests passing)
+**Next action:** Execute 03-04-fallback-PLAN.md (implement Claude fallback logic for complex/offline scenarios)
 
 ---
 
@@ -202,40 +202,39 @@ None currently. All systems go.
 |------|------|--------|---------|---------|
 | 03-01 | Request Parser | Complete | RequestDecomposer service, DecomposedRequest models, 66 test cases | 5443ca7, 0399a17, 01d33b7 |
 | 03-02 | Work Planner | Complete | WorkPlanner service, WorkTask/WorkPlan models, resource-aware reordering, 93 test cases | 55d61b3, 6d3016f, 6c6abd1 |
+| 03-03 | Agent Router | Complete | AgentRouter with weighted scoring, AgentRegistry/Performance models, 69 tests, full audit trail | aae3a68, f4bb661, 15c3026, cf86d10 |
 
-**Phase 3 Progress:** 2/5 plans complete (40%)
+**Phase 3 Progress:** 3/5 plans complete (60%)
 
 ---
 
 ## Session Continuity
 
-### Last Session (2026-01-19 08:00 - 08:30)
+### Last Session (2026-01-19 17:26 - 18:10)
 
-**Completed:** 02-05-integration-PLAN.md (Message Bus Integration Testing)
+**Completed:** 03-03-agent-router-PLAN.md (Agent Router with Intelligent Routing)
 
 **What was done:**
-1. Created tests/test_e2e_message_bus.py (801 lines) with 21 test methods
-2. Organized tests into 7 test classes covering all message bus scenarios
-3. Implemented comprehensive test fixtures (rabbitmq_service, orchestrator_service, test_agent)
-4. Fixed production bug: Added test work types to OrchestratorService mapping
-5. Fixed production bug: Corrected DeliveryMode enum (NOT_PERSISTENT vs TRANSIENT)
-6. All 63 test cases passing across 3 async backends (asyncio, trio, curio)
+1. Added AgentRegistry, AgentPerformance, RoutingDecision ORM models to src/common/models.py (300 lines)
+2. Created Alembic migration (002_agent_registry.py) with agent_registry, agent_performance, routing_decisions tables
+3. Implemented AgentRouter class in src/orchestrator/router.py (402 lines) with intelligent routing algorithm
+4. Created comprehensive test suite in tests/test_agent_router.py (663 lines)
+5. Implemented weighted scoring algorithm: 40pts success rate + 30pts context + 20pts specialization + 10pts load
+6. All 69 tests passing across 3 async backends (asyncio, trio, curio)
 
 **What works now:**
-- Complete message bus topology verified end-to-end
-- RabbitMQ durable queues, priority routing, DLX routing all confirmed
-- Agent framework connection management tested
-- Orchestrator service dispatch/result handling tested
-- Idempotency cache infrastructure validated
-- Concurrent message processing verified
-- Error scenarios and failure modes tested
+- Agent registry stores capabilities, specializations, and online status
+- Performance tracking records success rates and execution history per work type
+- Routing algorithm scores agents by performance, context, specialization, and load
+- Agent selection based on weighted scoring (max 100 points)
+- Routing decisions fully logged to database for audit trail
+- Retry logic with max 3 retries, automatic fallback to different agents
+- Error handling: offline pools and missing capabilities detected early
 
-**Test results:** 63/63 passing (21 methods × 3 backends), ~24 second execution
+**Test results:** 69/69 passing (23 methods × 3 backends)
+**Coverage:** >90% of AgentRouter module
 
-**Phase 2 Status:** COMPLETE - All 5 plans done
-- Message bus fully operational and validated
-- All 14 plans in Phase 1 + Phase 2 complete
-- 35% of total roadmap complete (14/40 plans)
+**Phase 3 Status:** IN PROGRESS - 3/5 plans done (60%)
 
 ### Current Session (2026-01-19 14:32 - 15:17)
 
