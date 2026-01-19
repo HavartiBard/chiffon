@@ -126,6 +126,174 @@ class ExecutionLog(Base):
         )
 
 
+class AgentRegistry(Base):
+    """Agent registry model for tracking agent capabilities and status.
+
+    Tracks:
+    - Agent identity and type (infra, code, research, desktop)
+    - Capabilities (what work types this agent can perform)
+    - Specializations (expert areas like "config_specialist", "deployment_expert")
+    - Online status and last heartbeat
+    """
+
+    __tablename__ = "agent_registry"
+
+    # Primary key
+    agent_id = Column(UUID(as_uuid=True), primary_key=True)
+
+    # Agent identity
+    agent_type = Column(String(50), nullable=False)
+    # Values: infra|code|research|desktop
+
+    pool_name = Column(String(100), nullable=False)
+    # Pool identifier (e.g., "infra_pool_1", "code_pool_main")
+
+    # Capabilities and specializations
+    capabilities = Column(JSON, nullable=False)
+    # List of work types this agent can handle (e.g., ["deploy_service", "run_playbook"])
+
+    specializations = Column(JSON, nullable=True)
+    # Optional list of expertise areas (e.g., ["config_specialist", "deployment_expert"])
+
+    # Status tracking
+    status = Column(String(50), nullable=False, default="offline")
+    # Values: online|offline|busy
+
+    last_heartbeat_at = Column(DateTime, nullable=True)
+    # When agent last sent a heartbeat
+
+    # Timestamps
+    created_at = Column(DateTime, nullable=False, default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
+
+    # Relationships
+    performance_records = relationship(
+        "AgentPerformance",
+        back_populates="agent",
+        cascade="all, delete-orphan",
+    )
+    routing_decisions = relationship(
+        "RoutingDecision",
+        back_populates="selected_agent",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self):
+        return (
+            f"<AgentRegistry(agent_id={self.agent_id}, agent_type={self.agent_type}, "
+            f"pool_name={self.pool_name}, status={self.status})>"
+        )
+
+
+class AgentPerformance(Base):
+    """Agent performance tracking model for success rates and execution history.
+
+    Records:
+    - Success and failure counts per work type
+    - Execution duration metrics
+    - Difficulty assessments from agents
+    """
+
+    __tablename__ = "agent_performance"
+
+    # Primary key
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Foreign key to agent
+    agent_id = Column(UUID(as_uuid=True), ForeignKey("agent_registry.agent_id"), nullable=False)
+
+    # Work type being tracked
+    work_type = Column(String(100), nullable=False)
+    # e.g., "deploy_service", "run_playbook", "add_config"
+
+    # Success and failure tracking
+    success_count = Column(Integer, nullable=False, default=0)
+    failure_count = Column(Integer, nullable=False, default=0)
+
+    # Duration metrics
+    total_duration_ms = Column(Integer, nullable=False, default=0)
+    # Sum of all execution times for this work type on this agent
+
+    # Last execution
+    last_execution_at = Column(DateTime, nullable=True)
+
+    # Difficulty assessment from agent
+    difficulty_assessment = Column(String(50), nullable=True)
+    # Values: straightforward|tricky|failed
+
+    # Timestamps
+    created_at = Column(DateTime, nullable=False, default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
+
+    # Relationships
+    agent = relationship("AgentRegistry", back_populates="performance_records")
+
+    def __repr__(self):
+        return (
+            f"<AgentPerformance(agent_id={self.agent_id}, work_type={self.work_type}, "
+            f"success={self.success_count}, failures={self.failure_count})>"
+        )
+
+
+class RoutingDecision(Base):
+    """Routing decision audit trail for all agent routing decisions.
+
+    Records:
+    - Which agent was selected for a task
+    - Why (success rate, specialization match, context, load)
+    - Whether this was a retry attempt
+    - Full audit trail for post-mortem analysis
+    """
+
+    __tablename__ = "routing_decisions"
+
+    # Primary key
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Reference to task being routed
+    task_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+
+    # Work type being routed
+    work_type = Column(String(100), nullable=False)
+
+    # Agent pool and selection
+    agent_pool = Column(String(100), nullable=False)
+    # Pool name (e.g., "infra_pool_1")
+
+    selected_agent_id = Column(UUID(as_uuid=True), ForeignKey("agent_registry.agent_id"), nullable=True)
+
+    # Scoring factors
+    success_rate_percent = Column(Integer, nullable=True)
+    # Agent's success rate at this work type (0-100)
+
+    specialization_match = Column(Integer, nullable=False, default=0)
+    # Boolean (0 or 1): agent has specialization for this work type
+
+    recent_context_match = Column(Integer, nullable=False, default=0)
+    # Boolean (0 or 1): agent recently executed similar work
+
+    # Retry tracking
+    retried = Column(Integer, nullable=False, default=0)
+    # Boolean (0 or 1): whether this was a retry attempt
+
+    # Selection explanation
+    reason = Column(String, nullable=True)
+    # Human-readable explanation of why this agent was selected
+
+    # Timestamp
+    created_at = Column(DateTime, nullable=False, default=func.now(), index=True)
+
+    # Relationships
+    selected_agent = relationship("AgentRegistry", back_populates="routing_decisions")
+
+    def __repr__(self):
+        return (
+            f"<RoutingDecision(id={self.id}, task_id={self.task_id}, "
+            f"work_type={self.work_type}, agent_id={self.selected_agent_id}, "
+            f"created_at={self.created_at})>"
+        )
+
+
 # Pydantic models for request parsing and decomposition
 from datetime import datetime
 from pydantic import BaseModel, Field
