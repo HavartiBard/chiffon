@@ -30,9 +30,7 @@ class MessageEnvelope(BaseModel):
     )
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="ISO 8601 timestamp")
     trace_id: UUID = Field(default_factory=uuid4, description="Trace ID for debugging")
-    request_id: UUID = Field(
-        default_factory=uuid4, description="Request ID for idempotency"
-    )
+    request_id: UUID = Field(default_factory=uuid4, description="Request ID for idempotency")
     type: str = Field(
         description="Message type",
         pattern="^(work_request|work_status|work_result|error)$",
@@ -100,9 +98,7 @@ class WorkStatus(BaseModel):
         description="Work status",
         pattern="^(running|step_completed|paused)$",
     )
-    progress_percent: int = Field(
-        ge=0, le=100, description="Progress as percentage 0-100"
-    )
+    progress_percent: int = Field(ge=0, le=100, description="Progress as percentage 0-100")
     step: Step = Field(description="Current step information")
 
     @field_validator("progress_percent")
@@ -153,9 +149,7 @@ class ErrorMessage(BaseModel):
         use_enum_values=True,
     )
 
-    error_code: int = Field(
-        ge=5001, le=5999, description="Error code in range 5001-5999"
-    )
+    error_code: int = Field(ge=5001, le=5999, description="Error code in range 5001-5999")
     error_message: str = Field(description="Human-readable error message")
     error_context: dict[str, Any] | None = Field(
         default=None, description="Additional error context"
