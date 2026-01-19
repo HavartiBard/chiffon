@@ -16,7 +16,7 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 |-------|------|--------------|-------|------------------|
 | 1 - Foundation | Project infrastructure, observability stack ready | STATE-01, STATE-02, MSG-04 | 5 | 5 |
 | 2 - Message Bus | RabbitMQ and agent communication protocol deployed | MSG-01, MSG-02, MSG-03, MSG-04 | 5/5 ✓ | 5/5 ✓ |
-| 3 - Orchestrator Core | Orchestrator accepts requests, plans work, dispatches to agents | ORCH-01, ORCH-02, ORCH-05 | (planned) | 5 |
+| 3 - Orchestrator Core | Orchestrator accepts requests, plans work, dispatches to agents | ORCH-01, ORCH-02, ORCH-05 | 5/5 ✓ | 5/5 ✓ |
 | 4 - Desktop Agent | Agents report resource availability in real-time | DESK-01, DESK-02, DESK-03, DESK-04 | (planned) | 5 |
 | 5 - State & Audit | Execution tracked in PostgreSQL, audit trail committed to git | STATE-03, STATE-04, ORCH-03, ORCH-04 | (planned) | 5 |
 | 6 - Infrastructure Agent | Ansible integration, playbook execution, improvement suggestions | INFRA-01, INFRA-02, INFRA-03, INFRA-04 | (planned) | 5 |
@@ -101,6 +101,15 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 ### Phase 3: Orchestrator Core
 
 **Goal:** Orchestrator service accepts natural language requests, structures them into work plans, routes to agents based on resource availability and capability. Can fall back to external AI when needed.
+
+**Status:** ✓ PLANNED (5/5 plans created, ready for execution)
+
+**Plans:**
+- [ ] 03-01-PLAN.md — Request Parser & Intent Decomposer (NLU, auto-decompose requests into subtasks)
+- [ ] 03-02-PLAN.md — Work Plan Generation & Validation (sequential task lists, resource requirements, reordering)
+- [ ] 03-03-PLAN.md — Agent Routing & Registry (pool-based assignment, performance tracking, scoring)
+- [ ] 03-04-PLAN.md — External AI Fallback Integration (quota checks, complexity assessment, Claude fallback)
+- [ ] 03-05-PLAN.md — Orchestrator Service Integration & E2E Tests (REST API, approval workflow, full workflow tests)
 
 **Dependencies:** Phase 1 (state layer), Phase 2 (message bus)
 
@@ -269,37 +278,37 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 
 ### Requirement → Phase Mapping
 
-| Requirement | Phase | Category |
-|-------------|-------|----------|
-| STATE-01 | Phase 1, 5 | State & Audit |
-| STATE-02 | Phase 1 | State & Audit |
-| STATE-03 | Phase 5 | State & Audit |
-| STATE-04 | Phase 5 | State & Audit |
-| MSG-01 | Phase 2 | Message Bus |
-| MSG-02 | Phase 2 | Message Bus |
-| MSG-03 | Phase 2 | Message Bus |
-| MSG-04 | Phase 1, 2 | Message Bus |
-| ORCH-01 | Phase 3 | Orchestrator |
-| ORCH-02 | Phase 3 | Orchestrator |
-| ORCH-03 | Phase 5 | Orchestrator |
-| ORCH-04 | Phase 5 | Orchestrator |
-| ORCH-05 | Phase 3 | Orchestrator |
-| DESK-01 | Phase 4 | Desktop Agent |
-| DESK-02 | Phase 4 | Desktop Agent |
-| DESK-03 | Phase 4 | Desktop Agent |
-| DESK-04 | Phase 4 | Orchestrator |
-| INFRA-01 | Phase 6 | Infrastructure Agent |
-| INFRA-02 | Phase 6 | Infrastructure Agent |
-| INFRA-03 | Phase 6 | Infrastructure Agent |
-| INFRA-04 | Phase 6 | Infrastructure Agent |
-| UI-01 | Phase 7 | User Interface |
-| UI-02 | Phase 7 | User Interface |
-| UI-03 | Phase 7 | User Interface |
-| UI-04 | Phase 7 | User Interface |
-| E2E-01 | Phase 8 | Integration |
-| E2E-02 | Phase 8 | Integration |
-| E2E-03 | Phase 8 | Integration |
-| E2E-04 | Phase 8 | Integration |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| STATE-01 | Phase 1, 5 | Phase 1: Complete, Phase 5: Pending |
+| STATE-02 | Phase 1 | Complete |
+| STATE-03 | Phase 5 | Pending |
+| STATE-04 | Phase 5 | Pending |
+| MSG-01 | Phase 2 | Complete |
+| MSG-02 | Phase 2 | Complete |
+| MSG-03 | Phase 2 | Complete |
+| MSG-04 | Phase 1, 2 | Complete |
+| ORCH-01 | Phase 3 | Planned |
+| ORCH-02 | Phase 3 | Planned |
+| ORCH-03 | Phase 5 | Pending |
+| ORCH-04 | Phase 5 | Pending |
+| ORCH-05 | Phase 3 | Planned |
+| DESK-01 | Phase 4 | Pending |
+| DESK-02 | Phase 4 | Pending |
+| DESK-03 | Phase 4 | Pending |
+| DESK-04 | Phase 4 | Pending |
+| INFRA-01 | Phase 6 | Pending |
+| INFRA-02 | Phase 6 | Pending |
+| INFRA-03 | Phase 6 | Pending |
+| INFRA-04 | Phase 6 | Pending |
+| UI-01 | Phase 7 | Pending |
+| UI-02 | Phase 7 | Pending |
+| UI-03 | Phase 7 | Pending |
+| UI-04 | Phase 7 | Pending |
+| E2E-01 | Phase 8 | Pending |
+| E2E-02 | Phase 8 | Pending |
+| E2E-03 | Phase 8 | Pending |
+| E2E-04 | Phase 8 | Pending |
 
 ---
 
@@ -341,7 +350,7 @@ Each phase has observable completion criteria. Phase 8 success means:
 
 ---
 
-**Roadmap Version:** 1.1
+**Roadmap Version:** 1.2
 **Created:** 2026-01-18
-**Plans Created:** 2026-01-19 (Phase 1: 5 plans completed; Phase 2: 5 plans planned)
-**Next Step:** Execute Phase 2 via `/gsd:execute-phase 2`
+**Last Updated:** 2026-01-19 (Phase 3: 5 plans created)
+**Current Status:** 19/40 plans complete (47.5%) — Phase 3 ready for execution
