@@ -26,6 +26,67 @@ router = APIRouter(prefix="/api/v1", tags=["orchestration"])
 
 
 # Pydantic Models for REST API
+class RequestSubmissionRequest(BaseModel):
+    """Request to submit a natural language request."""
+
+    request: str = Field(description="Natural language request")
+    user_id: str = Field(description="User ID")
+
+
+class RequestSubmissionResponse(BaseModel):
+    """Response from request submission."""
+
+    request_id: str = Field(description="Unique request ID")
+    status: str = Field(description="Status: parsing_complete|requires_clarification|parsing_failed")
+    decomposed_request: Optional[dict] = Field(default=None, description="Decomposed request if successful")
+    ambiguities: Optional[list] = Field(default=None, description="Ambiguities found")
+    out_of_scope: Optional[list] = Field(default=None, description="Out-of-scope items")
+    error: Optional[str] = Field(default=None, description="Error message if failed")
+
+
+class PlanGenerationResponse(BaseModel):
+    """Response from plan generation."""
+
+    plan_id: str = Field(description="Unique plan ID")
+    request_id: str = Field(description="Request ID this plan is for")
+    status: str = Field(description="Status: pending_approval|planning_failed")
+    tasks: list = Field(default_factory=list, description="Tasks in plan")
+    human_readable_summary: str = Field(description="Human-readable plan summary")
+    complexity_level: str = Field(description="simple|medium|complex")
+    will_use_external_ai: bool = Field(description="Whether Claude will be used")
+    error: Optional[str] = Field(default=None, description="Error if planning failed")
+
+
+class ApprovalRequest(BaseModel):
+    """Request to approve or reject a plan."""
+
+    approved: bool = Field(description="True to approve, False to reject")
+    user_id: str = Field(description="User approving")
+    notes: Optional[str] = Field(default=None, description="Optional approval notes")
+
+
+class ApprovalResponse(BaseModel):
+    """Response from plan approval."""
+
+    plan_id: str = Field(description="Plan ID")
+    status: str = Field(description="approved|rejected")
+    dispatch_started: Optional[bool] = Field(default=None, description="True if dispatch started")
+    error: Optional[str] = Field(default=None, description="Error if approval failed")
+
+
+class PlanStatusResponse(BaseModel):
+    """Response from plan status query."""
+
+    plan_id: str = Field(description="Plan ID")
+    request_id: str = Field(description="Request ID")
+    status: str = Field(description="pending|approved|executing|completed|failed")
+    complexity_level: str = Field(description="Plan complexity")
+    will_use_external_ai: bool = Field(description="Whether Claude is/was used")
+    tasks: list = Field(description="Task list")
+    created_at: Optional[str] = Field(default=None, description="Created timestamp")
+    approved_at: Optional[str] = Field(default=None, description="Approved timestamp")
+
+
 class DispatchRequest(BaseModel):
     """Request to dispatch work to agents."""
 

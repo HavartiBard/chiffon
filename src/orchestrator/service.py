@@ -19,13 +19,23 @@ import aio_pika
 from sqlalchemy.orm import Session
 
 from src.common.config import Config
-from src.common.models import Task
+from src.common.models import (
+    Task,
+    DecomposedRequest,
+    WorkPlan,
+    FallbackDecision,
+)
 from src.common.protocol import (
     MessageEnvelope,
     WorkRequest,
     WorkResult,
 )
 from src.common.rabbitmq import declare_queues, get_connection_string
+from src.orchestrator.nlu import RequestDecomposer
+from src.orchestrator.planner import WorkPlanner
+from src.orchestrator.router import AgentRouter
+from src.orchestrator.fallback import ExternalAIFallback
+from src.common.litellm_client import LiteLLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -106,12 +116,18 @@ class OrchestratorService:
     - Canceling in-flight tasks
     """
 
-    def __init__(self, config: Config, db_session: Session):
+    def __init__(
+        self,
+        config: Config,
+        db_session: Session,
+        litellm_client: Optional[LiteLLMClient] = None,
+    ):
         """Initialize orchestrator service.
 
         Args:
             config: Configuration object
             db_session: SQLAlchemy session for database operations
+            litellm_client: Optional LiteLLMClient for request decomposition and fallback
         """
         self.config = config
         self.db = db_session
@@ -120,6 +136,16 @@ class OrchestratorService:
         self.request_cache = RequestCache(ttl_seconds=300)  # 5-minute cache
         self.logger = logging.getLogger("orchestrator.service")
         self.ws_manager: Optional[object] = None  # Set by main.py for WebSocket broadcasting
+
+        # Initialize orchestration components (Phase 3 modules)
+        self.litellm = litellm_client
+        self.decomposer: Optional[RequestDecomposer] = None
+        self.planner: Optional[WorkPlanner] = None
+        self.router: Optional[AgentRouter] = None
+        self.fallback: Optional[ExternalAIFallback] = None
+
+        # Store for request → plan mappings (request_id → plan)
+        self._request_plans: dict[str, WorkPlan] = {}  # Simple in-memory store, would use DB in production
 
     async def connect(self) -> None:
         """Initialize RabbitMQ connection and declare queue topology.
@@ -515,3 +541,313 @@ class OrchestratorService:
                 extra={"trace_id": str(trace_id), "task_id": str(work_result.task_id)},
                 exc_info=True,
             )
+
+    # ==================== Phase 3: Orchestration Workflow ====================
+
+    async def submit_request(self, request_text: str, user_id: str) -> dict:
+        """Submit a natural language request for orchestration.
+
+        Args:
+            request_text: User's natural language request
+            user_id: User ID submitting the request
+
+        Returns:
+            dict with request_id, status, and decomposed_request if successful
+
+        Raises:
+            ValueError: If request is invalid
+        """
+        try:
+            # Validate request
+            if not request_text or not isinstance(request_text, str):
+                raise ValueError("Request cannot be empty")
+            if len(request_text) > 10000:
+                raise ValueError("Request too long (max 10000 chars)")
+
+            # Generate request ID
+            request_id = str(uuid4())
+            self.logger.info(f"Submitting request {request_id}: {request_text[:100]}...")
+
+            # Create task record
+            try:
+                task = Task(
+                    task_id=uuid4(),
+                    request_text=request_text,
+                    status="pending",
+                    created_by=user_id,
+                )
+                self.db.add(task)
+                self.db.commit()
+            except Exception as db_err:
+                self.logger.warning(f"Failed to store request in DB: {db_err}")
+                self.db.rollback()
+
+            # Decompose request
+            if not self.decomposer:
+                raise ValueError("RequestDecomposer not initialized")
+
+            try:
+                decomposed = await self.decomposer.decompose(request_text)
+                self.logger.info(
+                    f"Decomposed request {request_id} into {len(decomposed.subtasks)} subtasks"
+                )
+
+                # Check for ambiguities/out-of-scope
+                if decomposed.ambiguities or decomposed.out_of_scope:
+                    return {
+                        "request_id": request_id,
+                        "status": "requires_clarification",
+                        "ambiguities": decomposed.ambiguities,
+                        "out_of_scope": decomposed.out_of_scope,
+                    }
+
+                return {
+                    "request_id": request_id,
+                    "status": "parsing_complete",
+                    "decomposed_request": decomposed.model_dump(),
+                }
+
+            except Exception as decomp_err:
+                self.logger.error(f"Decomposition failed: {decomp_err}")
+                return {
+                    "request_id": request_id,
+                    "status": "parsing_failed",
+                    "error": str(decomp_err),
+                }
+
+        except ValueError as e:
+            self.logger.error(f"Invalid request: {e}")
+            raise
+
+    async def generate_plan(self, request_id: str) -> dict:
+        """Generate an execution plan from a submitted request.
+
+        Args:
+            request_id: ID of a previously submitted request
+
+        Returns:
+            dict with plan_id, tasks, summary, status
+
+        Raises:
+            ValueError: If request not found or plan generation fails
+        """
+        try:
+            self.logger.info(f"Generating plan for request {request_id}")
+
+            if not self.planner:
+                raise ValueError("WorkPlanner not initialized")
+
+            # Get available resources (simplified - would query agent pool)
+            available_resources = {"gpu_vram_mb": 8192, "cpu_cores": 16}
+
+            # Generate plan
+            try:
+                # For now, create a basic plan structure
+                # In production, would retrieve decomposed request from DB/cache
+                plan_id = str(uuid4())
+                plan = WorkPlan(
+                    plan_id=plan_id,
+                    request_id=request_id,
+                    tasks=[],
+                    estimated_duration_seconds=300,
+                    complexity_level="simple",
+                    will_use_external_ai=False,
+                    human_readable_summary="Plan generated and ready for approval",
+                )
+
+                # Store plan mapping
+                self._request_plans[request_id] = plan
+
+                # Check fallback decision
+                if self.fallback:
+                    try:
+                        fallback_decision, use_claude = await self.fallback.should_use_external_ai(plan)
+                        plan.will_use_external_ai = use_claude
+                        self.logger.info(f"Fallback decision: {fallback_decision.decision}")
+                    except Exception as fallback_err:
+                        self.logger.warning(f"Fallback check failed: {fallback_err}")
+
+                return {
+                    "plan_id": plan_id,
+                    "request_id": request_id,
+                    "tasks": [t.model_dump() for t in plan.tasks],
+                    "human_readable_summary": plan.human_readable_summary,
+                    "complexity_level": plan.complexity_level,
+                    "will_use_external_ai": plan.will_use_external_ai,
+                    "status": "pending_approval",
+                }
+
+            except Exception as plan_err:
+                self.logger.error(f"Plan generation failed: {plan_err}")
+                return {"status": "planning_failed", "error": str(plan_err)}
+
+        except ValueError as e:
+            self.logger.error(f"Invalid request: {e}")
+            raise
+
+    async def approve_plan(self, plan_id: str, approved: bool = True) -> dict:
+        """Approve or reject a generated plan.
+
+        Args:
+            plan_id: ID of plan to approve
+            approved: True to approve, False to reject
+
+        Returns:
+            dict with plan_id, status, and dispatch_started if approved
+
+        Raises:
+            ValueError: If plan not found
+        """
+        try:
+            self.logger.info(f"Approving plan {plan_id}: approved={approved}")
+
+            # Find plan in mapping
+            plan = None
+            for request_id, p in self._request_plans.items():
+                if p.plan_id == plan_id:
+                    plan = p
+                    break
+
+            if not plan:
+                raise ValueError(f"Plan not found: {plan_id}")
+
+            if approved:
+                plan.status = "approved"
+                plan.approved_at = datetime.utcnow()
+                self.logger.info(f"Plan {plan_id} approved at {plan.approved_at}")
+
+                # Begin dispatch
+                dispatch_result = await self.dispatch_plan(plan_id)
+                return {
+                    "plan_id": plan_id,
+                    "status": "approved",
+                    "dispatch_started": True,
+                    "dispatch_result": dispatch_result,
+                }
+            else:
+                plan.status = "rejected"
+                self.logger.info(f"Plan {plan_id} rejected")
+                return {"plan_id": plan_id, "status": "rejected"}
+
+        except ValueError as e:
+            self.logger.error(f"Invalid plan: {e}")
+            raise
+
+    async def dispatch_plan(self, plan_id: str) -> dict:
+        """Dispatch an approved plan to agents via routing.
+
+        Args:
+            plan_id: ID of plan to dispatch
+
+        Returns:
+            dict with plan_id, status, dispatched_tasks
+
+        Raises:
+            ValueError: If plan not found
+        """
+        try:
+            self.logger.info(f"Dispatching plan {plan_id}")
+
+            # Find plan
+            plan = None
+            for request_id, p in self._request_plans.items():
+                if p.plan_id == plan_id:
+                    plan = p
+                    break
+
+            if not plan:
+                raise ValueError(f"Plan not found: {plan_id}")
+
+            dispatched_tasks = []
+
+            # Dispatch each task (simplified - would use router in full implementation)
+            for task in plan.tasks:
+                try:
+                    # In full implementation, would use router.dispatch_with_retry()
+                    task_id = uuid4()
+                    dispatch_result = await self.dispatch_work(
+                        task_id=task_id,
+                        work_type=task.work_type,
+                        parameters=task.parameters,
+                        priority=3,
+                    )
+                    dispatched_tasks.append(dispatch_result)
+                    self.logger.info(f"Dispatched task {task.name} (task_id={task_id})")
+                except Exception as task_err:
+                    self.logger.error(f"Failed to dispatch task {task.name}: {task_err}")
+                    dispatched_tasks.append({"name": task.name, "error": str(task_err)})
+
+            plan.status = "executing"
+            self.logger.info(f"Plan {plan_id} now executing ({len(dispatched_tasks)} tasks dispatched)")
+
+            return {
+                "plan_id": plan_id,
+                "status": "executing",
+                "dispatched_tasks": dispatched_tasks,
+            }
+
+        except ValueError as e:
+            self.logger.error(f"Invalid plan: {e}")
+            raise
+
+    async def get_plan_status(self, plan_id: str) -> dict:
+        """Get execution status of a dispatched plan.
+
+        Args:
+            plan_id: ID of plan to query
+
+        Returns:
+            dict with plan status and task summaries
+
+        Raises:
+            ValueError: If plan not found
+        """
+        try:
+            # Find plan
+            plan = None
+            for request_id, p in self._request_plans.items():
+                if p.plan_id == plan_id:
+                    plan = p
+                    break
+
+            if not plan:
+                raise ValueError(f"Plan not found: {plan_id}")
+
+            # Summarize execution progress
+            return {
+                "plan_id": plan_id,
+                "request_id": plan.request_id,
+                "status": plan.status,
+                "tasks": [{"order": t.order, "name": t.name, "work_type": t.work_type} for t in plan.tasks],
+                "complexity_level": plan.complexity_level,
+                "will_use_external_ai": plan.will_use_external_ai,
+                "created_at": plan.created_at.isoformat() if plan.created_at else None,
+                "approved_at": plan.approved_at.isoformat() if plan.approved_at else None,
+            }
+
+        except ValueError as e:
+            self.logger.error(f"Invalid plan: {e}")
+            raise
+
+    def initialize_components(
+        self,
+        decomposer: Optional[RequestDecomposer] = None,
+        planner: Optional[WorkPlanner] = None,
+        router: Optional[AgentRouter] = None,
+        fallback: Optional[ExternalAIFallback] = None,
+    ) -> None:
+        """Initialize orchestration components.
+
+        Called during service setup to inject dependencies.
+
+        Args:
+            decomposer: RequestDecomposer instance
+            planner: WorkPlanner instance
+            router: AgentRouter instance
+            fallback: ExternalAIFallback instance
+        """
+        self.decomposer = decomposer
+        self.planner = planner
+        self.router = router
+        self.fallback = fallback
+        self.logger.info("Orchestration components initialized")
