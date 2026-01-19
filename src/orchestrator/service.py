@@ -182,6 +182,11 @@ class OrchestratorService:
             "code_gen": "code",
             "code_review": "code",
             "research": "research",
+            # Test work types for integration testing
+            "test": "infra",
+            "echo": "infra",
+            "slow_echo": "infra",
+            "fail": "infra",
         }
 
         if work_type in mapping:
