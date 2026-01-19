@@ -300,3 +300,134 @@ async def cancel_task(
     except Exception as e:
         logger.error(f"Cancel error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal error: {e}")
+
+
+# ==================== Phase 3: Orchestration Workflow ====================
+
+
+@router.post("/request", response_model=dict)
+async def submit_request(
+    req: RequestSubmissionRequest,
+    service: OrchestratorService = Depends(get_orchestrator_service),
+) -> dict:
+    """Submit a natural language request to the orchestrator.
+
+    Request body:
+        - request (str): Natural language request
+        - user_id (str): User submitting the request
+
+    Returns:
+        - request_id: Unique request identifier
+        - status: parsing_complete|requires_clarification|parsing_failed
+        - decomposed_request (optional): If parsing succeeded
+        - ambiguities (optional): If clarification needed
+        - out_of_scope (optional): If items out of scope
+        - error (optional): If parsing failed
+    """
+    try:
+        result = await service.submit_request(req.request, req.user_id)
+        logger.info(f"Request submitted: {result.get('request_id')}")
+        return result
+
+    except ValueError as e:
+        logger.error(f"Invalid request: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Request submission failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}")
+
+
+@router.get("/plan/{request_id}", response_model=dict)
+async def get_plan(
+    request_id: str,
+    service: OrchestratorService = Depends(get_orchestrator_service),
+) -> dict:
+    """Generate a plan for a submitted request.
+
+    Args:
+        request_id: ID of previously submitted request
+
+    Returns:
+        - plan_id: Unique plan identifier
+        - request_id: Request this plan is for
+        - tasks: List of tasks in plan
+        - human_readable_summary: Summary for user review
+        - complexity_level: simple|medium|complex
+        - will_use_external_ai: Whether Claude will be used
+        - status: pending_approval|planning_failed
+    """
+    try:
+        result = await service.generate_plan(request_id)
+        logger.info(f"Plan generated: {result.get('plan_id')}")
+        return result
+
+    except ValueError as e:
+        logger.error(f"Plan not found: {e}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Plan generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}")
+
+
+@router.post("/plan/{plan_id}/approve", response_model=dict)
+async def approve_plan(
+    plan_id: str,
+    req: ApprovalRequest,
+    service: OrchestratorService = Depends(get_orchestrator_service),
+) -> dict:
+    """Approve or reject a generated plan.
+
+    Args:
+        plan_id: ID of plan to approve/reject
+        req: ApprovalRequest with approved flag and user_id
+
+    Returns:
+        - plan_id: Plan ID
+        - status: approved|rejected
+        - dispatch_started (optional): True if dispatch started
+        - error (optional): Error message if failed
+    """
+    try:
+        result = await service.approve_plan(plan_id, req.approved)
+        logger.info(f"Plan approval result: {plan_id} -> {result.get('status')}")
+        return result
+
+    except ValueError as e:
+        logger.error(f"Invalid plan: {e}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Plan approval failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}")
+
+
+@router.get("/plan/{plan_id}/status", response_model=dict)
+async def get_plan_status(
+    plan_id: str,
+    service: OrchestratorService = Depends(get_orchestrator_service),
+) -> dict:
+    """Get execution status of a plan.
+
+    Args:
+        plan_id: ID of plan to query
+
+    Returns:
+        - plan_id: Plan ID
+        - request_id: Request ID
+        - status: pending|approved|executing|completed|failed
+        - complexity_level: Plan complexity
+        - will_use_external_ai: Whether Claude is/was used
+        - tasks: List of tasks
+        - created_at: Creation timestamp
+        - approved_at: Approval timestamp
+    """
+    try:
+        result = await service.get_plan_status(plan_id)
+        logger.info(f"Plan status: {plan_id} -> {result.get('status')}")
+        return result
+
+    except ValueError as e:
+        logger.error(f"Plan not found: {e}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Status query failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}")
