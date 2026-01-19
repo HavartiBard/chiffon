@@ -15,7 +15,7 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 | Phase | Goal | Requirements | Plans | Success Criteria |
 |-------|------|--------------|-------|------------------|
 | 1 - Foundation | Project infrastructure, observability stack ready | STATE-01, STATE-02, MSG-04 | 5 | 5 |
-| 2 - Message Bus | RabbitMQ and agent communication protocol deployed | MSG-01, MSG-02, MSG-03, MSG-04 | (planned) | 5 |
+| 2 - Message Bus | RabbitMQ and agent communication protocol deployed | MSG-01, MSG-02, MSG-03, MSG-04 | 5 | 5 |
 | 3 - Orchestrator Core | Orchestrator accepts requests, plans work, dispatches to agents | ORCH-01, ORCH-02, ORCH-05 | (planned) | 5 |
 | 4 - Desktop Agent | Agents report resource availability in real-time | DESK-01, DESK-02, DESK-03, DESK-04 | (planned) | 5 |
 | 5 - State & Audit | Execution tracked in PostgreSQL, audit trail committed to git | STATE-03, STATE-04, ORCH-03, ORCH-04 | (planned) | 5 |
@@ -65,6 +65,15 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 ### Phase 2: Message Bus & Agent Communication
 
 **Goal:** RabbitMQ deployed, agent communication protocol implemented and tested. Agents can exchange messages with orchestrator.
+
+**Status:** 🔄 PLANNING (5 plans to execute)
+
+**Plans:**
+- [ ] 02-01-PLAN.md — RabbitMQ deployment, queue topology, management UI verification
+- [ ] 02-02-PLAN.md — Protocol completion (all message types), comprehensive tests (40+ tests)
+- [ ] 02-03-PLAN.md — Agent framework base class, heartbeat loop, test agent
+- [ ] 02-04-PLAN.md — Orchestrator REST API (/dispatch, /status, /agents, /cancel)
+- [ ] 02-05-PLAN.md — End-to-end integration tests, error scenarios, persistence validation
 
 **Dependencies:** Phase 1 (foundation established)
 
@@ -332,7 +341,7 @@ Each phase has observable completion criteria. Phase 8 success means:
 
 ---
 
-**Roadmap Version:** 1.0
+**Roadmap Version:** 1.1
 **Created:** 2026-01-18
-**Plans Created:** 2026-01-19 (Phase 1: 5 plans in 3 waves)
-**Next Step:** Execute Phase 1 via `/gsd:execute-phase 1`
+**Plans Created:** 2026-01-19 (Phase 1: 5 plans completed; Phase 2: 5 plans planned)
+**Next Step:** Execute Phase 2 via `/gsd:execute-phase 2`
