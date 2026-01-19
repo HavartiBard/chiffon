@@ -7,7 +7,7 @@ Provides:
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -249,7 +249,7 @@ class AgentRouter:
         Returns:
             True if agent executed this work type in the time window
         """
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
         recent = (
             self.db.query(RoutingDecision)
             .filter(
@@ -273,7 +273,7 @@ class AgentRouter:
         Returns:
             Load estimate 0-10
         """
-        cutoff_time = datetime.utcnow() - timedelta(hours=1)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=1)
         count = (
             self.db.query(RoutingDecision)
             .filter(
