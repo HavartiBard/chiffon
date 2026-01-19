@@ -1,0 +1,111 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: agent-deploy-postgres
+    environment:
+      POSTGRES_USER: agent
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: agent_deploy
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agent -d agent_deploy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chiffon
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: agent-deploy-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chiffon
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: agent-deploy-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - chiffon
+
+  litellm:
+    build:
+      context: .
+      dockerfile: Dockerfile.litellm
+    container_name: agent-deploy-litellm
+    ports:
+      - "8001:8000"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-dev-key}
+    volumes:
+      - ./config/litellm-config.json:/app/config.json
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - chiffon
+    depends_on:
+      - ollama
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agent-deploy-orchestrator
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://agent:password@postgres:5432/agent_deploy
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-dev-key}
+      LITELLM_URL: http://litellm:8000
+      OLLAMA_BASE_URL: http://ollama:11434
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      litellm:
+        condition: service_healthy
+    networks:
+      - chiffon
+    volumes:
+      - ./src:/app/src
+
+volumes:
+  ollama_data:
+
+networks:
+  chiffon:
+    driver: bridge
