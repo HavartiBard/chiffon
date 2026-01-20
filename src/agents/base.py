@@ -269,20 +269,60 @@ class BaseAgent(ABC):
         except Exception as e:
             self.logger.error(f"Error sending heartbeat: {e}", exc_info=True)
 
+    async def _connect_with_backoff(self, max_retries: int = 10) -> None:
+        """Reconnect to RabbitMQ with exponential backoff.
+
+        Args:
+            max_retries: Maximum number of reconnection attempts
+
+        Raises:
+            Exception: If all reconnection attempts fail
+        """
+        backoff_seconds = 1
+        for attempt in range(max_retries):
+            try:
+                self.logger.info(f"Reconnection attempt {attempt + 1}/{max_retries}")
+                await self.connect()
+                self.logger.info("Reconnected successfully")
+                return
+            except aio_pika.exceptions.AMQPConnectionError as e:
+                if attempt < max_retries - 1:
+                    self.logger.warning(f"Attempt {attempt + 1} failed, retrying in {backoff_seconds}s: {e}")
+                    await asyncio.sleep(backoff_seconds)
+                    backoff_seconds = min(backoff_seconds * 2, 60)  # Cap at 60s
+                else:
+                    self.logger.error(f"All {max_retries} reconnection attempts failed")
+                    raise
+
     async def start_heartbeat_loop(self) -> None:
-        """Background task that sends heartbeats every 60 seconds.
+        """Background task that sends heartbeats at config-driven interval.
+
+        Reads heartbeat_interval_seconds from config. Implements exponential
+        backoff reconnection logic for RabbitMQ disconnections.
 
         Runs indefinitely until agent stops. Exceptions are caught and logged
         to prevent the heartbeat loop from crashing the agent.
         """
-        try:
-            while True:
-                await asyncio.sleep(60)
+        interval = self.config.heartbeat_interval_seconds
+        self.logger.info(f"Starting heartbeat loop, interval={interval}s")
+
+        while True:
+            try:
+                await asyncio.sleep(interval)
                 await self.send_heartbeat()
-        except asyncio.CancelledError:
-            self.logger.info("Heartbeat loop cancelled")
-        except Exception as e:
-            self.logger.error(f"Heartbeat loop error: {e}", exc_info=True)
+            except aio_pika.exceptions.AMQPConnectionError as e:
+                self.logger.warning(f"Heartbeat publish failed (connection error): {e}")
+                try:
+                    await self._connect_with_backoff(max_retries=3)
+                except Exception as reconnect_error:
+                    self.logger.error(f"Reconnection failed: {reconnect_error}, exiting heartbeat loop")
+                    break
+            except asyncio.CancelledError:
+                self.logger.info("Heartbeat loop cancelled")
+                break
+            except Exception as e:
+                self.logger.error(f"Heartbeat error (will retry): {e}")
+                # Continue loop, don't crash
 
     def _validate_envelope(self, envelope: MessageEnvelope) -> bool:
         """Validate message envelope before processing.
