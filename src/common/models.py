@@ -9,6 +9,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from sqlalchemy import JSON, UUID, Column, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -62,9 +63,25 @@ class Task(Base):
     # Error tracking
     error_message = Column(String, nullable=True)
 
+    # Audit columns (Phase 5)
+    services_touched = Column(ARRAY(String), nullable=True)
+    # Array of service names touched by this task (e.g., ["kuma", "portainer"])
+
+    outcome = Column(JSONB, nullable=True)
+    # Execution outcome: {"success": bool, "output_summary": str, "error_type": str|null}
+
+    suggestions = Column(JSONB, nullable=True)
+    # Post-mortem scaffolding: [{"suggestion": str, "reason": str, "created_at": str}]
+    # Unpopulated in v1; v2 post-mortem agent will populate
+
     # Relationships
     execution_logs = relationship(
         "ExecutionLog",
+        back_populates="task",
+        cascade="all, delete-orphan",
+    )
+    pause_queue_entries = relationship(
+        "PauseQueueEntry",
         back_populates="task",
         cascade="all, delete-orphan",
     )
@@ -298,6 +315,39 @@ class RoutingDecision(Base):
             f"work_type={self.work_type}, agent_id={self.selected_agent_id}, "
             f"created_at={self.created_at})>"
         )
+
+
+class PauseQueueEntry(Base):
+    """Persisted pause queue entry for work awaiting resources.
+
+    Used by PauseManager to persist paused work that survives orchestrator restart.
+    Entries removed when work resumes or is cancelled.
+
+    Attributes:
+        id: Auto-incrementing primary key
+        task_id: Foreign key to tasks table
+        work_plan_json: Serialized WorkPlan as JSONB
+        reason: Why work was paused ('insufficient_capacity', 'manual_pause')
+        paused_at: When work was paused
+        resume_after: Optional datetime for timed auto-resume
+        priority: Priority level for resume ordering (lower = higher priority)
+    """
+
+    __tablename__ = "pause_queue"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.task_id"), nullable=False)
+    work_plan_json = Column(JSONB, nullable=False)
+    reason = Column(String(100), nullable=False)
+    paused_at = Column(DateTime, nullable=False, default=func.now())
+    resume_after = Column(DateTime, nullable=True)
+    priority = Column(Integer, nullable=False, default=3)
+
+    # Relationship
+    task = relationship("Task", back_populates="pause_queue_entries")
+
+    def __repr__(self):
+        return f"<PauseQueueEntry(id={self.id}, task_id={self.task_id}, reason={self.reason})>"
 
 
 # Pydantic models for request parsing and decomposition
@@ -585,4 +635,42 @@ class FallbackDecision(BaseModel):
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         description="When decision was made"
+    )
+
+
+class PauseQueueEntryModel(BaseModel):
+    """Pydantic model for pause queue entry serialization.
+
+    Used for API responses and inter-service communication. Maps to PauseQueueEntry ORM.
+
+    Attributes:
+        id: Auto-generated primary key (None for new entries)
+        task_id: UUID of the paused task
+        work_plan: Serialized WorkPlan object
+        reason: Why work was paused ('insufficient_capacity', 'manual_pause')
+        paused_at: When work was paused
+        resume_after: Optional datetime for timed auto-resume
+        priority: Priority level for resume ordering (default 3)
+    """
+    id: Optional[int] = Field(default=None, description="Auto-generated ID (None for new entries)")
+    task_id: str = Field(..., description="UUID of the paused task")
+    work_plan: WorkPlan = Field(..., description="The paused work plan")
+    reason: str = Field(
+        ...,
+        pattern="^(insufficient_capacity|manual_pause)$",
+        description="Why work was paused"
+    )
+    paused_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="When work was paused"
+    )
+    resume_after: Optional[datetime] = Field(
+        default=None,
+        description="Optional datetime for timed auto-resume"
+    )
+    priority: int = Field(
+        default=3,
+        ge=1,
+        le=5,
+        description="Priority level (1=highest, 5=lowest)"
     )
