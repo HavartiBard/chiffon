@@ -264,3 +264,37 @@ class DesktopAgent(BaseAgent):
             duration_ms=duration_ms,
             resources_used=self._get_resource_metrics(),
         )
+
+    async def run(self) -> None:
+        """Main agent run loop.
+
+        Connects to RabbitMQ and starts both heartbeat loop and work consumer
+        concurrently. Both run until agent is stopped or encounters a fatal error.
+
+        Gracefully handles cancellation and errors with proper cleanup.
+        """
+        try:
+            await self.connect()
+            self.logger.info(f"Desktop agent {self.agent_id} connected to RabbitMQ")
+
+            # Start both loops concurrently
+            heartbeat_task = asyncio.create_task(self.start_heartbeat_loop())
+            work_task = asyncio.create_task(self.consume_work_requests())
+
+            # Wait for both (will run indefinitely until cancelled)
+            try:
+                await asyncio.gather(heartbeat_task, work_task)
+            except asyncio.CancelledError:
+                self.logger.info("Agent cancelled, stopping loops...")
+                heartbeat_task.cancel()
+                work_task.cancel()
+                try:
+                    await asyncio.gather(heartbeat_task, work_task)
+                except asyncio.CancelledError:
+                    pass
+                raise
+        except Exception as e:
+            self.logger.error(f"Agent error: {e}", exc_info=True)
+        finally:
+            await self.disconnect()
+            self.logger.info("Desktop agent stopped")
