@@ -14,10 +14,12 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from src.orchestrator.service import OrchestratorService
+from src.common.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +155,19 @@ def get_orchestrator_service() -> OrchestratorService:
     Actual implementation is injected in main.py via app.dependency_overrides.
     """
     raise RuntimeError("Orchestrator service not initialized")
+
+
+def get_db() -> Session:
+    """Get database session for API endpoints.
+
+    Returns:
+        SQLAlchemy Session for database operations
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 @router.post("/dispatch", response_model=DispatchResponse)
@@ -431,3 +446,104 @@ async def get_plan_status(
     except Exception as e:
         logger.error(f"Status query failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal error: {e}")
+
+
+# ==================== Phase 4: Agent Capacity Queries ====================
+
+
+@router.get("/agents/{agent_id}/capacity", response_model=dict, tags=["agents"])
+async def get_agent_capacity(
+    agent_id: str,
+    db: Session = Depends(get_db),
+    service: OrchestratorService = Depends(get_orchestrator_service),
+) -> dict:
+    """Get single agent's available capacity.
+
+    Path parameters:
+        - agent_id: UUID of agent to query
+
+    Returns:
+        {
+            "agent_id": str,
+            "status": "online" | "offline" | "busy",
+            "cpu_cores_available": int,
+            "cpu_cores_physical": int,
+            "cpu_load_1min": float,
+            "memory_available_gb": float,
+            "gpu_vram_available_gb": float,
+            "gpu_type": "nvidia|amd|intel|none",
+            "timestamp": ISO 8601
+        }
+
+    Responses:
+        - 200: Agent capacity
+        - 400: Invalid agent_id format
+        - 404: Agent not found
+        - 500: Database error
+    """
+    try:
+        # Validate agent_id is UUID
+        agent_uuid = UUID(agent_id)
+        capacity = await service.get_agent_capacity(agent_uuid, db)
+        logger.info(f"Agent capacity queried: {agent_id}")
+        return capacity
+    except ValueError as e:
+        error_msg = str(e)
+        if "invalid" in error_msg.lower() or "uuid" in error_msg.lower():
+            logger.warning(f"Invalid agent_id format: {agent_id}")
+            raise HTTPException(status_code=400, detail="Invalid agent_id format (must be UUID)")
+        else:
+            logger.warning(f"Agent not found: {agent_id}")
+            raise HTTPException(status_code=404, detail=error_msg)
+    except Exception as e:
+        logger.error(f"Error fetching agent capacity: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch agent capacity")
+
+
+@router.get("/agents/available-capacity", response_model=list[dict], tags=["agents"])
+async def get_available_capacity(
+    min_gpu_vram_gb: float = Query(0.0, ge=0.0, description="Minimum GPU VRAM in GB"),
+    min_cpu_cores: int = Query(1, ge=1, description="Minimum available CPU cores"),
+    db: Session = Depends(get_db),
+    service: OrchestratorService = Depends(get_orchestrator_service),
+) -> list[dict]:
+    """Find agents with available capacity.
+
+    Query parameters:
+        - min_gpu_vram_gb: Minimum GPU VRAM required (default 0)
+        - min_cpu_cores: Minimum available CPU cores (default 1)
+
+    Returns:
+        List of agents matching criteria:
+        [
+            {
+                "agent_id": str,
+                "agent_type": str,
+                "pool_name": str,
+                "status": "online",
+                "gpu_vram_available_gb": float,
+                "cpu_cores_available": int,
+                "cpu_load_1min": float
+            },
+            ...
+        ]
+
+    Responses:
+        - 200: List of agents (may be empty)
+        - 400: Invalid parameters
+        - 500: Database error
+    """
+    try:
+        agents = await service.get_available_capacity(
+            min_gpu_vram_gb=min_gpu_vram_gb,
+            min_cpu_cores=min_cpu_cores,
+            db=db,
+        )
+        logger.info(
+            f"Available capacity query: min_gpu={min_gpu_vram_gb}GB, "
+            f"min_cpu={min_cpu_cores} -> {len(agents)} agents"
+        )
+        return agents
+    except Exception as e:
+        logger.error(f"Error fetching available capacity: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch available capacity")
