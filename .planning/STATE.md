@@ -2,7 +2,7 @@
 
 **Project:** Chiffon (Orchestrated AI Agents for Homelab Automation)
 **Version:** 1.0 (v1 Roadmap Approved)
-**Last Updated:** 2026-01-20 (04-02 Desktop Agent Metrics complete)
+**Last Updated:** 2026-01-20 (04-03 Heartbeat Integration complete)
 
 ---
 
@@ -58,25 +58,27 @@ System is validated when:
 | Phase 1: Foundation | ✓ Complete | 100% (5/5 plans) |
 | Phase 2: Message Bus | ✓ Complete | 100% (5/5 plans) |
 | Phase 3: Orchestrator Core | ✓ Complete | 100% (6/6 plans + 2 gap closures) |
-| Phase 4: Desktop Agent | In Progress | 33% (2/6 plans) |
+| Phase 4: Desktop Agent | In Progress | 50% (3/6 plans) |
 | Phase 5: State & Audit | Pending | 0% |
 | Phase 6: Infrastructure Agent | Pending | 0% |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 24/40 plans complete (60%)
+**Overall Progress:** 25/40 plans complete (63%)
 
 ### Current Focus
 
-**Currently executing:** Phase 4: Desktop Agent (Plan 03 next)
-**Last completed:** 04-02-desktop-agent-metrics-PLAN.md (Desktop Agent metrics collection)
-**Next action:** Execute Phase 4 Plan 03: Heartbeat Integration (integrate metrics into heartbeat loop)
-**Verification:** Phase 4 Plans 01-02 COMPLETE:
+**Currently executing:** Phase 4: Desktop Agent (Plan 04 next)
+**Last completed:** 04-03-heartbeat-integration-PLAN.md (Heartbeat integration with resource metrics)
+**Next action:** Execute Phase 4 Plan 04: Orchestrator Capacity Query API (REST endpoints for agent capacity)
+**Verification:** Phase 4 Plans 01-03 COMPLETE:
   - 04-01: Database Schema (Migration 003 + AgentRegistry model, 69/69 tests passing)
   - 04-02: Desktop Agent Metrics (DesktopAgent class, Config loading, example config file)
+  - 04-03: Heartbeat Integration (config-driven intervals, auto-registration, offline detection, 35+ tests)
 **Completed Plans in Phase 4:**
   - 04-01: Database Schema for Desktop Agent Metrics (resource_metrics JSON column with GIN index)
   - 04-02: Desktop Agent Metrics Collection (CPU load averages, multi-vendor GPU support, config-driven heartbeat)
+  - 04-03: Heartbeat Integration (BaseAgent heartbeat loop with exponential backoff, DesktopAgent.run(), OrchestratorService heartbeat handler, offline detection)
 
 ---
 
