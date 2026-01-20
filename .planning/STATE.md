@@ -58,26 +58,23 @@ System is validated when:
 | Phase 1: Foundation | ✓ Complete | 100% (5/5 plans) |
 | Phase 2: Message Bus | ✓ Complete | 100% (5/5 plans) |
 | Phase 3: Orchestrator Core | ✓ Complete | 100% (6/6 plans + 2 gap closures) |
-| Phase 4: Desktop Agent | Pending | 0% |
+| Phase 4: Desktop Agent | In Progress | 17% (1/6 plans) |
 | Phase 5: State & Audit | Pending | 0% |
 | Phase 6: Infrastructure Agent | Pending | 0% |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 22/40 plans complete (55%)
+**Overall Progress:** 23/40 plans complete (58%)
 
 ### Current Focus
 
-**Currently executing:** Phase 4: Desktop Agent (next)
-**Last completed:** 03-06-integration-completion-PLAN.md (Gap closure: Full orchestrator integration, 61/61 E2E tests passing)
-**Verification:** Phase 3 COMPLETE — All 6 plans done (including gap closure):
-  - 03-01: RequestDecomposer (66 tests, 100%)
-  - 03-02: WorkPlanner (93 tests, 100%)
-  - 03-03: AgentRouter (69 tests, 100%)
-  - 03-04: ExternalAIFallback (111 tests, 100%)
-  - 03-05: OrchestratorService & REST API (49/61 E2E, 80% → 61/61 after 03-06)
-  - 03-06: Integration Completion (Gap closure, 61/61 E2E, 100%)
-**Next action:** Execute Phase 4: Desktop Agent (resource monitoring and metrics)
+**Currently executing:** Phase 4: Desktop Agent (Plan 02 next)
+**Last completed:** 04-01-database-schema-PLAN.md (Database schema for resource metrics)
+**Next action:** Execute Phase 4 Plan 02: Heartbeat Integration (agents report resource metrics)
+**Verification:** Phase 4 Plan 01 COMPLETE:
+  - 04-01: Database Schema (Migration 003 + AgentRegistry model, 69/69 tests passing)
+**Completed Plans in Phase 4:**
+  - 04-01: Database Schema for Desktop Agent Metrics (resource_metrics JSON column with GIN index)
 
 ---
 
@@ -215,6 +212,14 @@ None currently. All systems go.
 | 03-07 | Quota Validation Field Fix (Gap Closure) | Complete | Fixed FallbackDecision quota field from percentage (0-100) to fraction (0.0-1.0), 111/111 fallback tests, 61/61 E2E tests | c3dbcac |
 
 **Phase 3 Progress:** 6/6 plans + 2 gap closures complete (100%)
+
+### Phase 4: Desktop Agent
+
+| Plan | Name | Status | Summary | Commits |
+|------|------|--------|---------|---------|
+| 04-01 | Database Schema | Complete | Alembic migration 003 for resource_metrics column, AgentRegistry model update, GIN index for JSON queries | e9015a1, 9b3e0be |
+
+**Phase 4 Progress:** 1/6 plans complete (17%)
 
 ---
 
@@ -369,12 +374,12 @@ None currently. All systems go.
 
 ---
 
-**State Version:** 2.1
+**State Version:** 2.2
 **Roadmap Locked:** 2026-01-18
-**Last Execution:** 2026-01-19 18:18+ - Completed Phase 3 gap closure (03-07: Quota validation fix)
-**Session Duration:** ~5 minutes (quick fix plan)
-**Completed Tasks:** 1/1 task (quota field fix)
-**Next Execution:** Phase 4: Desktop Agent (resource monitoring and metrics)
+**Last Execution:** 2026-01-20 02:09-02:34 - Completed Phase 4 Plan 01 (Database Schema)
+**Session Duration:** ~25 minutes (database schema + migration)
+**Completed Tasks:** 2/2 tasks (migration + model update)
+**Next Execution:** Phase 4 Plan 02: Heartbeat Integration (agents report resource metrics)
 
 ### Current Session (2026-01-19 18:18 - 18:25)
 
@@ -406,3 +411,32 @@ None currently. All systems go.
 - 03-07: Quota Validation Fix (gap closure)
 
 **Total Roadmap Progress:** 22/40 plans complete (55%)
+
+### Current Session (2026-01-20 02:09 - 02:34)
+
+**Completed:** 04-01-database-schema-PLAN.md (Database Schema for Desktop Agent Metrics)
+
+**What was done:**
+1. Created Alembic migration 003_desktop_agent_resources.py
+   - Adds resource_metrics JSON column to agent_registry table
+   - Creates GIN index for efficient JSON queries
+   - Down migration: drop index then column
+2. Updated AgentRegistry ORM model in src/common/models.py
+   - Added resource_metrics field (JSON, NOT NULL, default={})
+   - Positioned after last_heartbeat_at for logical grouping
+3. Verified no regressions: 69/69 agent router tests passing
+
+**What works now:**
+- Database schema supports resource metrics persistence
+- GIN index enables efficient capacity queries (gpu_vram_available_gb, cpu_cores_available)
+- ORM model synchronized with migration
+- Backward compatible: agents without metrics default to {}
+- Foundation ready for Plan 02 (agents populate metrics)
+
+**Test results:** 69/69 agent router tests passing (100%), no regressions
+
+**Phase 4 Status:** IN PROGRESS - 1/6 plans done (17%)
+- 04-01: Database Schema (Migration 003 + AgentRegistry model)
+- Ready for 04-02: Heartbeat Integration (agents collect/report metrics)
+
+**Total Roadmap Progress:** 23/40 plans complete (58%)
