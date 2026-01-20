@@ -2,7 +2,7 @@
 
 **Project:** Chiffon (Orchestrated AI Agents for Homelab Automation)
 **Version:** 1.0 (v1 Roadmap Approved)
-**Last Updated:** 2026-01-20 (04-03 Heartbeat Integration complete)
+**Last Updated:** 2026-01-20 (05-02 Resource Tracker complete)
 
 ---
 
@@ -59,19 +59,18 @@ System is validated when:
 | Phase 2: Message Bus | ✓ Complete | 100% (5/5 plans) |
 | Phase 3: Orchestrator Core | ✓ Complete | 100% (6/6 plans + 2 gap closures) |
 | Phase 4: Desktop Agent | ✓ Complete | 100% (5/5 plans, goal verified) |
-| Phase 5: State & Audit | Pending | 0% |
+| Phase 5: State & Audit | In Progress | 40% (2/5 plans) |
 | Phase 6: Infrastructure Agent | Pending | 0% |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 27/40 plans complete (68%)
+**Overall Progress:** 29/40 plans complete (73%)
 
 ### Current Focus
 
-**Currently completed:** Phase 4: Desktop Agent (5 plans, goal verified)
-**Last completed:** 04-05-integration-e2e-tests-PLAN.md (E2E Integration Tests)
-**Verification:** Phase 4 VERIFIED PASSED — All 5 success criteria confirmed in codebase
-**Next action:** Execute Phase 4 Plan 06 or transition to Phase 5
+**Currently executing:** Phase 5: State & Audit (2/5 plans done)
+**Last completed:** 05-02-PLAN.md (Resource Tracker)
+**Next action:** Execute Phase 5 Plan 03 (Audit Query Service)
 **Verification:** Phase 4 Plans 01-05 COMPLETE:
   - 04-01: Database Schema (Migration 003 + AgentRegistry model, 69/69 tests passing)
   - 04-02: Desktop Agent Metrics (DesktopAgent class, Config loading, example config file)
@@ -547,3 +546,47 @@ None currently. All systems go.
 - 04-06: TBD (final plan)
 
 **Total Roadmap Progress:** 24/40 plans complete (60%) + Phase 4 5/6
+
+---
+
+### Current Session (2026-01-20 18:07 - 18:10)
+
+**Completed:** 05-02-PLAN.md (Resource Tracker)
+
+**What was done:**
+1. Created src/common/resource_tracker.py (174 lines)
+   - ResourceSnapshot dataclass for point-in-time metrics
+   - ResourceUsage dataclass for calculated deltas
+   - capture_resource_snapshot() for CPU/memory/GPU metrics
+   - calculate_resource_usage() for start/end delta calculation
+   - resource_usage_to_dict() for JSON serialization
+   - ResourceTracker context manager (sync and async support)
+   - Graceful GPU fallback when pynvml unavailable
+
+2. Created tests/test_resource_tracker.py (463 lines, 35 tests)
+   - TestCaptureSnapshot: CPU/memory/wall clock validation
+   - TestCalculateUsage: delta calculation tests
+   - TestResourceUsageToDict: JSON format verification
+   - TestResourceTrackerContextManager: sync/async context tests
+   - TestGPUGracefulFallback: graceful handling when no GPU
+   - TestIntegration: full workflow tests
+
+3. Added pynvml dependency for NVIDIA GPU tracking
+
+**What works now:**
+- Resource tracking module captures CPU time, wall clock, peak memory, GPU VRAM
+- Both sync and async context manager patterns supported
+- Graceful fallback when GPU unavailable (returns 0/None)
+- Dict output matches Task.actual_resources expected format
+- Ready for use in orchestrator to populate audit records
+
+**Test results:** 35/35 tests passing (~0.73s execution)
+- 9 test classes covering all functionality
+- Async tests run on asyncio/trio/curio backends
+
+**Phase 5 Status:** IN PROGRESS - 2/5 plans done (40%)
+- 05-01: Audit Database Schema (Migration 004 + Task model updates)
+- 05-02: Resource Tracker (psutil/pynvml wrapper)
+- Ready for 05-03: Audit Query Service
+
+**Total Roadmap Progress:** 29/40 plans complete (73%)
