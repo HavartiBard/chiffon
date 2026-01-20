@@ -17,7 +17,7 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 | 1 - Foundation | Project infrastructure, observability stack ready | STATE-01, STATE-02, MSG-04 | 5 | 5 |
 | 2 - Message Bus | RabbitMQ and agent communication protocol deployed | MSG-01, MSG-02, MSG-03, MSG-04 | 5/5 ✓ | 5/5 ✓ |
 | 3 - Orchestrator Core | Orchestrator accepts requests, plans work, dispatches to agents | ORCH-01, ORCH-02, ORCH-05 | 5/5 ✓ | 5/5 ✓ |
-| 4 - Desktop Agent | Agents report resource availability in real-time | DESK-01, DESK-02, DESK-03, DESK-04 | (planned) | 5 |
+| 4 - Desktop Agent | Agents report resource availability in real-time | DESK-01, DESK-02, DESK-03, DESK-04 | 5/5 ✓ | 5/5 ✓ |
 | 5 - State & Audit | Execution tracked in PostgreSQL, audit trail committed to git | STATE-03, STATE-04, ORCH-03, ORCH-04 | (planned) | 5 |
 | 6 - Infrastructure Agent | Ansible integration, playbook execution, improvement suggestions | INFRA-01, INFRA-02, INFRA-03, INFRA-04 | (planned) | 5 |
 | 7 - User Interface | Chat interface, plan approval, execution transparency | UI-01, UI-02, UI-03, UI-04 | (planned) | 5 |
@@ -138,6 +138,8 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 ### Phase 4: Desktop Agent (Resource Awareness)
 
 **Goal:** Lightweight agents run on GPU desktops, report resource availability (CPU, GPU VRAM, load %), signal online/offline status. Orchestrator can query before dispatching work.
+
+**Status:** ✓ COMPLETE (5/5 plans executed, goal verified)
 
 **Dependencies:** Phase 2 (message bus)
 
@@ -354,5 +356,5 @@ Each phase has observable completion criteria. Phase 8 success means:
 
 **Roadmap Version:** 1.2
 **Created:** 2026-01-18
-**Last Updated:** 2026-01-19 (Phase 3: 5 plans created)
-**Current Status:** 19/40 plans complete (47.5%) — Phase 3 ready for execution
+**Last Updated:** 2026-01-20 (Phase 4: 5 plans complete, goal verified)
+**Current Status:** 27/40 plans complete (68%) — Phase 4 complete, Phase 5 ready for planning
