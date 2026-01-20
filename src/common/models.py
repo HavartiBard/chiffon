@@ -162,6 +162,12 @@ class AgentRegistry(Base):
     last_heartbeat_at = Column(DateTime, nullable=True)
     # When agent last sent a heartbeat
 
+    # Resource metrics from heartbeats
+    resource_metrics = Column(JSON, nullable=False, default=dict)
+    # Current resource metrics: {cpu_percent, cpu_cores_physical, cpu_cores_available,
+    # cpu_load_1min, cpu_load_5min, memory_percent, memory_available_gb,
+    # gpu_vram_total_gb, gpu_vram_available_gb, gpu_type}
+
     # Timestamps
     created_at = Column(DateTime, nullable=False, default=func.now())
     updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
