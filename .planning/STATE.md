@@ -58,27 +58,29 @@ System is validated when:
 | Phase 1: Foundation | ✓ Complete | 100% (5/5 plans) |
 | Phase 2: Message Bus | ✓ Complete | 100% (5/5 plans) |
 | Phase 3: Orchestrator Core | ✓ Complete | 100% (6/6 plans + 2 gap closures) |
-| Phase 4: Desktop Agent | In Progress | 50% (3/6 plans) |
+| Phase 4: Desktop Agent | In Progress | 83% (5/6 plans) |
 | Phase 5: State & Audit | Pending | 0% |
 | Phase 6: Infrastructure Agent | Pending | 0% |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 25/40 plans complete (63%)
+**Overall Progress:** 26/40 plans complete (65%)
 
 ### Current Focus
 
-**Currently executing:** Phase 4: Desktop Agent (Plan 04 next)
-**Last completed:** 04-03-heartbeat-integration-PLAN.md (Heartbeat integration with resource metrics)
-**Next action:** Execute Phase 4 Plan 04: Orchestrator Capacity Query API (REST endpoints for agent capacity)
-**Verification:** Phase 4 Plans 01-03 COMPLETE:
+**Currently executing:** Phase 4: Desktop Agent (Plan 05 next)
+**Last completed:** 04-04-orchestrator-capacity-api-PLAN.md (Orchestrator Capacity Query API)
+**Next action:** Execute Phase 4 Plan 05 or Phase 5 (if defined)
+**Verification:** Phase 4 Plans 01-04 COMPLETE:
   - 04-01: Database Schema (Migration 003 + AgentRegistry model, 69/69 tests passing)
   - 04-02: Desktop Agent Metrics (DesktopAgent class, Config loading, example config file)
   - 04-03: Heartbeat Integration (config-driven intervals, auto-registration, offline detection, 35+ tests)
+  - 04-04: Orchestrator Capacity API (REST endpoints, service methods, 60 tests passing)
 **Completed Plans in Phase 4:**
   - 04-01: Database Schema for Desktop Agent Metrics (resource_metrics JSON column with GIN index)
   - 04-02: Desktop Agent Metrics Collection (CPU load averages, multi-vendor GPU support, config-driven heartbeat)
   - 04-03: Heartbeat Integration (BaseAgent heartbeat loop with exponential backoff, DesktopAgent.run(), OrchestratorService heartbeat handler, offline detection)
+  - 04-04: Orchestrator Capacity Query API (GET /api/v1/agents/{agent_id}/capacity, GET /api/v1/agents/available-capacity with resource filtering)
 
 ---
 
