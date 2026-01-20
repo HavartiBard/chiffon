@@ -8,10 +8,11 @@ Provides:
 - Task cancellation
 """
 
+import asyncio
 import json
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from uuid import UUID, uuid4
 
@@ -24,9 +25,11 @@ from src.common.models import (
     DecomposedRequest,
     WorkPlan,
     FallbackDecision,
+    AgentRegistry,
 )
 from src.common.protocol import (
     MessageEnvelope,
+    StatusUpdate,
     WorkRequest,
     WorkResult,
 )
@@ -544,6 +547,115 @@ class OrchestratorService:
                 exc_info=True,
             )
 
+    async def handle_agent_heartbeat(
+        self, heartbeat: StatusUpdate, db: Session
+    ) -> None:
+        """Handle agent heartbeat and persist resource metrics to database.
+
+        Receives heartbeat from agent with current resource metrics.
+        Auto-registers new agents on first heartbeat. Updates existing agent
+        registry with latest metrics and marks agent online.
+
+        Args:
+            heartbeat: StatusUpdate message from agent with resource metrics
+            db: SQLAlchemy session for database operations
+
+        Raises:
+            Exception: If database commit fails (logged but not raised to protect orchestrator)
+        """
+        try:
+            # Extract agent_id from heartbeat
+            agent_id = heartbeat.agent_id
+            agent_type = heartbeat.agent_type
+
+            # Look up agent in registry
+            agent = db.query(AgentRegistry).filter(
+                AgentRegistry.agent_id == agent_id
+            ).first()
+
+            # Auto-register new agent
+            if not agent:
+                self.logger.info(f"Auto-registering new agent {agent_id} (type={agent_type})")
+                agent = AgentRegistry(
+                    agent_id=agent_id,
+                    agent_type=agent_type,
+                    status="online",
+                    last_heartbeat_at=datetime.utcnow(),
+                    pool_name=f"{agent_type}_pool_1",
+                    capabilities=[],
+                    specializations=[],
+                    resource_metrics=heartbeat.resources,
+                )
+                db.add(agent)
+            else:
+                # Update existing agent
+                agent.status = "online"
+                agent.last_heartbeat_at = datetime.utcnow()
+                agent.resource_metrics = heartbeat.resources
+
+            # Commit to database
+            try:
+                db.commit()
+                self.logger.info(
+                    f"Heartbeat: agent={agent_id}, "
+                    f"gpu_vram={heartbeat.resources.get('gpu_vram_available_gb', 0):.1f}GB, "
+                    f"cpu_load={heartbeat.resources.get('cpu_load_1min', 0):.1f}",
+                    extra={"agent_id": str(agent_id), "resources": heartbeat.resources},
+                )
+            except Exception as commit_err:
+                self.logger.warning(f"Failed to commit heartbeat to DB: {commit_err}")
+                db.rollback()
+
+        except Exception as e:
+            self.logger.error(f"Error handling agent heartbeat: {e}", exc_info=True)
+
+    async def mark_agents_offline_periodically(self) -> None:
+        """Background task to mark offline agents.
+
+        Periodically queries agents with no heartbeat for >90s (3x heartbeat interval)
+        and marks them offline. Runs every 30 seconds.
+
+        Should be called as asyncio.create_task() during orchestrator startup.
+        """
+        timeout_seconds = self.config.heartbeat_timeout_seconds
+        check_interval_seconds = 30  # Check every 30 seconds
+
+        try:
+            while True:
+                try:
+                    await asyncio.sleep(check_interval_seconds)
+
+                    # Query agents offline > timeout
+                    timeout_threshold = datetime.utcnow() - timedelta(seconds=timeout_seconds)
+                    # Approximate: if last_heartbeat_at is None or far in past
+                    offline_agents = self.db.query(AgentRegistry).filter(
+                        (AgentRegistry.last_heartbeat_at == None) |
+                        (AgentRegistry.last_heartbeat_at < timeout_threshold)
+                    ).filter(AgentRegistry.status != "offline").all()
+
+                    # Mark offline
+                    for agent in offline_agents:
+                        self.logger.info(
+                            f"Marking agent offline: {agent.agent_id} "
+                            f"(last heartbeat {timeout_seconds}+ seconds ago)"
+                        )
+                        agent.status = "offline"
+
+                    if offline_agents:
+                        self.db.commit()
+
+                except asyncio.CancelledError:
+                    self.logger.info("Offline detection task cancelled")
+                    break
+                except Exception as e:
+                    self.logger.error(f"Error in offline detection: {e}", exc_info=True)
+                    self.db.rollback()
+
+        except asyncio.CancelledError:
+            self.logger.info("Offline detection task stopped")
+        except Exception as e:
+            self.logger.error(f"Fatal error in offline detection: {e}", exc_info=True)
+
     # ==================== Phase 3: Orchestration Workflow ====================
 
     async def submit_request(self, request_text: str, user_id: str) -> dict:
@@ -888,3 +1000,133 @@ class OrchestratorService:
         self.router = router
         self.fallback = fallback
         self.logger.info("Orchestration components initialized")
+
+    # ==================== Phase 4: Agent Capacity Queries ====================
+
+    async def get_agent_capacity(self, agent_id: UUID, db: Session) -> dict:
+        """Get single agent's current capacity.
+
+        Args:
+            agent_id: UUID of agent to query
+            db: Database session
+
+        Returns:
+            Dict with:
+            {
+                "agent_id": str(UUID),
+                "status": "online" | "offline" | "busy",
+                "cpu_cores_available": int,
+                "cpu_cores_physical": int,
+                "cpu_load_1min": float,
+                "cpu_load_5min": float,
+                "memory_available_gb": float,
+                "gpu_vram_available_gb": float,
+                "gpu_vram_total_gb": float,
+                "gpu_type": str,
+                "timestamp": ISO 8601
+            }
+
+        Raises:
+            ValueError: If agent not found
+        """
+        try:
+            # Query agent by ID
+            agent = db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
+            if not agent:
+                self.logger.warning(f"Agent not found: {agent_id}")
+                raise ValueError(f"Agent not found: {agent_id}")
+
+            # Extract resource metrics
+            metrics = agent.resource_metrics or {}
+
+            # Build capacity response
+            capacity = {
+                "agent_id": str(agent.agent_id),
+                "status": agent.status,
+                "cpu_cores_available": metrics.get("cpu_cores_available", 0),
+                "cpu_cores_physical": metrics.get("cpu_cores_physical", 0),
+                "cpu_load_1min": metrics.get("cpu_load_1min", 0.0),
+                "cpu_load_5min": metrics.get("cpu_load_5min", 0.0),
+                "memory_available_gb": metrics.get("memory_available_gb", 0.0),
+                "gpu_vram_available_gb": metrics.get("gpu_vram_available_gb", 0.0),
+                "gpu_vram_total_gb": metrics.get("gpu_vram_total_gb", 0.0),
+                "gpu_type": metrics.get("gpu_type", "none"),
+                "timestamp": agent.last_heartbeat_at.isoformat() if agent.last_heartbeat_at else None,
+            }
+
+            self.logger.debug(f"Agent capacity: {agent_id} -> {capacity}")
+            return capacity
+
+        except ValueError:
+            raise
+        except Exception as e:
+            self.logger.error(f"Error fetching agent capacity: {e}", exc_info=True)
+            raise
+
+    async def get_available_capacity(
+        self,
+        min_gpu_vram_gb: float = 0.0,
+        min_cpu_cores: int = 1,
+        db: Session = None,
+    ) -> list[dict]:
+        """Find agents with available capacity.
+
+        Args:
+            min_gpu_vram_gb: Minimum GPU VRAM required in GB (default 0, any GPU OK)
+            min_cpu_cores: Minimum available CPU cores (default 1)
+            db: Database session
+
+        Returns:
+            List of dicts, each with:
+            {
+                "agent_id": str(UUID),
+                "agent_type": str,
+                "pool_name": str,
+                "status": "online",
+                "gpu_vram_available_gb": float,
+                "cpu_cores_available": int,
+                "cpu_load_1min": float,
+                "last_heartbeat_at": ISO 8601
+            }
+        """
+        try:
+            # Query online desktop agents
+            agents = db.query(AgentRegistry).filter(
+                AgentRegistry.agent_type == "desktop",
+                AgentRegistry.status == "online"
+            ).all()
+
+            result = []
+
+            # Filter agents by resource requirements
+            for agent in agents:
+                try:
+                    metrics = agent.resource_metrics or {}
+                    gpu_vram = metrics.get("gpu_vram_available_gb", 0.0)
+                    cpu_cores = metrics.get("cpu_cores_available", 0)
+
+                    # Check if agent meets requirements
+                    if gpu_vram >= min_gpu_vram_gb and cpu_cores >= min_cpu_cores:
+                        result.append({
+                            "agent_id": str(agent.agent_id),
+                            "agent_type": agent.agent_type,
+                            "pool_name": agent.pool_name,
+                            "status": agent.status,
+                            "gpu_vram_available_gb": gpu_vram,
+                            "cpu_cores_available": cpu_cores,
+                            "cpu_load_1min": metrics.get("cpu_load_1min", 0.0),
+                            "last_heartbeat_at": agent.last_heartbeat_at.isoformat() if agent.last_heartbeat_at else None,
+                        })
+                except Exception as agent_err:
+                    self.logger.warning(f"Error processing agent {agent.agent_id}: {agent_err}")
+                    # Skip this agent and continue
+
+            self.logger.info(
+                f"Found {len(result)} agents with capacity "
+                f"(min_gpu={min_gpu_vram_gb}GB, min_cpu={min_cpu_cores})"
+            )
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Error fetching available capacity: {e}", exc_info=True)
+            raise
