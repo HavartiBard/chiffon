@@ -2,7 +2,7 @@
 
 **Project:** Chiffon (Orchestrated AI Agents for Homelab Automation)
 **Version:** 1.0 (v1 Roadmap Approved)
-**Last Updated:** 2026-01-19 (03-07 Quota Validation Fix complete)
+**Last Updated:** 2026-01-20 (04-02 Desktop Agent Metrics complete)
 
 ---
 
@@ -58,23 +58,25 @@ System is validated when:
 | Phase 1: Foundation | ✓ Complete | 100% (5/5 plans) |
 | Phase 2: Message Bus | ✓ Complete | 100% (5/5 plans) |
 | Phase 3: Orchestrator Core | ✓ Complete | 100% (6/6 plans + 2 gap closures) |
-| Phase 4: Desktop Agent | In Progress | 17% (1/6 plans) |
+| Phase 4: Desktop Agent | In Progress | 33% (2/6 plans) |
 | Phase 5: State & Audit | Pending | 0% |
 | Phase 6: Infrastructure Agent | Pending | 0% |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 23/40 plans complete (58%)
+**Overall Progress:** 24/40 plans complete (60%)
 
 ### Current Focus
 
-**Currently executing:** Phase 4: Desktop Agent (Plan 02 next)
-**Last completed:** 04-01-database-schema-PLAN.md (Database schema for resource metrics)
-**Next action:** Execute Phase 4 Plan 02: Heartbeat Integration (agents report resource metrics)
-**Verification:** Phase 4 Plan 01 COMPLETE:
+**Currently executing:** Phase 4: Desktop Agent (Plan 03 next)
+**Last completed:** 04-02-desktop-agent-metrics-PLAN.md (Desktop Agent metrics collection)
+**Next action:** Execute Phase 4 Plan 03: Heartbeat Integration (integrate metrics into heartbeat loop)
+**Verification:** Phase 4 Plans 01-02 COMPLETE:
   - 04-01: Database Schema (Migration 003 + AgentRegistry model, 69/69 tests passing)
+  - 04-02: Desktop Agent Metrics (DesktopAgent class, Config loading, example config file)
 **Completed Plans in Phase 4:**
   - 04-01: Database Schema for Desktop Agent Metrics (resource_metrics JSON column with GIN index)
+  - 04-02: Desktop Agent Metrics Collection (CPU load averages, multi-vendor GPU support, config-driven heartbeat)
 
 ---
 
@@ -440,3 +442,47 @@ None currently. All systems go.
 - Ready for 04-02: Heartbeat Integration (agents collect/report metrics)
 
 **Total Roadmap Progress:** 23/40 plans complete (58%)
+
+### Current Session (2026-01-20 02:40 - 02:55)
+
+**Completed:** 04-02-desktop-agent-metrics-PLAN.md (Desktop Agent Metrics Collection)
+
+**What was done:**
+1. Created DesktopAgent class in src/agents/desktop_agent.py
+   - CPU load averages (1-min, 5-min, 15-min) for stable scheduling
+   - Available cores calculated conservatively from load percentage
+   - Multi-vendor GPU detection (pynvml primary, nvidia-smi fallback)
+   - 5-second timeout protection to prevent agent hangs
+   - Graceful error handling returns sensible defaults
+
+2. Updated Config class in src/common/config.py
+   - Load heartbeat_interval_seconds, heartbeat_timeout_seconds from YAML
+   - Load gpu_detection_timeout_seconds, agent_id, agent_pool_name
+   - Support file loading (~/.chiffon/agent.yml or /etc/chiffon/agent.yml)
+   - Support environment variable overrides (CHIFFON_* prefix)
+   - Auto-generate agent_id from hostname if not set
+
+3. Created example config file at ~/.chiffon/agent.yml
+   - Sensible defaults: 30s heartbeat, 90s timeout, 5s GPU timeout
+   - Comprehensive documentation and deployment notes
+   - YAML format with clear section organization
+
+**What works now:**
+- DesktopAgent instances can be created and collect resource metrics
+- Config loads from file with proper defaults
+- Environment variables override file settings
+- CPU metrics based on load averages (stable for scheduling)
+- GPU detection tries pynvml, falls back to nvidia-smi, returns zeros if unavailable
+- Agents can be configured via YAML file or environment variables
+
+**Test results:** All 3 tasks verified:
+- Task 1: DesktopAgent metrics collection verified (10 metric keys present)
+- Task 2: Config file + env var loading verified
+- Task 3: Example config file valid YAML with correct defaults
+
+**Phase 4 Status:** IN PROGRESS - 2/6 plans done (33%)
+- 04-01: Database Schema (Migration 003 + AgentRegistry model)
+- 04-02: Desktop Agent Metrics (DesktopAgent class, Config loading)
+- Ready for 04-03: Heartbeat Integration (use metrics in heartbeat messages)
+
+**Total Roadmap Progress:** 24/40 plans complete (60%)
