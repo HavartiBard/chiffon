@@ -19,7 +19,7 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 | 3 - Orchestrator Core | Orchestrator accepts requests, plans work, dispatches to agents | ORCH-01, ORCH-02, ORCH-05 | 5/5 ✓ | 5/5 ✓ |
 | 4 - Desktop Agent | Agents report resource availability in real-time | DESK-01, DESK-02, DESK-03, DESK-04 | 5/5 ✓ | 5/5 ✓ |
 | 5 - State & Audit | Execution tracked in PostgreSQL, audit trail committed to git | STATE-03, STATE-04, ORCH-03, ORCH-04 | 5/5 ✓ | 5/5 ✓ |
-| 6 - Infrastructure Agent | Ansible integration, playbook execution, improvement suggestions | INFRA-01, INFRA-02, INFRA-03, INFRA-04 | (planned) | 5 |
+| 6 - Infrastructure Agent | Ansible integration, playbook execution, improvement suggestions | INFRA-01, INFRA-02, INFRA-03, INFRA-04 | 6 plans | 5 |
 | 7 - User Interface | Chat interface, plan approval, execution transparency | UI-01, UI-02, UI-03, UI-04 | (planned) | 5 |
 | 8 - End-to-End Integration | Full Kuma deployment workflow with user → orchestrator → infra agent → git | E2E-01, E2E-02, E2E-03, E2E-04 | (planned) | 5 |
 
@@ -195,7 +195,22 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 
 ### Phase 6: Infrastructure Agent (Ansible Integration)
 
-**Goal:** Agent accepts deployment tasks, maps to existing Ansible playbooks in ~/CascadeProjects/homelab-infra, executes playbooks, streams output, suggests improvements.
+**Goal:** Agent accepts deployment tasks, maps to existing Ansible playbooks in ~/CascadeProjects/homelab-infra, executes playbooks, returns structured summaries, suggests improvements.
+
+**Status:** PLANNED (6 plans in 3 waves)
+
+**Plans:**
+- [ ] 06-01-PLAN.md — Infrastructure Agent Foundation (InfraAgent class, PlaybookDiscovery service)
+- [ ] 06-02-PLAN.md — Task-to-Playbook Mapping (TaskMapper with FAISS semantic matching)
+- [ ] 06-03-PLAN.md — Playbook Execution & Output (PlaybookExecutor with ansible-runner)
+- [ ] 06-04-PLAN.md — Improvement Suggestions (PlaybookAnalyzer with ansible-lint)
+- [ ] 06-05-PLAN.md — Template Generation (TemplateGenerator with Jinja2 + Galaxy patterns)
+- [ ] 06-06-PLAN.md — E2E Integration & Tests (Full workflow tests, orchestrator integration)
+
+**Wave Structure:**
+- Wave 1: Plans 01, 02 (independent foundation — can run in parallel)
+- Wave 2: Plans 03, 04, 05 (depend on Wave 1 — can run in parallel)
+- Wave 3: Plan 06 (depends on all prior — integration testing)
 
 **Dependencies:** Phase 2 (message bus), Phase 3 (orchestrator)
 
@@ -209,14 +224,14 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 
 1. **Playbook discovery works** — Agent scans ~/CascadeProjects/homelab-infra/ansible for playbooks, indexes by service name (kuma, portainer, etc.), caches with refresh every 1h; orchestrator can query playbook catalog
 2. **Task → playbook mapping** — Orchestrator sends task "Deploy Kuma Uptime", agent parses intent, identifies kuma-deployment.yml playbook, verifies playbook exists; if no match, suggests closest match or "custom playbook needed"
-3. **Execution and output streaming** — Agent runs ansible-playbook with task, streams output line-by-line back to orchestrator; orchestrator displays in real-time or stores for later; exit code captured
-4. **Improvement suggestions generated** — After playbook execution, agent analyzes for patterns: "Config not idempotent", "Missing handler for service restart", suggests improvement with reasoning; suggestions stored, can be applied to playbook
+3. **Execution and output summary** — Agent runs ansible-playbook with task, returns structured summary (status, duration, changed count, errors); exit code captured
+4. **Improvement suggestions generated** — After playbook execution failure, agent analyzes for patterns: "Config not idempotent", "Missing handler for service restart", suggests improvement with reasoning; suggestions stored, can be applied to playbook
 5. **Playbook templates generated** — Agent receives "Generate template for deploying [service]", produces YAML playbook scaffold with roles, handlers, variables, comments; user can copy to homelab-infra and customize
 
 **Risks & Notes:**
 - Playbook inventory must be accurate and up-to-date
 - Ansible execution must use orchestrator context (user, privileges, vault access)
-- Output streaming must not overwhelm MQ (buffer, batch if needed)
+- Silent execution with high-level summaries preferred over line-by-line streaming (reduces MQ overhead)
 
 ---
 
@@ -286,27 +301,27 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STATE-01 | Phase 1, 5 | Phase 1: Complete, Phase 5: Pending |
+| STATE-01 | Phase 1, 5 | Phase 1: Complete, Phase 5: Complete |
 | STATE-02 | Phase 1 | Complete |
-| STATE-03 | Phase 5 | Pending |
-| STATE-04 | Phase 5 | Pending |
+| STATE-03 | Phase 5 | Complete |
+| STATE-04 | Phase 5 | Complete |
 | MSG-01 | Phase 2 | Complete |
 | MSG-02 | Phase 2 | Complete |
 | MSG-03 | Phase 2 | Complete |
 | MSG-04 | Phase 1, 2 | Complete |
-| ORCH-01 | Phase 3 | Planned |
-| ORCH-02 | Phase 3 | Planned |
-| ORCH-03 | Phase 5 | Pending |
-| ORCH-04 | Phase 5 | Pending |
-| ORCH-05 | Phase 3 | Planned |
-| DESK-01 | Phase 4 | Pending |
-| DESK-02 | Phase 4 | Pending |
-| DESK-03 | Phase 4 | Pending |
-| DESK-04 | Phase 4 | Pending |
-| INFRA-01 | Phase 6 | Pending |
-| INFRA-02 | Phase 6 | Pending |
-| INFRA-03 | Phase 6 | Pending |
-| INFRA-04 | Phase 6 | Pending |
+| ORCH-01 | Phase 3 | Complete |
+| ORCH-02 | Phase 3 | Complete |
+| ORCH-03 | Phase 5 | Complete |
+| ORCH-04 | Phase 5 | Complete |
+| ORCH-05 | Phase 3 | Complete |
+| DESK-01 | Phase 4 | Complete |
+| DESK-02 | Phase 4 | Complete |
+| DESK-03 | Phase 4 | Complete |
+| DESK-04 | Phase 4 | Complete |
+| INFRA-01 | Phase 6 | Planned |
+| INFRA-02 | Phase 6 | Planned |
+| INFRA-03 | Phase 6 | Planned |
+| INFRA-04 | Phase 6 | Planned |
 | UI-01 | Phase 7 | Pending |
 | UI-02 | Phase 7 | Pending |
 | UI-03 | Phase 7 | Pending |
@@ -356,7 +371,7 @@ Each phase has observable completion criteria. Phase 8 success means:
 
 ---
 
-**Roadmap Version:** 1.2
+**Roadmap Version:** 1.3
 **Created:** 2026-01-18
-**Last Updated:** 2026-01-21 (Phase 5: 5 plans + 2 gap closures complete, goal verified)
-**Current Status:** 34/40 plans complete (85%) — Phase 5 complete, Phase 6 ready for planning
+**Last Updated:** 2026-01-21 (Phase 6 planned: 6 plans in 3 waves)
+**Current Status:** 34/40 plans complete (85%) — Phase 5 complete, Phase 6 ready for execution
