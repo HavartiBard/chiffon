@@ -38,6 +38,8 @@ from src.orchestrator.nlu import RequestDecomposer
 from src.orchestrator.planner import WorkPlanner
 from src.orchestrator.router import AgentRouter
 from src.orchestrator.fallback import ExternalAIFallback
+from src.orchestrator.pause_manager import PauseManager
+from src.orchestrator.git_service import GitService, GitServiceError
 from src.common.litellm_client import LiteLLMClient
 
 logger = logging.getLogger(__name__)
@@ -124,6 +126,7 @@ class OrchestratorService:
         config: Config,
         db_session: Session,
         litellm_client: Optional[LiteLLMClient] = None,
+        repo_path: str = ".",
     ):
         """Initialize orchestrator service.
 
@@ -131,6 +134,7 @@ class OrchestratorService:
             config: Configuration object
             db_session: SQLAlchemy session for database operations
             litellm_client: Optional LiteLLMClient for request decomposition and fallback
+            repo_path: Path to git repository for audit trail (default: "." = project root)
         """
         self.config = config
         self.db = db_session
@@ -146,6 +150,15 @@ class OrchestratorService:
         self.planner: Optional[WorkPlanner] = None
         self.router: Optional[AgentRouter] = None
         self.fallback: Optional[ExternalAIFallback] = None
+
+        # Initialize GitService for audit trail (Phase 5)
+        try:
+            git_repo_path = repo_path or "."
+            self.git_service = GitService(repo_path=git_repo_path)
+            self.logger.info(f"Git audit trail enabled, repo: {git_repo_path}")
+        except GitServiceError as e:
+            self.logger.warning(f"Git audit trail initialization failed: {e}")
+            self.git_service = None
 
         # Store for request → plan mappings (request_id → plan)
         self._request_plans: dict[str, WorkPlan] = {}  # Simple in-memory store, would use DB in production
@@ -522,6 +535,14 @@ class OrchestratorService:
                 "exit_code": work_result.exit_code,
             }
             self.db.commit()
+
+            # Commit outcome to git audit trail
+            if self.git_service:
+                try:
+                    await self.git_service.commit_task_outcome(task)
+                except Exception as e:
+                    self.logger.error(f"Git audit commit failed for task {task.task_id}: {e}")
+                    # Continue execution - git failure should not block orchestrator
 
             # Cache result
             self.request_cache.set(cache_key, work_result.model_dump())
