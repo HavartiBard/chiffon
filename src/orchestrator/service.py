@@ -160,6 +160,17 @@ class OrchestratorService:
             self.logger.warning(f"Git audit trail initialization failed: {e}")
             self.git_service = None
 
+        # Initialize PauseManager for resource-aware pause/resume (Phase 5)
+        try:
+            # Read capacity threshold from environment (default 0.2 = 20%)
+            import os
+            capacity_threshold = float(os.getenv("PAUSE_CAPACITY_THRESHOLD_PERCENT", "0.2"))
+            self.pause_manager = PauseManager(db=db_session, capacity_threshold_percent=capacity_threshold)
+            self.logger.info(f"PauseManager initialized with {capacity_threshold * 100:.0f}% threshold")
+        except Exception as e:
+            self.logger.warning(f"PauseManager initialization failed: {e}")
+            self.pause_manager = None
+
         # Store for request → plan mappings (request_id → plan)
         self._request_plans: dict[str, WorkPlan] = {}  # Simple in-memory store, would use DB in production
         # Store for request → decomposed_request mappings (request_id → decomposed_request)
@@ -181,6 +192,14 @@ class OrchestratorService:
             self.logger.info("Declaring queue topology")
             await declare_queues(channel)
 
+            # Start PauseManager background polling
+            if self.pause_manager:
+                try:
+                    asyncio.create_task(self.pause_manager.start_resume_polling())
+                    self.logger.info("PauseManager resume polling started")
+                except Exception as pm_err:
+                    self.logger.warning(f"Failed to start PauseManager polling: {pm_err}")
+
             self.logger.info("RabbitMQ connection established")
         except Exception as e:
             self.logger.error(f"Failed to connect to RabbitMQ: {e}", exc_info=True)
@@ -192,6 +211,14 @@ class OrchestratorService:
         Safe to call even if not connected.
         """
         try:
+            # Stop PauseManager polling
+            if self.pause_manager:
+                try:
+                    self.pause_manager.stop_resume_polling()
+                    self.logger.info("PauseManager resume polling stopped")
+                except Exception as pm_err:
+                    self.logger.warning(f"Error stopping PauseManager polling: {pm_err}")
+
             if self.channel:
                 await self.channel.close()
                 self.logger.info("Channel closed")
@@ -906,6 +933,45 @@ class OrchestratorService:
 
             if not plan:
                 raise ValueError(f"Plan not found: {plan_id}")
+
+            # Pre-dispatch capacity check (Phase 5: PauseManager integration)
+            if self.pause_manager:
+                try:
+                    should_pause = await self.pause_manager.should_pause(plan_id)
+                    if should_pause:
+                        self.logger.warning(f"Capacity exhausted, pausing plan {plan_id}")
+
+                        # Create list of task IDs
+                        task_ids = [str(task.task_id) if hasattr(task, 'task_id') else f"task-{i}" for i, task in enumerate(plan.tasks)]
+
+                        # Pause work
+                        paused_count = await self.pause_manager.pause_work(
+                            plan_id=plan_id,
+                            task_ids=task_ids,
+                            work_plan_json=plan.model_dump() if hasattr(plan, 'model_dump') else None,
+                        )
+
+                        # Update task status to paused
+                        try:
+                            for task_id_str in task_ids:
+                                task_uuid = UUID(task_id_str) if task_id_str.startswith('task-') is False else None
+                                if task_uuid:
+                                    task_rec = self.db.query(Task).filter(Task.task_id == task_uuid).first()
+                                    if task_rec:
+                                        task_rec.status = 'paused'
+                            self.db.commit()
+                        except Exception as update_err:
+                            self.logger.warning(f"Could not update task status to paused: {update_err}")
+                            self.db.rollback()
+
+                        return {
+                            "plan_id": plan_id,
+                            "status": "paused",
+                            "paused_tasks": paused_count,
+                            "message": f"Plan paused due to insufficient agent capacity. {paused_count} tasks queued for resume.",
+                        }
+                except Exception as capacity_err:
+                    self.logger.warning(f"Capacity check failed, proceeding with dispatch: {capacity_err}")
 
             dispatched_tasks = []
 
