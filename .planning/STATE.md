@@ -2,7 +2,7 @@
 
 **Project:** Chiffon (Orchestrated AI Agents for Homelab Automation)
 **Version:** 1.0 (v1 Roadmap Approved)
-**Last Updated:** 2026-01-20 (05-02 Resource Tracker complete)
+**Last Updated:** 2026-01-21 (05-03 Audit Query Service complete)
 
 ---
 
@@ -59,18 +59,18 @@ System is validated when:
 | Phase 2: Message Bus | ✓ Complete | 100% (5/5 plans) |
 | Phase 3: Orchestrator Core | ✓ Complete | 100% (6/6 plans + 2 gap closures) |
 | Phase 4: Desktop Agent | ✓ Complete | 100% (5/5 plans, goal verified) |
-| Phase 5: State & Audit | In Progress | 40% (2/5 plans) |
+| Phase 5: State & Audit | In Progress | 60% (3/5 plans) |
 | Phase 6: Infrastructure Agent | Pending | 0% |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 29/40 plans complete (73%)
+**Overall Progress:** 31/40 plans complete (78%)
 
 ### Current Focus
 
-**Currently executing:** Phase 5: State & Audit (2/5 plans done)
-**Last completed:** 05-02-PLAN.md (Resource Tracker)
-**Next action:** Execute Phase 5 Plan 03 (Audit Query Service)
+**Currently executing:** Phase 5: State & Audit (3/5 plans done)
+**Last completed:** 05-03-PLAN.md (Audit Query Service)
+**Next action:** Execute Phase 5 Plan 04 (Resource Tracker Integration)
 **Verification:** Phase 4 Plans 01-05 COMPLETE:
   - 04-01: Database Schema (Migration 003 + AgentRegistry model, 69/69 tests passing)
   - 04-02: Desktop Agent Metrics (DesktopAgent class, Config loading, example config file)
@@ -590,3 +590,63 @@ None currently. All systems go.
 - Ready for 05-03: Audit Query Service
 
 **Total Roadmap Progress:** 29/40 plans complete (73%)
+
+---
+
+### Current Session (2026-01-21 05:59 - 06:02)
+
+**Completed:** 05-03-PLAN.md (Audit Query Service)
+
+**What was done:**
+1. Created src/orchestrator/audit.py (201 lines)
+   - AuditService class with 4 query methods
+   - get_failures(days, service, limit, offset) for failed task queries
+   - get_by_service(service_name, status, days, limit, offset) for service-based queries
+   - audit_query(status, service, intent, days, limit, offset) for combined filtering
+   - get_task_count(status, service, days) for pagination support
+
+2. Extended src/orchestrator/api.py (168 lines added)
+   - Added TaskAuditResponse and AuditQueryResponse Pydantic models
+   - GET /api/v1/audit/failures endpoint with time and service filters
+   - GET /api/v1/audit/by-service/{service_name} endpoint for service-based queries
+   - GET /api/v1/audit/query endpoint for combined filtering
+   - Added task_to_audit_response() helper function
+   - Comprehensive error handling on all endpoints
+
+3. Created tests/test_audit_service.py (405 lines, 27 tests)
+   - TestAuditServiceInitialization
+   - TestTaskToAuditResponse
+   - TestAuditServiceQueryMethods
+   - TestAuditServiceQueryBehavior
+   - TestAuditAPIRoutes
+   - TestAuditAPIEndpoints
+   - TestAuditResponseFormat
+   - TestAuditServiceAndAPIIntegration
+   - TestAuditEndpointErrorHandling
+   - TestAuditServiceDocumentation
+
+**What works now:**
+- AuditService queries tasks by failure status, service name, and combined filters
+- All 3 REST audit endpoints functional with pagination (limit 1-1000)
+- Response format includes tasks, total count, limit, offset
+- Error handling on all endpoints (500 on exception)
+- Query methods support combined filtering (status + service + intent + time)
+- Time-range queries use days parameter (1-90 for failures, 1-365 for general)
+- Intent filtering uses JSONB path query (outcome['action_type'].astext)
+
+**Test results:** 27/27 tests passing (100%)
+- Mock-based tests (compatible with any database)
+- All query methods verified
+- API routes and endpoints verified
+- Response format compliance verified
+- Error handling verified
+- Documentation verified
+
+**Phase 5 Status:** IN PROGRESS - 3/5 plans done (60%)
+- 05-01: Audit Database Schema (Migration 004 + Task model updates) ✓
+- 05-02: Resource Tracker (psutil/pynvml wrapper) ✓
+- 05-03: Audit Query Service (AuditService + REST API) ✓
+- Ready for 05-04: Resource Tracker Integration
+- Ready for 05-05: E2E Integration Tests
+
+**Total Roadmap Progress:** 31/40 plans complete (78%)
