@@ -95,12 +95,15 @@ class InfraAgent(BaseAgent):
             f"Parameters: {work_request.parameters}"
         )
 
+        from uuid import uuid4
+
         return WorkResult(
             task_id=work_request.task_id,
             status="completed",
             exit_code=0,
             output=output,
             duration_ms=0,
+            agent_id=uuid4(),  # Placeholder agent_id for Plan 01
             resources_used={},
         )
 

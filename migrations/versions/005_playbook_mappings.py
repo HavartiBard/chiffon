@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 
 # revision identifiers, used by Alembic.
-revision = '005_playbook_mappings'
-down_revision = '004_audit_columns'
+revision = '005'
+down_revision = '004'
 branch_labels = None
 depends_on = None
 
