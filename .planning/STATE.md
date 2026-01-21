@@ -2,7 +2,7 @@
 
 **Project:** Chiffon (Orchestrated AI Agents for Homelab Automation)
 **Version:** 1.0 (v1 Roadmap Approved)
-**Last Updated:** 2026-01-21 (05-03 Audit Query Service complete)
+**Last Updated:** 2026-01-21 (05-05 Pause/Resume Manager complete)
 
 ---
 
@@ -59,18 +59,18 @@ System is validated when:
 | Phase 2: Message Bus | ✓ Complete | 100% (5/5 plans) |
 | Phase 3: Orchestrator Core | ✓ Complete | 100% (6/6 plans + 2 gap closures) |
 | Phase 4: Desktop Agent | ✓ Complete | 100% (5/5 plans, goal verified) |
-| Phase 5: State & Audit | In Progress | 60% (3/5 plans) |
+| Phase 5: State & Audit | In Progress | 80% (4/5 plans) |
 | Phase 6: Infrastructure Agent | Pending | 0% |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 31/40 plans complete (78%)
+**Overall Progress:** 32/40 plans complete (80%)
 
 ### Current Focus
 
-**Currently executing:** Phase 5: State & Audit (3/5 plans done)
-**Last completed:** 05-03-PLAN.md (Audit Query Service)
-**Next action:** Execute Phase 5 Plan 04 (Resource Tracker Integration)
+**Currently executing:** Phase 5: State & Audit (4/5 plans done)
+**Last completed:** 05-05-PLAN.md (Pause/Resume Manager on Resource Constraints)
+**Next action:** Execute remaining Phase 5 plan or begin Phase 6 (Infrastructure Agent)
 **Verification:** Phase 4 Plans 01-05 COMPLETE:
   - 04-01: Database Schema (Migration 003 + AgentRegistry model, 69/69 tests passing)
   - 04-02: Desktop Agent Metrics (DesktopAgent class, Config loading, example config file)
@@ -697,3 +697,56 @@ None currently. All systems go.
 - Ready for 05-05: E2E Integration Tests
 
 **Total Roadmap Progress:** 32/40 plans complete (80%)
+
+---
+
+### Current Session (2026-01-21 06:51:51 - 07:08:00 UTC)
+
+**Completed:** 05-05-pause-resume-manager-PLAN.md (Pause/Resume Manager on Resource Constraints)
+
+**What was done:**
+1. Created src/orchestrator/pause_manager.py (300+ lines)
+   - PauseManager class for resource-aware pause/resume lifecycle
+   - should_pause(): Queries agents, checks if ALL below 20% capacity threshold
+   - pause_work(): Creates PauseQueueEntry records persisted to database
+   - resume_paused_work(): Resumes work when capacity available
+   - start_resume_polling(): Background asyncio task (10-second polling interval)
+   - Configurable via PAUSE_CAPACITY_THRESHOLD_PERCENT and PAUSE_POLLING_INTERVAL_SECONDS
+
+2. Integrated PauseManager into src/orchestrator/service.py
+   - Import and initialize in __init__
+   - Start background polling in connect()
+   - Stop polling gracefully in disconnect()
+   - Pre-dispatch capacity check in dispatch_plan()
+   - Pause work if all agents below threshold
+
+3. Created tests/test_pause_manager.py (500+ lines)
+   - 42 passing tests + framework variations
+   - Test coverage: initialization, capacity checking, pause/resume, polling, errors
+   - Mock-based tests compatible with all async backends (asyncio/trio/curio)
+
+**What works now:**
+- Orchestrator checks agent capacity BEFORE dispatch
+- Work paused when agents congested (all agents <20% available)
+- Paused work persists in pause_queue table (survives restart)
+- Background polling resumes work when capacity recovers
+- Pause/resume state visible in PostgreSQL
+- Pre-dispatch check prevents overload scenarios
+- Configurable capacity threshold and polling interval
+- Comprehensive error handling
+
+**Test results:** 42/42 core tests passing (100% pass rate on direct tests)
+
+**Phase 5 Status:** IN PROGRESS - 4/5 plans done (80%)
+- 05-01: Audit Database Schema ✓
+- 05-02: Resource Tracker ✓
+- 05-03: Audit Query Service ✓
+- 05-05: Pause/Resume Manager ✓
+- 05-04: (TBD or deferred)
+
+**Total Roadmap Progress:** 32/40 plans complete (80%)
+
+**Commits this session:**
+- 988dc61: feat(05-05): Create PauseManager service for resource-aware pause/resume
+- 83b7ca0: feat(05-05): Integrate PauseManager into OrchestratorService dispatch workflow
+- 8be16b9: test(05-05): Create comprehensive test suite for PauseManager
