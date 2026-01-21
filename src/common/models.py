@@ -8,6 +8,7 @@ Provides:
 from datetime import datetime
 from uuid import uuid4
 
+import sqlalchemy as sa
 from sqlalchemy import JSON, UUID, Column, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import relationship
@@ -348,6 +349,66 @@ class PauseQueueEntry(Base):
 
     def __repr__(self):
         return f"<PauseQueueEntry(id={self.id}, task_id={self.task_id}, reason={self.reason})>"
+
+
+class PlaybookMapping(Base):
+    """Playbook mapping model for semantic task-to-playbook cache.
+
+    Tracks:
+    - Task intent to playbook path mappings
+    - Confidence scores for match quality
+    - Embedding vectors for semantic similarity
+    - Usage statistics for cache optimization
+    """
+
+    __tablename__ = "playbook_mappings"
+
+    # Primary key
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Intent tracking
+    intent = Column(String(500), nullable=False)
+    # The original task intent text
+
+    intent_hash = Column(String(64), nullable=False, unique=True)
+    # SHA256 hash of normalized intent for fast lookup
+
+    # Mapping result
+    playbook_path = Column(String(500), nullable=False)
+    # Path to the matched playbook
+
+    confidence = Column(sa.Float, nullable=False)
+    # Match confidence score (0.0-1.0)
+
+    match_method = Column(String(50), nullable=False)
+    # How match was found: 'exact', 'cached', 'semantic'
+
+    embedding_vector = Column(JSONB, nullable=True)
+    # Embedding vector stored as JSON array for portability
+
+    # Usage tracking
+    created_at = Column(DateTime, nullable=False, default=func.now())
+    last_used_at = Column(DateTime, nullable=False, default=func.now())
+    use_count = Column(Integer, nullable=False, default=1)
+
+    @staticmethod
+    def normalize_intent(intent: str) -> str:
+        """Normalize intent text for consistent hashing.
+
+        Args:
+            intent: Raw task intent text
+
+        Returns:
+            Normalized intent (lowercased, stripped whitespace)
+        """
+        return intent.lower().strip()
+
+    def __repr__(self):
+        return (
+            f"<PlaybookMapping(id={self.id}, intent='{self.intent[:30]}...', "
+            f"playbook_path={self.playbook_path}, confidence={self.confidence:.2f}, "
+            f"method={self.match_method})>"
+        )
 
 
 # Pydantic models for request parsing and decomposition
