@@ -1,0 +1,18 @@
+---
+# Handlers for {{ service_name }} role
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Restart {{ service_name }}
+  ansible.builtin.systemd:
+    name: "{{ service_name }}"
+    state: restarted
+  when: ansible_service_mgr == "systemd"
+
+- name: Reload {{ service_name }}
+  ansible.builtin.systemd:
+    name: "{{ service_name }}"
+    state: reloaded
+  when: ansible_service_mgr == "systemd"

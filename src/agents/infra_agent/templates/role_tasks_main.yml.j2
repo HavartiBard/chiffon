@@ -1,0 +1,72 @@
+---
+# Tasks for {{ service_name }} role
+
+- name: Install {{ service_name }} dependencies
+  ansible.builtin.apt:
+    name: "{{ '{{' }} item {{ '}}' }}"
+    state: present
+    update_cache: yes
+  loop:
+    - curl
+    - ca-certificates
+  tags:
+    - install
+    - dependencies
+
+- name: Create {{ service_name }} user
+  ansible.builtin.user:
+    name: "{{ '{{' }} service_user {{ '}}' }}"
+    group: "{{ '{{' }} service_group {{ '}}' }}"
+    system: yes
+    create_home: no
+    shell: /usr/sbin/nologin
+  tags:
+    - install
+
+- name: Create {{ service_name }} directories
+  ansible.builtin.file:
+    path: "{{ '{{' }} item {{ '}}' }}"
+    state: directory
+    owner: "{{ '{{' }} service_user {{ '}}' }}"
+    group: "{{ '{{' }} service_group {{ '}}' }}"
+    mode: '0755'
+  loop:
+    - "{{ '{{' }} config_dir {{ '}}' }}"
+    - "{{ '{{' }} data_dir {{ '}}' }}"
+    - "{{ '{{' }} log_dir {{ '}}' }}"
+  tags:
+    - install
+
+- name: Deploy {{ service_name }} configuration
+  ansible.builtin.template:
+    src: "{{ service_name }}.conf.j2"
+    dest: "{{ '{{' }} config_dir {{ '}}' }}/{{ service_name }}.conf"
+    owner: "{{ '{{' }} service_user {{ '}}' }}"
+    group: "{{ '{{' }} service_group {{ '}}' }}"
+    mode: '0640'
+  notify: Restart {{ service_name }}
+  tags:
+    - config
+
+- name: Deploy {{ service_name }} systemd unit
+  ansible.builtin.template:
+    src: "{{ service_name }}.service.j2"
+    dest: "/etc/systemd/system/{{ service_name }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Reload systemd
+    - Restart {{ service_name }}
+  tags:
+    - install
+    - systemd
+
+- name: Enable and start {{ service_name }}
+  ansible.builtin.systemd:
+    name: "{{ service_name }}"
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  tags:
+    - service

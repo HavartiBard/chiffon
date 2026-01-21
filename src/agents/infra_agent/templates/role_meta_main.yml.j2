@@ -1,0 +1,27 @@
+---
+# Meta information for {{ service_name }} role
+
+galaxy_info:
+  role_name: {{ service_name }}
+  author: Chiffon Infrastructure Agent
+  description: Deploy and configure {{ service_name }} service
+  company: Homelab
+  license: MIT
+  min_ansible_version: "2.10"
+
+  platforms:
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+
+  galaxy_tags:
+    - {{ service_name }}
+    - deployment
+    - homelab
+
+dependencies: []
