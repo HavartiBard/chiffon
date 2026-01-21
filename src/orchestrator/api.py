@@ -11,7 +11,7 @@ All responses use consistent JSON format with error codes for correlation.
 
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -19,7 +19,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from src.orchestrator.service import OrchestratorService
+from src.orchestrator.audit import AuditService
 from src.common.database import SessionLocal
+from src.common.models import Task
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +149,31 @@ class CancelResponse(BaseModel):
     status: str = Field(default="cancelled")
 
 
+# ==================== Phase 5: Audit Queries ====================
+
+
+class TaskAuditResponse(BaseModel):
+    """Response model for a single task in audit results."""
+
+    task_id: str
+    status: str
+    request_text: str
+    services_touched: Optional[List[str]] = None
+    outcome: Optional[dict] = None
+    created_at: str
+    completed_at: Optional[str] = None
+    error_message: Optional[str] = None
+
+
+class AuditQueryResponse(BaseModel):
+    """Response for audit queries with pagination."""
+
+    tasks: List[TaskAuditResponse]
+    total: int
+    limit: int
+    offset: int
+
+
 # Dependency injection for orchestrator service
 def get_orchestrator_service() -> OrchestratorService:
     """Get orchestrator service from app state.
@@ -168,6 +195,20 @@ def get_db() -> Session:
         yield db
     finally:
         db.close()
+
+
+def task_to_audit_response(task: Task) -> TaskAuditResponse:
+    """Convert Task ORM object to audit response."""
+    return TaskAuditResponse(
+        task_id=str(task.task_id),
+        status=task.status,
+        request_text=task.request_text,
+        services_touched=task.services_touched,
+        outcome=task.outcome,
+        created_at=task.created_at.isoformat() if task.created_at else None,
+        completed_at=task.completed_at.isoformat() if task.completed_at else None,
+        error_message=task.error_message,
+    )
 
 
 @router.post("/dispatch", response_model=DispatchResponse)
@@ -547,3 +588,129 @@ async def get_available_capacity(
     except Exception as e:
         logger.error(f"Error fetching available capacity: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch available capacity")
+
+
+# ==================== Phase 5: Audit Queries ====================
+
+
+@router.get("/audit/failures", response_model=AuditQueryResponse, tags=["audit"])
+async def get_failures(
+    days: int = Query(7, ge=1, le=90, description="Look back N days"),
+    service: Optional[str] = Query(None, description="Filter by service name"),
+    limit: int = Query(100, ge=1, le=1000, description="Max results"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    db: Session = Depends(get_db),
+):
+    """Get all failed tasks in the specified time range.
+
+    Implements STATE-03: "all failures in last week"
+
+    Query parameters:
+        - days: Look back N days (1-90, default 7)
+        - service: Optional service name filter
+        - limit: Max results (1-1000, default 100)
+        - offset: Pagination offset (default 0)
+
+    Returns:
+        AuditQueryResponse with tasks, total, limit, offset
+    """
+    try:
+        audit = AuditService(db)
+        tasks = audit.get_failures(days=days, service=service, limit=limit, offset=offset)
+        total = audit.get_task_count(status="failed", service=service, days=days)
+
+        return AuditQueryResponse(
+            tasks=[task_to_audit_response(t) for t in tasks],
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
+    except Exception as e:
+        logger.error(f"Failed to query failures: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to query failures")
+
+
+@router.get("/audit/by-service/{service_name}", response_model=AuditQueryResponse, tags=["audit"])
+async def get_by_service(
+    service_name: str,
+    status: Optional[str] = Query(None, description="Filter by status"),
+    days: Optional[int] = Query(None, ge=1, le=365, description="Look back N days"),
+    limit: int = Query(100, ge=1, le=1000, description="Max results"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    db: Session = Depends(get_db),
+):
+    """Get all tasks that touched a specific service.
+
+    Implements STATE-03: "all changes to service X"
+
+    Path parameters:
+        - service_name: Service name to filter by
+
+    Query parameters:
+        - status: Optional status filter
+        - days: Optional time range in days (1-365)
+        - limit: Max results (1-1000, default 100)
+        - offset: Pagination offset (default 0)
+
+    Returns:
+        AuditQueryResponse with tasks, total, limit, offset
+    """
+    try:
+        audit = AuditService(db)
+        tasks = audit.get_by_service(
+            service_name=service_name, status=status, days=days, limit=limit, offset=offset
+        )
+        total = audit.get_task_count(status=status, service=service_name, days=days)
+
+        return AuditQueryResponse(
+            tasks=[task_to_audit_response(t) for t in tasks],
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
+    except Exception as e:
+        logger.error(f"Failed to query by service: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to query by service")
+
+
+@router.get("/audit/query", response_model=AuditQueryResponse, tags=["audit"])
+async def audit_query(
+    status: Optional[str] = Query(None, description="Filter by status"),
+    service: Optional[str] = Query(None, description="Filter by service name"),
+    intent: Optional[str] = Query(None, description="Filter by inferred intent"),
+    days: Optional[int] = Query(None, ge=1, le=365, description="Look back N days"),
+    limit: int = Query(100, ge=1, le=1000, description="Max results"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    db: Session = Depends(get_db),
+):
+    """Combined audit query with multiple optional filters.
+
+    Supports combined filtering: status + time range + service + intent.
+
+    Query parameters:
+        - status: Optional status filter
+        - service: Optional service name filter
+        - intent: Optional intent filter (inferred from outcome JSON)
+        - days: Optional time range in days (1-365)
+        - limit: Max results (1-1000, default 100)
+        - offset: Pagination offset (default 0)
+
+    Returns:
+        AuditQueryResponse with tasks, total, limit, offset
+    """
+    try:
+        audit = AuditService(db)
+        tasks = audit.audit_query(
+            status=status, service=service, intent=intent, days=days, limit=limit, offset=offset
+        )
+        total = audit.get_task_count(status=status, service=service, days=days)
+
+        return AuditQueryResponse(
+            tasks=[task_to_audit_response(t) for t in tasks],
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
+    except Exception as e:
+        logger.error(f"Failed to execute audit query: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to execute audit query")
