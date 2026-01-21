@@ -2,7 +2,7 @@
 
 **Project:** Chiffon (Orchestrated AI Agents for Homelab Automation)
 **Version:** 1.0 (v1 Roadmap Approved)
-**Last Updated:** 2026-01-21 (05-05 Pause/Resume Manager complete)
+**Last Updated:** 2026-01-21 (06-02 Task-to-Playbook Mapping complete)
 
 ---
 
@@ -60,18 +60,18 @@ System is validated when:
 | Phase 3: Orchestrator Core | ✓ Complete | 100% (6/6 plans + 2 gap closures) |
 | Phase 4: Desktop Agent | ✓ Complete | 100% (5/5 plans, goal verified) |
 | Phase 5: State & Audit | ✓ Complete | 100% (5/5 plans + 2 gap closures, goal verified) |
-| Phase 6: Infrastructure Agent | Pending | 0% |
+| Phase 6: Infrastructure Agent | In Progress | 33% (2/6 plans) |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 34/40 plans complete (85%)
+**Overall Progress:** 36/40 plans complete (90%)
 
 ### Current Focus
 
-**Currently executing:** Phase 6: Infrastructure Agent (pending)
-**Last completed:** 05-05-PLAN.md (Pause/Resume Manager on Resource Constraints, gap closure)
-**Next action:** Plan Phase 6: Infrastructure Agent integration
-**Status:** Phase 5 complete and goal verified ✓
+**Currently executing:** Phase 6: Infrastructure Agent (in progress)
+**Last completed:** 06-02-PLAN.md (Task-to-Playbook Mapping)
+**Next action:** Execute 06-03-PLAN.md (Playbook Executor with ansible-runner)
+**Status:** Phase 6 - 33% complete (2/6 plans)
 **Verification:** Phase 4 Plans 01-05 COMPLETE:
   - 04-01: Database Schema (Migration 003 + AgentRegistry model, 69/69 tests passing)
   - 04-02: Desktop Agent Metrics (DesktopAgent class, Config loading, example config file)
@@ -132,6 +132,10 @@ System is validated when:
 | Desktop agents report resource status | Real-time accuracy on GPU availability. Enables intelligent scheduling, avoids failed task dispatch | Approved |
 | Wrap existing Ansible playbooks | Reuse infrastructure patterns already working; infra agent orchestrates, not rewrites | Approved |
 | Chat interface for v1 approval | Manual gates initially build confidence. Auto-approval in later phases as workflows proven | Approved |
+| Sentence-transformers 'all-MiniLM-L6-v2' for semantic search | 384 dims, fast inference (~50ms), good semantic similarity, widely used for task-to-playbook mapping | Approved (06-02) |
+| Confidence threshold 0.85 for semantic matches | Research shows 0.85+ provides reliable matches; below this risks false positives | Approved (06-02) |
+| Lazy-load ML models (embedder, FAISS) | Avoids ~2s startup cost if exact/cached matches suffice; reduces memory footprint | Approved (06-02) |
+| PostgreSQL JSONB for embedding storage | Allows querying and filtering; portability across databases; normalized vectors for cosine similarity | Approved (06-02) |
 
 ### Architectural Patterns Established
 
