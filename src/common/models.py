@@ -411,6 +411,55 @@ class PlaybookMapping(Base):
         )
 
 
+class PlaybookCache(Base):
+    """Playbook cache model for storing playbook metadata.
+
+    Tracks:
+    - Playbook file paths and service names
+    - Metadata (description, required vars, tags)
+    - File hash for cache invalidation
+    - Discovery and update timestamps
+    """
+
+    __tablename__ = "playbook_cache"
+
+    # Primary key
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Playbook identification
+    playbook_path = Column(String(500), nullable=False, unique=True)
+    # Full path to playbook file
+
+    service_name = Column(String(100), nullable=True, index=True)
+    # Service name extracted from playbook (e.g., "kuma", "portainer")
+
+    # Metadata
+    description = Column(String, nullable=True)
+    # Human-readable description from playbook header or play name
+
+    required_vars = Column(JSONB, nullable=False, server_default="[]")
+    # Required variables as JSON array
+
+    tags = Column(JSONB, nullable=False, server_default="[]")
+    # Tags as JSON array for categorization
+
+    file_hash = Column(String(64), nullable=False)
+    # SHA256 hash of playbook file for invalidation
+
+    # Timestamps
+    discovered_at = Column(DateTime, nullable=False, default=func.now())
+    # When playbook was first discovered
+
+    updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
+    # Last update timestamp
+
+    def __repr__(self):
+        return (
+            f"<PlaybookCache(id={self.id}, service_name={self.service_name}, "
+            f"playbook_path={self.playbook_path})>"
+        )
+
+
 # Pydantic models for request parsing and decomposition
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
