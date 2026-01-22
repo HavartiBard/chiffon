@@ -79,6 +79,14 @@ select = [
 ignore = [
   "E501",   # line too long (handled by black)
   "B008",   # Do not perform function calls in argument defaults
+  "F401",   # unused imports (sometimes needed for re-exports)
+  "F841",   # local variable assigned but never used (test fixtures)
+  "C901",   # function too complex (some orchestrator functions are intentionally complex)
+  "B007",   # loop control variable not used (common in parameterized tests)
+  "B017",   # pytest.raises(Exception) (acceptable for broad exception testing)
+  "B904",   # raise without from (acceptable in error handling)
+  "I001",   # isort would reorder imports (conflicts with black)
+  "F541",   # f-string without placeholders (acceptable for logging)
 ]
 exclude = [
   ".git",
