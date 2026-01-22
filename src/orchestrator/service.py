@@ -576,9 +576,11 @@ class OrchestratorService:
 
             # Broadcast to WebSocket subscribers
             if self.ws_manager:
-                await self.ws_manager.broadcast(
-                    str(trace_id), work_result.model_dump(mode="json")
-                )
+                payload = {
+                    "event": "work_result",
+                    "data": work_result.model_dump(mode="json"),
+                }
+                await self.ws_manager.broadcast(str(trace_id), payload)
 
             self.logger.info(
                 "Work result handled",
@@ -594,6 +596,18 @@ class OrchestratorService:
                 extra={"trace_id": str(trace_id), "task_id": str(work_result.task_id)},
                 exc_info=True,
             )
+
+    async def broadcast_execution_event(self, trace_id: UUID, event: str, data: dict) -> None:
+        """Emit a structured execution event to WebSocket subscribers."""
+        if not self.ws_manager:
+            return
+        await self.ws_manager.broadcast(
+            str(trace_id),
+            {
+                "event": event,
+                "data": data,
+            },
+        )
 
     async def handle_agent_heartbeat(
         self, heartbeat: StatusUpdate, db: Session
