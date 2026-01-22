@@ -347,185 +347,291 @@ class InfraAgent(BaseAgent):
             )
 
     async def _handle_run_playbook(self, work_request: WorkRequest) -> WorkResult:
-        """Handle run_playbook work type (stub - will be implemented by executor in Plan 03).
-
-        After execution, if status == "failed", triggers PlaybookAnalyzer.
+        """Handle run_playbook work type using PlaybookExecutor.
 
         Parameters:
             playbook_path: Path to playbook file (required)
-            extra_vars: Additional variables (optional)
+            extravars: Extra variables to pass to playbook (optional)
+            inventory: Inventory file to use (optional)
+            limit: Limit execution to specific hosts (optional)
+            tags: Only run tasks with these tags (optional)
+            timeout_seconds: Maximum execution time (optional, default 600)
 
         Returns:
-            WorkResult with execution output and optional analysis
+            WorkResult with execution summary
         """
-        from uuid import uuid4
-        import time
+        playbook_path = work_request.parameters.get("playbook_path")
+        extravars = work_request.parameters.get("extravars")
+        inventory = work_request.parameters.get("inventory")
+        limit = work_request.parameters.get("limit")
+        tags = work_request.parameters.get("tags")
+        timeout_seconds = work_request.parameters.get("timeout_seconds", 600)
 
-        start_time = time.time()
-
-        try:
-            playbook_path = work_request.parameters.get("playbook_path")
-            if not playbook_path:
-                return WorkResult(
-                    task_id=work_request.task_id,
-                    status="failed",
-                    exit_code=1,
-                    output="Error: playbook_path parameter is required",
-                    duration_ms=0,
-                    agent_id=uuid4(),
-                    resources_used={},
-                )
-
-            # TODO: Actual execution via PlaybookExecutor (Plan 03)
-            # For now, simulate a failure to test analyzer integration
-            status = "failed"  # Stub: simulate failure
-            exit_code = 1
-
-            duration_ms = int((time.time() - start_time) * 1000)
-
-            # If failed, run analyzer
-            analysis_result = None
-            if status == "failed":
-                try:
-                    analysis_result = await self.analyzer.analyze_playbook(
-                        playbook_path=playbook_path,
-                        task_id=str(work_request.task_id),
-                    )
-                    self.logger.info(
-                        f"Playbook analysis after failure: {analysis_result.total_issues} suggestions generated"
-                    )
-                except Exception as e:
-                    self.logger.error(f"Post-failure analysis failed: {e}", exc_info=True)
-
-            # Build output with optional analysis
-            output_parts = [
-                "Playbook execution stub (Plan 03 will implement actual execution)",
-                f"Playbook: {playbook_path}",
-                f"Status: {status}",
-            ]
-
-            if analysis_result:
-                output_parts.append(
-                    f"\nAnalysis: {analysis_result.total_issues} improvement suggestions"
-                )
-                output_parts.append(
-                    f"Categories: {', '.join(f'{k}: {v}' for k, v in analysis_result.by_category.items())}"
-                )
-
-            return WorkResult(
-                task_id=work_request.task_id,
-                status=status,
-                exit_code=exit_code,
-                output="\n".join(output_parts),
-                duration_ms=duration_ms,
-                agent_id=uuid4(),
-                resources_used={},
-                analysis_result=analysis_result.model_dump() if analysis_result else None,
-            )
-
-        except Exception as e:
-            duration_ms = int((time.time() - start_time) * 1000)
-            self.logger.error(f"Playbook execution failed: {e}", exc_info=True)
+        if not playbook_path:
+            from uuid import uuid4
 
             return WorkResult(
                 task_id=work_request.task_id,
                 status="failed",
                 exit_code=1,
-                output=f"Playbook execution failed: {str(e)}",
-                duration_ms=duration_ms,
+                output="",
+                error_message="Missing required parameter: playbook_path",
+                duration_ms=0,
+                agent_id=uuid4(),
+                resources_used={},
+            )
+
+        try:
+            summary = await self.executor.execute_playbook(
+                playbook_path=playbook_path,
+                extravars=extravars,
+                inventory=inventory,
+                limit=limit,
+                tags=tags,
+                timeout_seconds=timeout_seconds,
+            )
+
+            return self._summary_to_result(work_request.task_id, summary)
+
+        except PlaybookNotFoundError as e:
+            from uuid import uuid4
+
+            return WorkResult(
+                task_id=work_request.task_id,
+                status="failed",
+                exit_code=2,
+                output="",
+                error_message=f"Playbook not found: {str(e)}",
+                duration_ms=0,
+                agent_id=uuid4(),
+                resources_used={},
+            )
+
+        except ExecutionTimeoutError as e:
+            from uuid import uuid4
+
+            return WorkResult(
+                task_id=work_request.task_id,
+                status="failed",
+                exit_code=124,  # Standard timeout exit code
+                output="",
+                error_message=f"Execution timeout: {str(e)}",
+                duration_ms=timeout_seconds * 1000,
+                agent_id=uuid4(),
+                resources_used={},
+            )
+
+        except AnsibleRunnerError as e:
+            from uuid import uuid4
+
+            return WorkResult(
+                task_id=work_request.task_id,
+                status="failed",
+                exit_code=1,
+                output="",
+                error_message=f"Ansible runner error: {str(e)}",
+                duration_ms=0,
                 agent_id=uuid4(),
                 resources_used={},
             )
 
     async def _handle_deploy_service(self, work_request: WorkRequest) -> WorkResult:
-        """Handle deploy_service work type (stub - will be implemented in Plan 03).
-
-        After execution, if status == "failed", triggers PlaybookAnalyzer.
+        """Handle deploy_service work type with task mapping and execution.
 
         Parameters:
-            service_name: Service to deploy (required)
-            playbook_path: Path to playbook (optional, will be discovered)
+            task_intent: Natural language task description (required)
+            extravars: Extra variables to pass to playbook (optional)
+            inventory: Inventory file to use (optional)
+            limit: Limit execution to specific hosts (optional)
+            tags: Only run tasks with these tags (optional)
+            timeout_seconds: Maximum execution time (optional, default 600)
 
         Returns:
-            WorkResult with execution output and optional analysis
+            WorkResult with execution summary
         """
-        from uuid import uuid4
-        import time
+        task_intent = work_request.parameters.get("task_intent")
 
-        start_time = time.time()
-
-        try:
-            service_name = work_request.parameters.get("service_name")
-            if not service_name:
-                return WorkResult(
-                    task_id=work_request.task_id,
-                    status="failed",
-                    exit_code=1,
-                    output="Error: service_name parameter is required",
-                    duration_ms=0,
-                    agent_id=uuid4(),
-                    resources_used={},
-                )
-
-            # TODO: Actual execution via PlaybookExecutor (Plan 03)
-            # For now, simulate a failure to test analyzer integration
-            playbook_path = f"/path/to/{service_name}-deploy.yml"  # Stub
-            status = "failed"  # Stub: simulate failure
-            exit_code = 1
-
-            duration_ms = int((time.time() - start_time) * 1000)
-
-            # If failed, run analyzer
-            analysis_result = None
-            if status == "failed":
-                try:
-                    analysis_result = await self.analyzer.analyze_playbook(
-                        playbook_path=playbook_path,
-                        task_id=str(work_request.task_id),
-                    )
-                    self.logger.info(
-                        f"Playbook analysis after failure: {analysis_result.total_issues} suggestions generated"
-                    )
-                except Exception as e:
-                    self.logger.error(f"Post-failure analysis failed: {e}", exc_info=True)
-
-            # Build output with optional analysis
-            output_parts = [
-                "Service deployment stub (Plan 03 will implement actual execution)",
-                f"Service: {service_name}",
-                f"Playbook: {playbook_path}",
-                f"Status: {status}",
-            ]
-
-            if analysis_result:
-                output_parts.append(
-                    f"\nAnalysis: {analysis_result.total_issues} improvement suggestions"
-                )
-                output_parts.append(
-                    f"Categories: {', '.join(f'{k}: {v}' for k, v in analysis_result.by_category.items())}"
-                )
-
-            return WorkResult(
-                task_id=work_request.task_id,
-                status=status,
-                exit_code=exit_code,
-                output="\n".join(output_parts),
-                duration_ms=duration_ms,
-                agent_id=uuid4(),
-                resources_used={},
-                analysis_result=analysis_result.model_dump() if analysis_result else None,
-            )
-
-        except Exception as e:
-            duration_ms = int((time.time() - start_time) * 1000)
-            self.logger.error(f"Service deployment failed: {e}", exc_info=True)
+        if not task_intent:
+            from uuid import uuid4
 
             return WorkResult(
                 task_id=work_request.task_id,
                 status="failed",
                 exit_code=1,
-                output=f"Service deployment failed: {str(e)}",
-                duration_ms=duration_ms,
+                output="",
+                error_message="Missing required parameter: task_intent",
+                duration_ms=0,
                 agent_id=uuid4(),
                 resources_used={},
             )
+
+        # Import TaskMapper and CacheManager here to avoid circular deps
+        from .cache_manager import CacheManager
+        from .task_mapper import TaskMapper
+
+        # Create cache manager and task mapper
+        # Note: In production, these should be initialized once in __init__
+        # For now, create them per-request for simplicity
+        from src.common.config import Config
+
+        cache_manager = CacheManager(Config())
+
+        # Get playbook catalog
+        catalog_dicts = await self.discover_playbooks(force_refresh=False)
+
+        # Convert to PlaybookMetadata objects for TaskMapper
+        from .task_mapper import PlaybookMetadata
+
+        catalog = [PlaybookMetadata(**pb) for pb in catalog_dicts]
+
+        # Map task to playbook
+        task_mapper = TaskMapper(cache_manager, catalog)
+        mapping_result = await task_mapper.map_task_to_playbook(task_intent)
+
+        if not mapping_result.playbook_path:
+            from uuid import uuid4
+
+            suggestion = mapping_result.suggestion or "No suggestion available"
+            return WorkResult(
+                task_id=work_request.task_id,
+                status="failed",
+                exit_code=1,
+                output=f"No matching playbook found.\n{suggestion}",
+                error_message=f"No playbook matched task intent: {task_intent}",
+                duration_ms=0,
+                agent_id=uuid4(),
+                resources_used={},
+            )
+
+        # Execute the mapped playbook
+        extravars = work_request.parameters.get("extravars")
+        inventory = work_request.parameters.get("inventory")
+        limit = work_request.parameters.get("limit")
+        tags = work_request.parameters.get("tags")
+        timeout_seconds = work_request.parameters.get("timeout_seconds", 600)
+
+        try:
+            summary = await self.executor.execute_playbook(
+                playbook_path=mapping_result.playbook_path,
+                extravars=extravars,
+                inventory=inventory,
+                limit=limit,
+                tags=tags,
+                timeout_seconds=timeout_seconds,
+            )
+
+            return self._summary_to_result(work_request.task_id, summary)
+
+        except (PlaybookNotFoundError, ExecutionTimeoutError, AnsibleRunnerError) as e:
+            from uuid import uuid4
+
+            return WorkResult(
+                task_id=work_request.task_id,
+                status="failed",
+                exit_code=1,
+                output="",
+                error_message=str(e),
+                duration_ms=0,
+                agent_id=uuid4(),
+                resources_used={},
+            )
+
+    async def _handle_discover_playbooks(self, work_request: WorkRequest) -> WorkResult:
+        """Handle discover_playbooks work type.
+
+        Parameters:
+            force_refresh: If True, ignore cache and rescan repository (optional, default False)
+
+        Returns:
+            WorkResult with playbook catalog in output
+        """
+        force_refresh = work_request.parameters.get("force_refresh", False)
+
+        try:
+            catalog = await self.discover_playbooks(force_refresh=force_refresh)
+            from uuid import uuid4
+
+            return WorkResult(
+                task_id=work_request.task_id,
+                status="completed",
+                exit_code=0,
+                output=json.dumps(catalog, indent=2),
+                duration_ms=0,
+                agent_id=uuid4(),
+                resources_used={},
+            )
+
+        except Exception as e:
+            from uuid import uuid4
+
+            return WorkResult(
+                task_id=work_request.task_id,
+                status="failed",
+                exit_code=1,
+                output="",
+                error_message=f"Failed to discover playbooks: {str(e)}",
+                duration_ms=0,
+                agent_id=uuid4(),
+                resources_used={},
+            )
+
+    def _summary_to_result(
+        self, task_id: UUID, summary: ExecutionSummary
+    ) -> WorkResult:
+        """Convert ExecutionSummary to WorkResult.
+
+        Args:
+            task_id: Task ID from work request
+            summary: Execution summary from PlaybookExecutor
+
+        Returns:
+            WorkResult with formatted output
+        """
+        from uuid import uuid4
+
+        # Format output
+        output_lines = [
+            f"Status: {summary.status}",
+            f"Duration: {summary.duration_ms}ms",
+            f"Tasks: {summary.ok_count} ok, {summary.changed_count} changed, "
+            f"{summary.failed_count} failed, {summary.skipped_count} skipped",
+        ]
+
+        if summary.failed_tasks:
+            output_lines.append("\nFailed tasks:")
+            for task in summary.failed_tasks:
+                output_lines.append(f"  - {task}")
+
+        if summary.key_errors:
+            output_lines.append("\nKey errors:")
+            for error in summary.key_errors:
+                output_lines.append(f"  - {error}")
+
+        if summary.hosts_summary:
+            output_lines.append("\nHost summary:")
+            for host, stats in summary.hosts_summary.items():
+                output_lines.append(
+                    f"  {host}: {stats['ok']} ok, {stats['changed']} changed, "
+                    f"{stats['failures']} failed"
+                )
+
+        output = "\n".join(output_lines)
+
+        # Determine status and error message
+        status = "completed" if summary.status == "successful" else "failed"
+        error_message = None
+        if summary.status != "successful":
+            error_message = f"Playbook execution {summary.status}"
+            if summary.key_errors:
+                error_message += f": {summary.key_errors[0]}"
+
+        return WorkResult(
+            task_id=task_id,
+            status=status,
+            exit_code=summary.exit_code,
+            output=output,
+            error_message=error_message,
+            duration_ms=summary.duration_ms,
+            agent_id=uuid4(),
+            resources_used={},
+        )
