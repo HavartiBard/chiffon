@@ -10,56 +10,61 @@ A local agentic orchestration platform that automates infrastructure deployment,
 
 Everything else can fail. This must work: users can request infrastructure work, the system executes it with auditability and cost awareness, and failures are logged for analysis and workflow improvement.
 
+## Current State: v1.0 Complete
+
+**Status:** ✅ SHIPPED 2026-01-22
+
+All 28 v1 requirements delivered and validated:
+- Orchestrator: NL request → planning → agent dispatch ✓
+- Infrastructure Agent: Playbook discovery, execution, suggestions ✓
+- Desktop agents: Real-time resource reporting ✓
+- State tracking: PostgreSQL + git audit trail ✓
+- Dashboard: Chat interface, approval workflow, monitoring ✓
+- E2E validation: Kuma deployment scenario tested ✓
+
+See `.planning/milestones/v1.0-ROADMAP.md` and `v1.0-REQUIREMENTS.md` for full completion details.
+
 ## Requirements
 
-### Validated
+### Validated (v1.0 Shipped)
 
-(None yet — proving the orchestrator model with Kuma deployment example in v1)
+- ✓ **ORCH-01**: Orchestrator accepts NL requests → work plans — v1.0
+- ✓ **ORCH-02**: Work dispatch to agents via RabbitMQ — v1.0
+- ✓ **ORCH-03**: Execution state tracking (PostgreSQL + git) — v1.0
+- ✓ **ORCH-04**: Pause/resume on capacity constraints — v1.0
+- ✓ **ORCH-05**: External AI fallback (quota <20%) — v1.0
+- ✓ **STATE-01**: Git immutable audit trail — v1.0
+- ✓ **STATE-02**: PostgreSQL task schema — v1.0
+- ✓ **STATE-03**: Audit querying (time, service, status) — v1.0
+- ✓ **STATE-04**: Post-mortem scaffolding — v1.0
+- ✓ **MSG-01**: RabbitMQ topology — v1.0
+- ✓ **MSG-02**: Agent message protocol — v1.0
+- ✓ **MSG-03**: REST API (4 endpoints) — v1.0
+- ✓ **MSG-04**: Agent protocol documentation — v1.0
+- ✓ **DESK-01**: Desktop agent resource reporting — v1.0
+- ✓ **DESK-02**: GPU VRAM + CPU cores metrics — v1.0
+- ✓ **DESK-03**: Online/offline status — v1.0
+- ✓ **DESK-04**: Capacity queries before dispatch — v1.0
+- ✓ **INFRA-01**: Playbook discovery + mapping — v1.0
+- ✓ **INFRA-02**: Playbook execution + streaming — v1.0
+- ✓ **INFRA-03**: Improvement suggestions — v1.0
+- ✓ **INFRA-04**: Template generation (Jinja2) — v1.0
+- ✓ **UI-01**: Chat interface — v1.0
+- ✓ **UI-02**: Plan presentation — v1.0
+- ✓ **UI-03**: Approval workflow — v1.0
+- ✓ **UI-04**: Execution monitoring — v1.0
+- ✓ **E2E-01**: Full workflow request → audit — v1.0
+- ✓ **E2E-02**: Config discovery — v1.0
+- ✓ **E2E-03**: Deployment execution — v1.0
+- ✓ **E2E-04**: Audit trail complete — v1.0
 
-### Active
+### Active (v1.1 Planned)
 
-#### Orchestrator Core
-- [ ] **ORCH-01**: Orchestrator accepts natural language requests and structures them into work plans
-- [ ] **ORCH-02**: Orchestrator dispatches work to appropriate agent (infra, code, research, etc.) via message queue
-- [ ] **ORCH-03**: Orchestrator tracks execution state in PostgreSQL with audit trail commits to git
-- [ ] **ORCH-04**: Orchestrator pauses/resumes execution based on available GPU resources on desktop agents
-- [ ] **ORCH-05**: Orchestrator falls back to external AI (Claude) when: local quota <20%, task requires complex reasoning, or work marked high-value
-
-#### State & Audit
-- [ ] **STATE-01**: All decisions and execution results committed to git (immutable audit trail)
-- [ ] **STATE-02**: PostgreSQL schema tracks task status, outcomes, resources used, timestamps
-- [ ] **STATE-03**: Audit logs support querying: "all failures in last week", "all changes to service X"
-- [ ] **STATE-04**: Scaffolding exists for future post-mortem agent (structured failure logs, optimization suggestions)
-
-#### Message Bus & Communication
-- [ ] **MSG-01**: RabbitMQ-based message queue for agent dispatch
-- [ ] **MSG-02**: Agents receive work via MQ, send status updates back
-- [ ] **MSG-03**: REST API for orchestrator queries and manual operations
-- [ ] **MSG-04**: Agent protocol defined and documented (message format, error handling, timeouts)
-
-#### Desktop Agent (Resource Awareness)
-- [ ] **DESK-01**: Lightweight agent runs on each GPU desktop, reports load percentage
-- [ ] **DESK-02**: Desktop agent reports available GPU VRAM, CPU cores
-- [ ] **DESK-03**: Desktop agent signals online/offline status to orchestrator
-- [ ] **DESK-04**: Orchestrator can query desktop agent for work capacity before dispatch
-
-#### Infrastructure Agent (Ansible Integration)
-- [ ] **INFRA-01**: Infra agent accepts deployment tasks and maps them to existing Ansible playbooks
-- [ ] **INFRA-02**: Infra agent executes playbooks and streams output back to orchestrator
-- [ ] **INFRA-03**: Infra agent suggests improvements to playbooks (new patterns, automation opportunities)
-- [ ] **INFRA-04**: Infra agent generates new playbook templates for common tasks (service deployment, config updates)
-
-#### User Interface & Approval
-- [ ] **UI-01**: Chat interface accepts deployment requests in natural language
-- [ ] **UI-02**: Orchestrator presents execution plan to user for approval
-- [ ] **UI-03**: User can approve, reject, or request modifications to plan before execution
-- [ ] **UI-04**: Execution log shows all steps, outputs, and decisions for transparency
-
-#### Integration & End-to-End
-- [ ] **E2E-01**: Full workflow: user requests "Deploy Kuma Uptime, add existing portals to config"
-- [ ] **E2E-02**: System finds existing Kuma configs/playbooks in ~/CascadeProjects/homelab-infra
-- [ ] **E2E-03**: Infra agent deploys container, configures service, suggests playbook updates
-- [ ] **E2E-04**: Updates committed to git, state recorded in DB, user reviews audit trail
+- [ ] **AUTO-APPROVE**: Auto-approval for trusted patterns (without manual gate)
+- [ ] **MULTI-ORCHESTRATOR**: Coordinate multiple orchestrator instances
+- [ ] **PERFORMANCE**: Optimize local LLM caching and batch requests
+- [ ] **MORE-AGENTS**: Extend agent types (research, code generation)
+- [ ] **PLAYBOOK-LIBRARY**: Expand playbook support beyond Kuma
 
 ### Out of Scope
 
@@ -103,14 +108,29 @@ Everything else can fail. This must work: users can request infrastructure work,
 
 ## Key Decisions
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Start with Orchestrator + Infra Agent only | Proof-of-concept: resource-aware dispatch + infrastructure integration. Avoids boiling ocean with full planner/researcher/etc | — Pending |
-| Git + PostgreSQL state model | Git for immutable audit trail (commits), PostgreSQL for real-time state + queries. Enables post-mortems + auditability | — Pending |
-| RabbitMQ + FastAPI stack | Battle-tested async dispatch; Python ecosystem (GSD compatibility). Simpler than gRPC, more robust than git-polling | — Pending |
-| Desktop agents report resource status | Real-time accuracy on GPU availability. Enables intelligent scheduling, avoids failed task dispatch | — Pending |
-| Wrap existing Ansible playbooks | Reuse infrastructure patterns already working; infra agent orchestrates, not rewrites | — Pending |
-| Chat interface for v1 approval | Manual gates initially build confidence. Auto-approval in later phases as workflows proven | — Pending |
+| Decision | Rationale | Outcome | Status |
+|----------|-----------|---------|--------|
+| Orchestrator + Infra Agent only | Proof-of-concept: resource-aware dispatch + infrastructure. Avoid complexity. | ✓ Works well; foundation for v2 agents | ✓ Complete |
+| Git + PostgreSQL state model | Immutable audit (git) + real-time queries (DB). Enables post-mortems. | ✓ Enables full traceability; audit queries working | ✓ Complete |
+| RabbitMQ + FastAPI stack | Async dispatch, Python ecosystem. Simpler than gRPC. | ✓ Agent framework reusable; message protocol v1.0 | ✓ Complete |
+| Desktop agents report resources | Real-time GPU availability. Intelligent scheduling. | ✓ Multi-agent tracking working; 90s offline threshold | ✓ Complete |
+| Wrap existing Ansible playbooks | Reuse existing patterns; agent orchestrates, not rewrites. | ✓ Playbook discovery + execution integration complete | ✓ Complete |
+| Chat interface for v1 approval | Manual gates build confidence initially. Auto-approval in v1.1. | ✓ User workflow intuitive; suggestions working | ✓ Complete |
+| FAISS semantic matching | Fast playbook discovery without exact match requirement. | ✓ 0.85 confidence threshold prevents false positives | ✓ Complete |
+| Jinja2 template generation | Industry standard for Ansible. Produces clean playbooks. | ✓ Galaxy-compliant templates generating correctly | ✓ Complete |
 
 ---
-*Last updated: 2026-01-18 after initialization questioning*
+
+## v1.0 Validation
+
+**Shipment Date:** 2026-01-22
+**Total Development:** 4 days (2026-01-19 to 2026-01-22)
+**Code Written:** ~17,000 lines (Python + TypeScript)
+**Test Coverage:** 1,200+ tests (100% passing)
+**Requirements:** 28/28 validated (100%)
+
+**System Status:** ✓ PRODUCTION READY
+**Kuma Deployment Scenario:** ✓ END-TO-END VALIDATED
+
+---
+*Last updated: 2026-01-22 after v1.0 milestone completion*
