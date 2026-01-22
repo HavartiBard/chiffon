@@ -397,7 +397,7 @@ class InfraAgent(BaseAgent):
                 timeout_seconds=timeout_seconds,
             )
 
-            return self._summary_to_result(work_request.task_id, summary)
+            return await self._summary_to_result(work_request.task_id, summary, playbook_path)
 
         except PlaybookNotFoundError as e:
             from uuid import uuid4
@@ -526,7 +526,7 @@ class InfraAgent(BaseAgent):
                 timeout_seconds=timeout_seconds,
             )
 
-            return self._summary_to_result(work_request.task_id, summary)
+            return await self._summary_to_result(work_request.task_id, summary, mapping_result.playbook_path)
 
         except (PlaybookNotFoundError, ExecutionTimeoutError, AnsibleRunnerError) as e:
             from uuid import uuid4
@@ -581,17 +581,18 @@ class InfraAgent(BaseAgent):
                 resources_used={},
             )
 
-    def _summary_to_result(
-        self, task_id: UUID, summary: ExecutionSummary
+    async def _summary_to_result(
+        self, task_id: UUID, summary: ExecutionSummary, playbook_path: str
     ) -> WorkResult:
         """Convert ExecutionSummary to WorkResult.
 
         Args:
             task_id: Task ID from work request
             summary: Execution summary from PlaybookExecutor
+            playbook_path: Path to the executed playbook (for analysis on failure)
 
         Returns:
-            WorkResult with formatted output
+            WorkResult with formatted output and optional analysis
         """
         from uuid import uuid4
 
@@ -621,15 +622,40 @@ class InfraAgent(BaseAgent):
                     f"{stats['failures']} failed"
                 )
 
-        output = "\n".join(output_lines)
-
         # Determine status and error message
         status = "completed" if summary.status == "successful" else "failed"
         error_message = None
+        analysis_result = None
+
+        # If failed, run playbook analyzer
+        if status == "failed" and playbook_path:
+            try:
+                analysis = await self.analyzer.analyze_playbook(
+                    playbook_path=playbook_path,
+                    task_id=str(task_id),
+                )
+                analysis_result = analysis.model_dump()
+                self.logger.info(
+                    f"Playbook analysis after failure: {analysis.total_issues} suggestions generated"
+                )
+
+                # Add analysis summary to output
+                output_lines.append(
+                    f"\nAnalysis: {analysis.total_issues} improvement suggestions"
+                )
+                if analysis.by_category:
+                    output_lines.append(
+                        f"Categories: {', '.join(f'{k}: {v}' for k, v in analysis.by_category.items())}"
+                    )
+            except Exception as e:
+                self.logger.error(f"Post-failure analysis failed: {e}", exc_info=True)
+
         if summary.status != "successful":
             error_message = f"Playbook execution {summary.status}"
             if summary.key_errors:
                 error_message += f": {summary.key_errors[0]}"
+
+        output = "\n".join(output_lines)
 
         return WorkResult(
             task_id=task_id,
@@ -640,4 +666,5 @@ class InfraAgent(BaseAgent):
             duration_ms=summary.duration_ms,
             agent_id=uuid4(),
             resources_used={},
+            analysis_result=analysis_result,
         )
