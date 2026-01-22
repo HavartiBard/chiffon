@@ -168,6 +168,10 @@ class WorkResult(BaseModel):
         default_factory=dict,
         description="Resource consumption: {cpu_time_ms, memory_peak_mb, gpu_memory_used_mb}"
     )
+    analysis_result: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Playbook analysis result from PlaybookAnalyzer (if applicable)"
+    )
 
     @model_validator(mode="after")
     def validate_status_and_error(self) -> "WorkResult":
