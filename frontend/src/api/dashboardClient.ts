@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios'
-import type { ChatResponse, PlanView } from '../types/dashboard'
+import type { ChatResponse, PlanStatusPayload, PlanView } from '../types/dashboard'
 
 const dashboardClient = axios.create({
   baseURL: 'http://localhost:8001/api/dashboard',
@@ -83,6 +83,11 @@ const dashboardApi = {
         user_message: modification,
       })
     )
+    return response.data
+  },
+
+  async pollPlan(planId: string): Promise<PlanStatusPayload> {
+    const response = await withRetry(() => dashboardClient.get(`/plan/${planId}/poll`))
     return response.data
   },
 }

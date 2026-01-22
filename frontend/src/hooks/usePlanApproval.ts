@@ -43,7 +43,7 @@ export function usePlanApproval(initialPlan: PlanView | null = null): UsePlanApp
         success: result.status === 'approved' ? 'Execution started' : 'Plan approved',
         plan: prev.plan ? { ...prev.plan, status: result.status, canApprove: false } : prev.plan,
       }))
-      return true
+      return Boolean(result.execution_started)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       setState((prev) => ({ ...prev, isApproving: false, error: `Approval failed: ${message}` }))

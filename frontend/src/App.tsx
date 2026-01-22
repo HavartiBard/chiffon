@@ -1,13 +1,16 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import ApprovalControls from './components/ApprovalControls'
 import ChatInterface from './components/ChatInterface'
+import ExecutionMonitor from './components/ExecutionMonitor'
 import PlanReview from './components/PlanReview'
 import { useChat } from './hooks/useChat'
 import { usePlanApproval } from './hooks/usePlanApproval'
+import type { PlanView } from './types/dashboard'
 
 function App() {
   const chat = useChat()
   const planApproval = usePlanApproval()
+  const [executionPlan, setExecutionPlan] = useState<PlanView | null>(null)
 
   useEffect(() => {
     if (chat.plan) {
@@ -17,6 +20,40 @@ function App() {
 
   const sessionId = chat.session?.sessionId || ''
   const activePlan = planApproval.plan
+
+  const handleApprove = useCallback(async () => {
+    if (!sessionId || !activePlan) {
+      return
+    }
+    const planToRun = activePlan
+    const executionStarted = await planApproval.approve(sessionId)
+    if (executionStarted) {
+      setExecutionPlan(planToRun)
+    }
+  }, [activePlan, planApproval, sessionId])
+
+  const handleReject = useCallback(async () => {
+    if (!sessionId) {
+      return
+    }
+    await planApproval.reject(sessionId)
+  }, [planApproval, sessionId])
+
+  const handleModify = useCallback(
+    async (text: string) => {
+      if (!sessionId) {
+        return
+      }
+      await planApproval.modify(sessionId, text)
+    },
+    [planApproval, sessionId]
+  )
+
+  const handleExecutionComplete = useCallback(() => {
+    planApproval.setPlan(null)
+    setExecutionPlan(null)
+    chat.clearHistory()
+  }, [chat, planApproval])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -30,7 +67,9 @@ function App() {
         <ChatInterface />
 
         <div className="space-y-4">
-          {activePlan ? (
+          {executionPlan ? (
+            <ExecutionMonitor plan={executionPlan} sessionId={sessionId} onComplete={handleExecutionComplete} />
+          ) : activePlan ? (
             <>
               <PlanReview plan={activePlan} />
               <div className="rounded-xl border bg-white p-6 shadow-sm">
@@ -47,9 +86,9 @@ function App() {
                 <ApprovalControls
                   planId={activePlan.planId}
                   sessionId={sessionId}
-                  onApprove={() => planApproval.approve(sessionId)}
-                  onReject={() => planApproval.reject(sessionId)}
-                  onModify={(text) => planApproval.modify(sessionId, text)}
+                  onApprove={handleApprove}
+                  onReject={handleReject}
+                  onModify={handleModify}
                   isApproving={planApproval.isApproving}
                   isRejecting={planApproval.isRejecting}
                   isModifying={planApproval.isModifying}
