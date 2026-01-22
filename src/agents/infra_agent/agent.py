@@ -170,11 +170,13 @@ class InfraAgent(BaseAgent):
             # Extract parameters
             service_name = work_request.parameters.get("service_name")
             if not service_name:
+                error_msg = "service_name parameter is required"
                 return WorkResult(
                     task_id=work_request.task_id,
                     status="failed",
                     exit_code=1,
-                    output="Error: service_name parameter is required",
+                    output=f"Error: {error_msg}",
+                    error_message=error_msg,
                     duration_ms=0,
                     agent_id=uuid4(),
                     resources_used={},
@@ -234,11 +236,13 @@ class InfraAgent(BaseAgent):
             duration_ms = int((time.time() - start_time) * 1000)
             self.logger.error(f"Template generation failed: {e}", exc_info=True)
 
+            error_msg = str(e)
             return WorkResult(
                 task_id=work_request.task_id,
                 status="failed",
                 exit_code=1,
-                output=f"Template generation failed: {str(e)}",
+                output=f"Template generation failed: {error_msg}",
+                error_message=error_msg,
                 duration_ms=duration_ms,
                 agent_id=uuid4(),
                 resources_used={},
@@ -295,7 +299,8 @@ class InfraAgent(BaseAgent):
                     task_id=work_request.task_id,
                     status="failed",
                     exit_code=1,
-                    output="Error: playbook_path parameter is required",
+                    output="",
+                    error_message="playbook_path parameter is required",
                     duration_ms=0,
                     agent_id=uuid4(),
                     resources_used={},
@@ -340,7 +345,8 @@ class InfraAgent(BaseAgent):
                 task_id=work_request.task_id,
                 status="failed",
                 exit_code=1,
-                output=f"Playbook analysis failed: {str(e)}",
+                output="",
+                error_message=f"Playbook analysis failed: {str(e)}",
                 duration_ms=duration_ms,
                 agent_id=uuid4(),
                 resources_used={},
