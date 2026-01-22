@@ -60,18 +60,18 @@ System is validated when:
 | Phase 3: Orchestrator Core | ✓ Complete | 100% (6/6 plans + 2 gap closures) |
 | Phase 4: Desktop Agent | ✓ Complete | 100% (5/5 plans, goal verified) |
 | Phase 5: State & Audit | ✓ Complete | 100% (5/5 plans + 2 gap closures, goal verified) |
-| Phase 6: Infrastructure Agent | In Progress | 50% (3/6 plans) |
+| Phase 6: Infrastructure Agent | In Progress | 67% (4/6 plans) |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 37/40 plans complete (93%)
+**Overall Progress:** 38/40 plans complete (95%)
 
 ### Current Focus
 
 **Currently executing:** Phase 6: Infrastructure Agent (in progress)
-**Last completed:** 06-05-PLAN.md (Template Generation)
-**Next action:** Execute 06-03-PLAN.md (Playbook Executor with ansible-runner)
-**Status:** Phase 6 - 50% complete (3/6 plans)
+**Last completed:** 06-04-PLAN.md (Improvement Suggestions)
+**Next action:** Execute 06-06-PLAN.md (E2E Infrastructure Agent Tests)
+**Status:** Phase 6 - 67% complete (4/6 plans)
 **Verification:** Phase 4 Plans 01-05 COMPLETE:
   - 04-01: Database Schema (Migration 003 + AgentRegistry model, 69/69 tests passing)
   - 04-02: Desktop Agent Metrics (DesktopAgent class, Config loading, example config file)
@@ -139,6 +139,10 @@ System is validated when:
 | Jinja2 for Ansible template generation | Industry standard for template rendering; trim_blocks/lstrip_blocks produce clean YAML | Approved (06-05) |
 | Service name normalization (lowercase-dashes) | Ansible role names must be filesystem-safe; conventionally lowercase-with-dashes | Approved (06-05) |
 | Chiffon metadata comments in playbooks | Enable tracking Chiffon-generated vs manual playbooks; format: chiffon:service=name | Approved (06-05) |
+| ansible-lint subprocess for playbook analysis | Leverages mature linting tool instead of reimplementing rules; JSON output enables structured parsing | Approved (06-04) |
+| 5-category rule taxonomy | Groups findings by actionability (idempotency, error_handling, performance, best_practices, standards) for better prioritization | Approved (06-04) |
+| Truncate large results (>100 → 50) | Prevents overwhelming users and reduces storage; ansible-lint sorts by severity so first 50 are most critical | Approved (06-04) |
+| Run analyzer only on failure | Focuses analysis efforts on actionable failures; successful playbooks don't need improvement suggestions | Approved (06-04) |
 
 ### Architectural Patterns Established
 
@@ -240,24 +244,27 @@ None currently. All systems go.
 
 ## Session Continuity
 
-### Last Session (2026-01-19 17:26 - 18:10)
+### Last Session (2026-01-22 01:24 - 01:32)
 
-**Completed:** 03-03-agent-router-PLAN.md (Agent Router with Intelligent Routing)
+**Completed:** 06-04-PLAN.md (Improvement Suggestions)
 
 **What was done:**
-1. Added AgentRegistry, AgentPerformance, RoutingDecision ORM models to src/common/models.py (300 lines)
-2. Created Alembic migration (002_agent_registry.py) with agent_registry, agent_performance, routing_decisions tables
-3. Implemented AgentRouter class in src/orchestrator/router.py (402 lines) with intelligent routing algorithm
-4. Created comprehensive test suite in tests/test_agent_router.py (663 lines)
-5. Implemented weighted scoring algorithm: 40pts success rate + 30pts context + 20pts specialization + 10pts load
-6. All 69 tests passing across 3 async backends (asyncio, trio, curio)
+1. Created PlaybookAnalyzer service in src/agents/infra_agent/analyzer.py (346 lines)
+2. Implemented 5-category rule taxonomy (idempotency, error_handling, performance, best_practices, standards)
+3. Added 15 reasoning templates for common ansible-lint rules
+4. Integrated analyzer into InfraAgent (runs on playbook failure)
+5. Added analysis_result field to WorkResult protocol model
+6. Created comprehensive test suite in tests/test_playbook_analyzer.py (670 lines, 49 tests)
+7. All tests passing (49/49) across 3 async backends (asyncio, trio, curio)
 
 **What works now:**
-- Agent registry stores capabilities, specializations, and online status
-- Performance tracking records success rates and execution history per work type
-- Routing algorithm scores agents by performance, context, specialization, and load
-- Agent selection based on weighted scoring (max 100 points)
-- Routing decisions fully logged to database for audit trail
+- PlaybookAnalyzer runs ansible-lint subprocess with JSON output parsing
+- Suggestions categorized by actionability (idempotency, error_handling, etc.)
+- Template-based reasoning generation for common rules
+- Database persistence via playbook_suggestions table (migration 007)
+- InfraAgent automatically triggers analyzer when playbook execution fails
+- Analysis results included in WorkResult for orchestrator consumption
+- CI-friendly tests with subprocess mocking
 - Retry logic with max 3 retries, automatic fallback to different agents
 - Error handling: offline pools and missing capabilities detected early
 
