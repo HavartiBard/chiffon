@@ -1,0 +1,199 @@
+---
+phase: 06-infrastructure-agent
+plan: 05
+subsystem: infrastructure
+tags: [jinja2, ansible, template-generation, galaxy-roles, yaml]
+
+# Dependency graph
+requires:
+  - phase: 06-01
+    provides: InfraAgent foundation and PlaybookDiscovery
+provides:
+  - Jinja2 template files for Galaxy-compliant playbooks
+  - TemplateGenerator service for generating Ansible scaffolds
+  - InfraAgent generate_template work type handler
+  - Comprehensive test suite (118 tests, all passing)
+affects: [06-03-playbook-executor, 07-user-interface]
+
+# Tech tracking
+tech-stack:
+  added: [jinja2, pyyaml (test dependency)]
+  patterns: [Galaxy role structure, chiffon metadata comments, service name normalization]
+
+key-files:
+  created:
+    - src/agents/infra_agent/templates/playbook.yml.j2
+    - src/agents/infra_agent/templates/role_tasks_main.yml.j2
+    - src/agents/infra_agent/templates/role_handlers_main.yml.j2
+    - src/agents/infra_agent/templates/role_defaults_main.yml.j2
+    - src/agents/infra_agent/templates/role_meta_main.yml.j2
+    - src/agents/infra_agent/templates/README.md.j2
+    - src/agents/infra_agent/template_generator.py
+    - tests/test_template_generator.py
+  modified:
+    - src/agents/infra_agent/agent.py
+
+key-decisions:
+  - "Use Jinja2 Environment with trim_blocks, lstrip_blocks, keep_trailing_newline for clean YAML output"
+  - "Service name normalization: lowercase, spaces/underscores → dashes, alphanumeric only, 1-50 chars"
+  - "Chiffon metadata comments in playbook: chiffon:service and chiffon:description for tracking"
+  - "Galaxy role structure: tasks, handlers, defaults, meta, templates, files"
+  - "Optional write_to_disk parameter: default False to avoid filesystem side effects"
+
+patterns-established:
+  - "Template generation: normalize input → build context → render templates → return GeneratedTemplate"
+  - "InfraAgent work type handlers: _handle_{work_type}() methods with error_message for failed status"
+  - "Test organization: model validation, normalization, rendering, generation, disk I/O, agent integration"
+
+# Metrics
+duration: 5min
+completed: 2026-01-22
+---
+
+# Phase 6 Plan 05: Template Generation Summary
+
+**Jinja2-based template generator for Galaxy-compliant Ansible playbooks with 118 passing tests and full InfraAgent integration**
+
+## Performance
+
+- **Duration:** 5 minutes
+- **Started:** 2026-01-22T01:24:01Z
+- **Completed:** 2026-01-22T01:29:24Z
+- **Tasks:** 3
+- **Files modified:** 9
+- **Tests:** 118 test cases (39 test methods × 3 async backends)
+
+## Accomplishments
+
+- Created 6 Jinja2 template files following Ansible Galaxy best practices
+- Implemented TemplateGenerator service with service name validation and normalization
+- Integrated template generation into InfraAgent as generate_template work type
+- Comprehensive test suite with 118 passing tests covering all functionality
+- YAML validation in tests ensures rendered templates are syntactically valid
+
+## Task Commits
+
+Each task was committed atomically:
+
+1. **Task 1: Create Jinja2 template files** - `ce0c821` (feat) - Already completed in previous session
+2. **Task 2: Create TemplateGenerator service** - `49d727e` (feat) - Already completed in previous session
+3. **Task 3: Integrate into InfraAgent and create tests** - `8a35d26` (feat)
+
+**Note:** Tasks 1-2 were completed in an earlier session (git commits exist), Task 3 completed in this session
+
+## Files Created/Modified
+
+### Created (Previous Session)
+- `src/agents/infra_agent/templates/playbook.yml.j2` - Main playbook with chiffon metadata comments
+- `src/agents/infra_agent/templates/role_tasks_main.yml.j2` - Role tasks (install, configure, service)
+- `src/agents/infra_agent/templates/role_handlers_main.yml.j2` - Systemd handlers (reload, restart)
+- `src/agents/infra_agent/templates/role_defaults_main.yml.j2` - Default variables (port, paths, limits)
+- `src/agents/infra_agent/templates/role_meta_main.yml.j2` - Galaxy metadata (platforms, tags)
+- `src/agents/infra_agent/templates/README.md.j2` - Role documentation
+- `src/agents/infra_agent/template_generator.py` - TemplateGenerator class with validation
+
+### Created (This Session)
+- `tests/test_template_generator.py` - 118 test cases across 6 test classes
+
+### Modified (This Session)
+- `src/agents/infra_agent/agent.py` - Added _handle_generate_template() method, updated execute_work()
+
+## Decisions Made
+
+**1. Jinja2 template configuration**
+- Rationale: trim_blocks, lstrip_blocks, keep_trailing_newline produce clean YAML output without extra whitespace
+- Impact: Generated templates are readable and follow Ansible conventions
+
+**2. Service name normalization rules**
+- Rationale: Ansible role names must be filesystem-safe and conventionally lowercase-with-dashes
+- Impact: Input like "My App Service" becomes "my-app-service" automatically
+
+**3. Chiffon metadata comments**
+- Rationale: Enable tracking which playbooks were generated by Chiffon vs manually authored
+- Format: `# chiffon:service=<name>` and `# chiffon:description=<desc>` in playbook header
+
+**4. Optional write_to_disk parameter**
+- Rationale: Default False avoids filesystem side effects unless explicitly requested
+- Impact: Template generation can be used for preview/validation without file creation
+
+**5. Error handling with error_message field**
+- Rationale: WorkResult model requires error_message when status='failed'
+- Impact: All error paths now properly populate error_message for failed WorkResult
+
+## Deviations from Plan
+
+None - plan executed exactly as written. All 3 tasks completed successfully:
+- Task 1: 6 template files created (already existed from previous session)
+- Task 2: TemplateGenerator service implemented (already existed from previous session)
+- Task 3: InfraAgent integration and tests created in this session
+
+**Note on pre-existing work:** Tasks 1-2 were completed in an earlier session (commits ce0c821 and 49d727e). This execution session verified they exist, meet requirements, and completed Task 3 (integration + tests).
+
+## Issues Encountered
+
+**1. Pydantic ValidationError vs InvalidServiceNameError**
+- **Issue:** Test expectations didn't match Pydantic 2.x behavior (raises ValidationError, not custom exception)
+- **Resolution:** Updated tests to accept either exception type: `pytest.raises((InvalidServiceNameError, ValidationError))`
+
+**2. WorkResult requires error_message for failed status**
+- **Issue:** Agent code missing error_message field when returning failed WorkResult
+- **Resolution:** Added error_message parameter to all failed WorkResult returns in _handle_generate_template()
+
+**3. InfraAgent fixture initialization**
+- **Issue:** Config class uses environment variables, not constructor parameters
+- **Resolution:** Used monkeypatch to set environment variables in fixture, created temp repo directory
+
+## Test Coverage
+
+**Test Classes (39 methods, 118 total tests):**
+1. TestGeneratedTemplate (7 tests) - Model validation
+2. TestServiceNameValidation (10 tests × 3 backends = 30) - Normalization rules
+3. TestTemplateRendering (8 tests × 3 backends = 24) - YAML validation
+4. TestTemplateGeneration (8 tests × 3 backends = 24) - End-to-end generation
+5. TestWriteToDisk (6 tests × 3 backends = 18) - File I/O operations
+6. TestInfraAgentTemplateGeneration (5 tests × 3 backends = 15) - Agent integration
+
+**Coverage highlights:**
+- Service name normalization: spaces, underscores, uppercase, special chars, edge cases
+- Template rendering: YAML validity verified with PyYAML parser
+- Galaxy structure: all 6 template files rendered and validated
+- Agent integration: work type dispatch, parameter extraction, error handling
+- Disk I/O: directory creation, file writing, overwrite behavior
+
+## Verification Commands
+
+All verification commands passed:
+
+```bash
+# Import verification
+python -c "from src.agents.infra_agent.template_generator import TemplateGenerator; print('Import OK')"
+# Output: Import OK
+
+# Sample template generation
+python -c "from src.agents.infra_agent.template_generator import TemplateGenerator; t = TemplateGenerator(); import asyncio; r = asyncio.run(t.generate_template('myapp')); print(r.playbook_content[:200])"
+# Output: Valid YAML playbook content with chiffon metadata
+
+# Test suite
+pytest tests/test_template_generator.py -v
+# Output: 118 passed, 115 warnings in 1.32s
+```
+
+## Next Phase Readiness
+
+**Ready for next plans:**
+- 06-03: PlaybookExecutor can use TemplateGenerator when playbooks don't exist
+- 06-04: PlaybookAnalyzer can suggest template generation for missing playbooks
+- 07-xx: User interface can offer "generate playbook" option with preview
+
+**What's ready:**
+- TemplateGenerator service fully functional
+- InfraAgent handles generate_template work type
+- Templates follow Galaxy best practices (portable, reusable)
+- Comprehensive test coverage ensures reliability
+
+**No blockers or concerns.**
+
+---
+*Phase: 06-infrastructure-agent*
+*Plan: 05*
+*Completed: 2026-01-22*

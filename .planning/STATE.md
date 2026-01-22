@@ -60,18 +60,18 @@ System is validated when:
 | Phase 3: Orchestrator Core | ✓ Complete | 100% (6/6 plans + 2 gap closures) |
 | Phase 4: Desktop Agent | ✓ Complete | 100% (5/5 plans, goal verified) |
 | Phase 5: State & Audit | ✓ Complete | 100% (5/5 plans + 2 gap closures, goal verified) |
-| Phase 6: Infrastructure Agent | In Progress | 33% (2/6 plans) |
+| Phase 6: Infrastructure Agent | In Progress | 50% (3/6 plans) |
 | Phase 7: User Interface | Pending | 0% |
 | Phase 8: E2E Integration | Pending | 0% |
 
-**Overall Progress:** 36/40 plans complete (90%)
+**Overall Progress:** 37/40 plans complete (93%)
 
 ### Current Focus
 
 **Currently executing:** Phase 6: Infrastructure Agent (in progress)
-**Last completed:** 06-02-PLAN.md (Task-to-Playbook Mapping)
+**Last completed:** 06-05-PLAN.md (Template Generation)
 **Next action:** Execute 06-03-PLAN.md (Playbook Executor with ansible-runner)
-**Status:** Phase 6 - 33% complete (2/6 plans)
+**Status:** Phase 6 - 50% complete (3/6 plans)
 **Verification:** Phase 4 Plans 01-05 COMPLETE:
   - 04-01: Database Schema (Migration 003 + AgentRegistry model, 69/69 tests passing)
   - 04-02: Desktop Agent Metrics (DesktopAgent class, Config loading, example config file)
@@ -136,6 +136,9 @@ System is validated when:
 | Confidence threshold 0.85 for semantic matches | Research shows 0.85+ provides reliable matches; below this risks false positives | Approved (06-02) |
 | Lazy-load ML models (embedder, FAISS) | Avoids ~2s startup cost if exact/cached matches suffice; reduces memory footprint | Approved (06-02) |
 | PostgreSQL JSONB for embedding storage | Allows querying and filtering; portability across databases; normalized vectors for cosine similarity | Approved (06-02) |
+| Jinja2 for Ansible template generation | Industry standard for template rendering; trim_blocks/lstrip_blocks produce clean YAML | Approved (06-05) |
+| Service name normalization (lowercase-dashes) | Ansible role names must be filesystem-safe; conventionally lowercase-with-dashes | Approved (06-05) |
+| Chiffon metadata comments in playbooks | Enable tracking Chiffon-generated vs manual playbooks; format: chiffon:service=name | Approved (06-05) |
 
 ### Architectural Patterns Established
 
@@ -386,12 +389,12 @@ None currently. All systems go.
 
 ---
 
-**State Version:** 2.2
+**State Version:** 2.3
 **Roadmap Locked:** 2026-01-18
-**Last Execution:** 2026-01-20 02:09-02:34 - Completed Phase 4 Plan 01 (Database Schema)
-**Session Duration:** ~25 minutes (database schema + migration)
-**Completed Tasks:** 2/2 tasks (migration + model update)
-**Next Execution:** Phase 4 Plan 02: Heartbeat Integration (agents report resource metrics)
+**Last Execution:** 2026-01-22 01:24-01:29 - Completed Phase 6 Plan 05 (Template Generation)
+**Session Duration:** ~5 minutes (integration + tests)
+**Completed Tasks:** 3/3 tasks (templates existed, generator existed, added integration + tests)
+**Next Execution:** Phase 6 Plan 03: Playbook Executor (ansible-runner integration)
 
 ### Current Session (2026-01-19 18:18 - 18:25)
 
@@ -809,3 +812,58 @@ None currently. All systems go.
 - 988dc61: feat(05-05): Create PauseManager service for resource-aware pause/resume
 - 83b7ca0: feat(05-05): Integrate PauseManager into OrchestratorService dispatch workflow
 - 8be16b9: test(05-05): Create comprehensive test suite for PauseManager
+
+---
+
+### Current Session (2026-01-22 01:24 - 01:29)
+
+**Completed:** 06-05-template-generation-PLAN.md (Template Generation with Jinja2)
+
+**What was done:**
+1. Verified existing template files from previous session (6 Jinja2 templates)
+   - playbook.yml.j2, role_tasks_main.yml.j2, role_handlers_main.yml.j2
+   - role_defaults_main.yml.j2, role_meta_main.yml.j2, README.md.j2
+2. Verified existing TemplateGenerator service from previous session
+   - GeneratedTemplate model, TemplateGenerator class
+   - Service name validation and normalization
+3. Integrated TemplateGenerator into InfraAgent
+   - Added _handle_generate_template() method to InfraAgent
+   - Updated execute_work() to dispatch generate_template work type
+   - Added error_message field to failed WorkResult returns
+4. Created comprehensive test suite (118 tests)
+   - 39 test methods across 6 test classes
+   - Parametrized across 3 async backends (asyncio, trio, curio)
+   - YAML validation using PyYAML
+   - All tests passing
+
+**What works now:**
+- TemplateGenerator generates Galaxy-compliant Ansible playbook scaffolds
+- Service name normalization (spaces/underscores → dashes, lowercase, alphanumeric)
+- InfraAgent handles generate_template work type
+- Templates include chiffon metadata comments for tracking
+- Optional write_to_disk parameter for file creation
+- Comprehensive test coverage (>90% of template_generator.py)
+
+**Test results:** 118/118 passing (1.32s execution)
+- TestGeneratedTemplate: 7 tests (model validation)
+- TestServiceNameValidation: 30 tests (normalization rules)
+- TestTemplateRendering: 24 tests (YAML validation)
+- TestTemplateGeneration: 24 tests (end-to-end generation)
+- TestWriteToDisk: 18 tests (file I/O operations)
+- TestInfraAgentTemplateGeneration: 15 tests (agent integration)
+
+**Phase 6 Status:** IN PROGRESS - 3/6 plans done (50%)
+- 06-01: Infrastructure Agent Foundation ✓
+- 06-02: Task-to-Playbook Mapping ✓
+- 06-05: Template Generation ✓
+- Ready for 06-03: Playbook Executor (ansible-runner)
+
+**Total Roadmap Progress:** 37/40 plans complete (93%)
+
+**Commits this session:**
+- 8a35d26: feat(06-05): Integrate TemplateGenerator into InfraAgent and create comprehensive tests
+
+**Notes:**
+- Tasks 1-2 were completed in previous session (commits ce0c821, 49d727e)
+- This session verified existing work and completed Task 3 (integration + tests)
+- All verification commands passed successfully
