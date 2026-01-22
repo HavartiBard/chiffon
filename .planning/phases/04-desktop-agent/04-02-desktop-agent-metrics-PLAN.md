@@ -2,7 +2,7 @@
 phase: 04-desktop-agent
 plan: 02
 type: execute
-wave: 1
+wave: 2
 depends_on: ["04-01"]
 files_modified:
   - src/agents/desktop_agent.py

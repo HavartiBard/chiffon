@@ -297,6 +297,13 @@ Integrate into existing message listener:
 - Add condition: if envelope.type == "work_status": await self.handle_agent_heartbeat(...)
 - Heartbeat messages have agent_id in StatusUpdate payload
 
+Addition: Implement mark_agents_offline() background check
+- Add async method: OrchestratorService.mark_agents_offline_periodically()
+- Runs every 30s: Query agents with last_heartbeat_at > 90s ago
+- Mark them: status = "offline", log at INFO level
+- Called once on orchestrator startup via asyncio.create_task()
+- Prevents stale agents from being included in capacity queries
+
 Do NOT:
 - Change existing RequestDecomposer, WorkPlanner, or AgentRouter logic
 - Remove any existing orchestrator methods
@@ -306,6 +313,8 @@ Do NOT:
 Run: `python -c "from src.orchestrator.service import OrchestratorService; import inspect; src = inspect.getsource(OrchestratorService.handle_agent_heartbeat); assert 'resource_metrics' in src"` (method persists metrics)
 Run: `grep -n "handle_agent_heartbeat" src/orchestrator/service.py` (method exists)
 Run: `grep -B5 -A5 "work_status" src/orchestrator/service.py | grep "handle_agent_heartbeat"` (integrated into message listener)
+Run: `grep -n "mark_agents_offline_periodically" src/orchestrator/service.py` (offline marking method exists)
+Run: `grep -n "last_heartbeat_at.*90" src/orchestrator/service.py` (offline threshold 90s present)
   </verify>
   <done>
 OrchestratorService.handle_agent_heartbeat() method created. Receives heartbeat, auto-registers new agents, updates resource_metrics in database. Integrated into message listener for work_status type.
@@ -410,9 +419,9 @@ Do NOT:
 - Mock GPU detection unless testing error handling
   </action>
   <verify>
-Run: `pytest tests/test_desktop_agent_heartbeat.py -v` (all tests pass, ~30 test methods)
+Run: `pytest tests/test_desktop_agent_heartbeat.py -v` (all tests pass, 30+ test methods)
 Run: `pytest tests/test_desktop_agent_heartbeat.py::test_heartbeat_message_has_all_required_fields -v` (specific test passes)
-Run: `pytest tests/test_desktop_agent_heartbeat.py -k "offline_detection" -v` (offline detection tests pass)
+Run: `pytest tests/test_desktop_agent_heartbeat.py -k "offline" -v` (offline detection tests: test_agent_marked_offline_after_90s_no_heartbeat, test_agent_offline_check_uses_last_heartbeat_at, test_offline_agent_not_included_in_capacity_queries, test_agent_comes_back_online_on_next_heartbeat, test_offline_detection_tolerates_minor_clock_skew all passing)
 Run: `pytest tests/test_desktop_agent_heartbeat.py --co -q | wc -l` (count test methods, should be 30+)
   </verify>
   <done>

@@ -3,7 +3,7 @@ phase: 04-desktop-agent
 plan: 04
 type: execute
 wave: 2
-depends_on: ["04-03"]
+depends_on: ["04-02", "04-03"]
 files_modified:
   - src/orchestrator/api.py
   - src/orchestrator/service.py
@@ -342,4 +342,117 @@ FastAPI endpoints added. GET /api/v1/agents/{agent_id}/capacity and GET /api/v1/
 
 <task type="auto">
   <name>Task 3: Create API endpoint tests (20+ test cases)</name>
-  <files>tests/test_orchestrator_capacity_api.py
+  <files>tests/test_orchestrator_capacity_api.py</files>
+  <action>
+Create comprehensive test suite for capacity query endpoints.
+
+Test categories:
+
+1. **Single Agent Capacity Tests (8 tests):**
+   - get_agent_capacity with valid UUID returns capacity dict
+   - Returns 404 for non-existent agent
+   - Returns 0 metrics for agent with empty resource_metrics
+   - Returns all fields in capacity dict (agent_id, status, cpu_cores_available, gpu_vram_available_gb, etc.)
+   - Handles UUID parse error (400)
+   - Handles database session error (500)
+   - Returns correct timestamp (ISO 8601)
+   - CPU cores matches available cores in metrics
+
+2. **Multi-Agent Capacity Filtering Tests (10 tests):**
+   - get_available_capacity with no filters returns all online agents
+   - min_gpu_vram_gb=4.0 filters agents with < 4GB available
+   - min_cpu_cores=8 filters agents with < 8 cores available
+   - Both filters combined (GPU AND CPU constraints)
+   - Returns empty list if no agents match
+   - Excludes offline agents from results
+   - Negative/zero parameter values handled (Query constraints)
+   - Returns correct agent list structure
+   - Results sorted by agent_id (deterministic)
+   - Handles database error gracefully (500)
+
+3. **Integration with Multi-Agent Setup (4 tests):**
+   - 3 agents registered with different capacities
+   - Query finds agent with highest GPU VRAM
+   - Query finds agents matching exact capacity
+   - After agent goes offline, not included in available-capacity results
+
+Implementation pattern (from Phase 2-3 tests):
+```python
+@pytest.mark.asyncio
+async def test_get_agent_capacity_valid_uuid(db, service):
+    """Test single agent capacity query."""
+    # Setup: Create agent in agent_registry with resource_metrics
+    agent = AgentRegistry(
+        agent_id=UUID("..."),
+        agent_type="desktop",
+        pool_name="gpu-pool",
+        status="online",
+        resource_metrics={
+            "cpu_cores_available": 4,
+            "gpu_vram_available_gb": 2.5,
+            ...
+        }
+    )
+    db.add(agent)
+    db.commit()
+
+    # Act
+    capacity = await service.get_agent_capacity(agent.agent_id, db)
+
+    # Assert
+    assert capacity["agent_id"] == str(agent.agent_id)
+    assert capacity["status"] == "online"
+    assert capacity["gpu_vram_available_gb"] == 2.5
+```
+
+Use pytest async backends (asyncio, trio, curio) from conftest.py.
+Parameterize tests for 3 backends (3 × 22 = 66 test methods total, ~110 assertions).
+
+Do NOT:
+- Modify existing API endpoints
+- Change database models
+- Break Phase 3 orchestrator functionality
+  </action>
+  <verify>
+Run: `pytest tests/test_orchestrator_capacity_api.py -v` (all tests pass)
+Run: `pytest tests/test_orchestrator_capacity_api.py --cov=src/orchestrator/api --cov=src/orchestrator/service --cov-report=term-missing | grep "TOTAL"` (coverage > 85%)
+Run: `grep -c "def test_" tests/test_orchestrator_capacity_api.py` (22+ test methods)
+  </verify>
+  <done>
+Test suite created with 22 test methods (66 test cases across 3 backends). All tests passing. Coverage > 85% for capacity query endpoints and service methods. GET /api/v1/agents/{agent_id}/capacity and GET /api/v1/agents/available-capacity endpoints validated with single-agent, multi-agent, filtering, and error scenarios.
+  </done>
+</task>
+
+</tasks>
+
+---
+
+## Verification Criteria
+
+✓ All capacity query methods implemented in OrchestratorService
+✓ Both REST endpoints added to FastAPI app
+✓ Endpoint tests passing (22 test methods, 66 test cases)
+✓ Coverage > 85% for api.py and service.py capacity query code
+✓ No regressions to existing Phase 3 orchestrator functionality
+✓ Query filtering works: agents by GPU VRAM, CPU cores, online status
+✓ Error handling: 404 for missing agents, 400 for invalid parameters, 500 for server errors
+
+## Must-Haves
+
+**Truths:**
+- ✓ OrchestratorService.get_agent_capacity(agent_id) returns agent capacity dict
+- ✓ OrchestratorService.get_available_capacity(min_gpu_vram_gb, min_cpu_cores) returns filtered list
+- ✓ FastAPI GET /api/v1/agents/{agent_id}/capacity endpoint works
+- ✓ FastAPI GET /api/v1/agents/available-capacity endpoint with query parameters works
+- ✓ Endpoints filter by online status and resource requirements
+- ✓ Endpoints return current metrics from database (not stale)
+- ✓ WorkPlanner can use these endpoints to make GPU routing decisions
+
+**Artifacts:**
+- ✓ src/orchestrator/service.py: get_agent_capacity() and get_available_capacity() methods
+- ✓ src/orchestrator/api.py: /api/v1/agents/{agent_id}/capacity and /api/v1/agents/available-capacity endpoints
+- ✓ tests/test_orchestrator_capacity_api.py: 22 test methods, 66 test cases, all passing
+
+**Key Links:**
+- From: WorkPlanner.generate_plan() → To: GET /api/v1/agents/available-capacity via: Query before scheduling GPU work
+- From: GET /api/v1/agents/available-capacity → To: agent_registry.resource_metrics via: Database query filtering online agents
