@@ -10,7 +10,6 @@ from uuid import uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import JSON, UUID, Column, DateTime, ForeignKey, Integer, String, func
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -65,13 +64,13 @@ class Task(Base):
     error_message = Column(String, nullable=True)
 
     # Audit columns (Phase 5)
-    services_touched = Column(ARRAY(String), nullable=True)
+    services_touched = Column(JSON, nullable=True)
     # Array of service names touched by this task (e.g., ["kuma", "portainer"])
 
-    outcome = Column(JSONB, nullable=True)
+    outcome = Column(JSON, nullable=True)
     # Execution outcome: {"success": bool, "output_summary": str, "error_type": str|null}
 
-    suggestions = Column(JSONB, nullable=True)
+    suggestions = Column(JSON, nullable=True)
     # Post-mortem scaffolding: [{"suggestion": str, "reason": str, "created_at": str}]
     # Unpopulated in v1; v2 post-mortem agent will populate
 
