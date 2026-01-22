@@ -326,7 +326,7 @@ class PauseQueueEntry(Base):
     Attributes:
         id: Auto-incrementing primary key
         task_id: Foreign key to tasks table
-        work_plan_json: Serialized WorkPlan as JSONB
+        work_plan_json: Serialized WorkPlan as JSON
         reason: Why work was paused ('insufficient_capacity', 'manual_pause')
         paused_at: When work was paused
         resume_after: Optional datetime for timed auto-resume
@@ -337,7 +337,7 @@ class PauseQueueEntry(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.task_id"), nullable=False)
-    work_plan_json = Column(JSONB, nullable=False)
+    work_plan_json = Column(JSON, nullable=False)
     reason = Column(String(100), nullable=False)
     paused_at = Column(DateTime, nullable=False, default=func.now())
     resume_after = Column(DateTime, nullable=True)
@@ -382,7 +382,7 @@ class PlaybookMapping(Base):
     match_method = Column(String(50), nullable=False)
     # How match was found: 'exact', 'cached', 'semantic'
 
-    embedding_vector = Column(JSONB, nullable=True)
+    embedding_vector = Column(JSON, nullable=True)
     # Embedding vector stored as JSON array for portability
 
     # Usage tracking
@@ -436,10 +436,10 @@ class PlaybookCache(Base):
     description = Column(String, nullable=True)
     # Human-readable description from playbook header or play name
 
-    required_vars = Column(JSONB, nullable=False, server_default="[]")
+    required_vars = Column(JSON, nullable=False, server_default="[]")
     # Required variables as JSON array
 
-    tags = Column(JSONB, nullable=False, server_default="[]")
+    tags = Column(JSON, nullable=False, server_default="[]")
     # Tags as JSON array for categorization
 
     file_hash = Column(String(64), nullable=False)
