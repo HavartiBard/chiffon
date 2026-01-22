@@ -20,8 +20,8 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 | 4 - Desktop Agent | Agents report resource availability in real-time | DESK-01, DESK-02, DESK-03, DESK-04 | 5/5 ✓ | 5/5 ✓ |
 | 5 - State & Audit | Execution tracked in PostgreSQL, audit trail committed to git | STATE-03, STATE-04, ORCH-03, ORCH-04 | 5/5 ✓ | 5/5 ✓ |
 | 6 - Infrastructure Agent | Ansible integration, playbook execution, improvement suggestions | INFRA-01, INFRA-02, INFRA-03, INFRA-04 | 6 plans | 5 |
-| 7 - User Interface | Chat interface, plan approval, execution transparency | UI-01, UI-02, UI-03, UI-04 | (planned) | 5 |
-| 8 - End-to-End Integration | Full Kuma deployment workflow with user → orchestrator → infra agent → git | E2E-01, E2E-02, E2E-03, E2E-04 | (planned) | 5 |
+| 7 - User Interface | Chat interface, plan approval, execution transparency | UI-01, UI-02, UI-03, UI-04 | 6/6 ✓ | 5/5 ✓ |
+| 8 - End-to-End Integration | Full Kuma deployment workflow with user → orchestrator → infra agent → git | E2E-01, E2E-02, E2E-03, E2E-04 | 2 plans | 5 |
 
 ---
 
@@ -239,6 +239,21 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 
 **Goal:** Chat interface accepts natural language deployment requests. Orchestrator presents plan for approval. User can approve, reject, or request modifications before execution.
 
+**Status:** ✓ COMPLETE (6/6 plans executed, goal verified)
+
+**Plans:**
+- [x] 07-01-PLAN.md — Dashboard Backend API (FastAPI, session management, orchestrator proxy)
+- [x] 07-02-PLAN.md — WebSocket Real-time Layer (connection manager, execution streaming)
+- [x] 07-03-PLAN.md — Chat Interface Frontend (React, TypeScript, Vite, TailwindCSS)
+- [x] 07-04-PLAN.md — Plan Review & Approval UI (plan display, approve/reject/modify)
+- [x] 07-05-PLAN.md — Execution Monitoring UI (real-time updates, abort, summary)
+- [x] 07-06-PLAN.md — E2E Integration Tests (full workflow, requirement verification)
+
+**Wave Structure:**
+- Wave 1: Plans 01, 02 (independent backend foundation — can run in parallel)
+- Wave 2: Plans 03, 04 (frontend components — depend on Wave 1)
+- Wave 3: Plans 05, 06 (integration and testing — depend on Waves 1 and 2)
+
 **Dependencies:** Phase 3 (orchestrator), Phase 6 (infra agent)
 
 **Requirements Mapped:**
@@ -265,6 +280,16 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 ### Phase 8: End-to-End Integration (Kuma Deployment)
 
 **Goal:** Complete workflow: user requests Kuma deployment, system finds existing configs, presents plan, executes via infra agent, suggests improvements, commits to git, tracks state. All components integrated and working.
+
+**Status:** PLANNED (2 plans in 2 waves)
+
+**Plans:**
+- [ ] 08-01-PLAN.md — Full E2E Integration Tests (comprehensive test suite covering all integration points)
+- [ ] 08-02-PLAN.md — Kuma Deployment Validation (real-world scenario validation with v1 validation report)
+
+**Wave Structure:**
+- Wave 1: Plan 01 (E2E integration test suite — autonomous)
+- Wave 2: Plan 02 (Kuma deployment validation with human verification checkpoint — sequential)
 
 **Dependencies:** All prior phases (1-7)
 
@@ -322,14 +347,14 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 | INFRA-02 | Phase 6 | Planned |
 | INFRA-03 | Phase 6 | Planned |
 | INFRA-04 | Phase 6 | Planned |
-| UI-01 | Phase 7 | Pending |
-| UI-02 | Phase 7 | Pending |
-| UI-03 | Phase 7 | Pending |
-| UI-04 | Phase 7 | Pending |
-| E2E-01 | Phase 8 | Pending |
-| E2E-02 | Phase 8 | Pending |
-| E2E-03 | Phase 8 | Pending |
-| E2E-04 | Phase 8 | Pending |
+| UI-01 | Phase 7 | Complete |
+| UI-02 | Phase 7 | Complete |
+| UI-03 | Phase 7 | Complete |
+| UI-04 | Phase 7 | Complete |
+| E2E-01 | Phase 8 | Planned |
+| E2E-02 | Phase 8 | Planned |
+| E2E-03 | Phase 8 | Planned |
+| E2E-04 | Phase 8 | Planned |
 
 ---
 
@@ -371,7 +396,7 @@ Each phase has observable completion criteria. Phase 8 success means:
 
 ---
 
-**Roadmap Version:** 1.3
+**Roadmap Version:** 1.5
 **Created:** 2026-01-18
-**Last Updated:** 2026-01-21 (Phase 6 planned: 6 plans in 3 waves)
-**Current Status:** 34/40 plans complete (85%) — Phase 5 complete, Phase 6 ready for execution
+**Last Updated:** 2026-01-22 (Phase 8 planned: 2 plans in 2 waves)
+**Current Status:** 36/48 plans complete (75%) — Phase 6 in progress, Phase 7 complete, Phase 8 planned
