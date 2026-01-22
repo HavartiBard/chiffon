@@ -557,11 +557,15 @@ class InfraAgent(BaseAgent):
             catalog = await self.discover_playbooks(force_refresh=force_refresh)
             from uuid import uuid4
 
+            # Convert catalog to JSON, handling datetime serialization
+            # Use default=str to convert datetime objects to ISO format strings
+            output = json.dumps(catalog, indent=2, default=str)
+
             return WorkResult(
                 task_id=work_request.task_id,
                 status="completed",
                 exit_code=0,
-                output=json.dumps(catalog, indent=2),
+                output=output,
                 duration_ms=0,
                 agent_id=uuid4(),
                 resources_used={},
