@@ -1,15 +1,12 @@
 """Pytest configuration and shared fixtures for end-to-end tests."""
 
-import asyncio
 import json
-import os
-import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import aio_pika
@@ -24,12 +21,10 @@ from src.agents.infra_agent.agent import InfraAgent
 from src.agents.infra_agent.analyzer import PlaybookAnalyzer
 from src.common.config import Config
 from src.common.database import Base
-from src.common.litellm_client import LiteLLMClient
 from src.common.models import (
     AgentRegistry,
     DecomposedRequest,
     FallbackDecision,
-    PauseQueueEntry,
     PlaybookCache,
     PlaybookSuggestion,
     Subtask,
@@ -37,9 +32,8 @@ from src.common.models import (
     WorkPlan,
     WorkTask,
 )
-from src.common.protocol import WorkRequest
-from src.dashboard.main import app as dashboard_app
 from src.dashboard import api as dashboard_api
+from src.dashboard.main import app as dashboard_app
 from src.orchestrator.audit import AuditService
 from src.orchestrator.service import OrchestratorService
 
