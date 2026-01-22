@@ -6,9 +6,11 @@ Provides:
 """
 
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 import sqlalchemy as sa
+from pydantic import BaseModel, Field
 from sqlalchemy import JSON, UUID, Column, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import relationship
 
@@ -537,8 +539,6 @@ class PlaybookSuggestion(Base):
 
 
 # Pydantic models for request parsing and decomposition
-from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
 
 
 class Subtask(BaseModel):

@@ -18,10 +18,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.orchestrator.service import OrchestratorService
-from src.orchestrator.audit import AuditService
 from src.common.database import SessionLocal
 from src.common.models import Task
+from src.orchestrator.audit import AuditService
+from src.orchestrator.service import OrchestratorService
 
 logger = logging.getLogger(__name__)
 

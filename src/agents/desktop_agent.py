@@ -247,7 +247,7 @@ class DesktopAgent(BaseAgent):
             WorkResult with status "success" and placeholder message
         """
         logger.info(
-            f"Phase 4: Desktop agent received work request (metrics only, no execution)",
+            "Phase 4: Desktop agent received work request (metrics only, no execution)",
             extra={"task_id": str(work_request.task_id)},
         )
 

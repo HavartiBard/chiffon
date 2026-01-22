@@ -15,7 +15,6 @@ from pydantic import BaseModel, Field
 
 from .cache_manager import CacheManager
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -197,7 +196,7 @@ class TaskMapper:
 
             # Convert results to alternatives list
             alternatives = []
-            for score, idx in zip(scores[0], indices[0]):
+            for score, idx in zip(scores[0], indices[0], strict=False):
                 if idx < len(self._catalog_index_map):
                     catalog_idx = self._catalog_index_map[idx]
                     playbook = self.playbook_catalog[catalog_idx]

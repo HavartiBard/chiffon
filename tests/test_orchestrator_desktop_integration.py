@@ -9,15 +9,15 @@ Tests cover:
 - Multi-agent scenarios
 """
 
-import pytest
 from datetime import datetime, timedelta
+from unittest.mock import Mock
 from uuid import uuid4
-from unittest.mock import Mock, AsyncMock, patch
 
+import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 
-from src.common.models import Base, AgentRegistry
+from src.common.models import AgentRegistry, Base
 from src.orchestrator.service import OrchestratorService
 
 

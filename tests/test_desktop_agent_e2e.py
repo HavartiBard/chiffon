@@ -10,18 +10,17 @@ Tests cover:
 """
 
 import asyncio
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from uuid import uuid4, UUID
+from unittest.mock import AsyncMock, Mock, patch
+from uuid import UUID, uuid4
 
+import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 
 from src.agents.base import BaseAgent
 from src.common.config import Config
-from src.common.models import Base, AgentRegistry
-from src.common.protocol import StatusUpdate, MessageEnvelope
+from src.common.models import AgentRegistry, Base
 
 
 # Create in-memory SQLite database for testing
@@ -169,7 +168,7 @@ class TestSingleAgentLifecycle:
             try:
                 metrics = mock_get_metrics()
                 heartbeat_count += 1
-            except Exception as e:
+            except Exception:
                 # Heartbeat loop should handle error gracefully
                 heartbeat_count += 1
 

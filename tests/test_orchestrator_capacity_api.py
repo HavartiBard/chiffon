@@ -8,17 +8,16 @@ Test coverage:
 - Resource metrics extraction and filtering
 """
 
-import pytest
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import uuid4
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.orchestrator.service import OrchestratorService
-from src.common.models import AgentRegistry, Base
 from src.common.config import Config
-
+from src.common.models import AgentRegistry, Base
+from src.orchestrator.service import OrchestratorService
 
 # ==================== Fixtures ====================
 

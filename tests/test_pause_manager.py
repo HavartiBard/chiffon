@@ -5,9 +5,9 @@ background polling, and integration with OrchestratorService.
 """
 
 import asyncio
-from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
-from uuid import UUID, uuid4
+from datetime import datetime
+from unittest.mock import Mock, patch
+from uuid import uuid4
 
 import pytest
 

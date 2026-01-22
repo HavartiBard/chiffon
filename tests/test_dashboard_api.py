@@ -8,8 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.dashboard import api as dashboard_api
-from src.dashboard.main import app
 from src.dashboard.api import session_store
+from src.dashboard.main import app
 
 ORCHESTRATOR_PLAN_ID = "plan-123"
 ORCHESTRATOR_REQUEST_ID = "req-123"

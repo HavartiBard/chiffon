@@ -20,12 +20,12 @@ import aio_pika
 from sqlalchemy.orm import Session
 
 from src.common.config import Config
+from src.common.litellm_client import LiteLLMClient
 from src.common.models import (
-    Task,
-    DecomposedRequest,
-    WorkPlan,
-    FallbackDecision,
     AgentRegistry,
+    DecomposedRequest,
+    Task,
+    WorkPlan,
 )
 from src.common.protocol import (
     MessageEnvelope,
@@ -34,13 +34,12 @@ from src.common.protocol import (
     WorkResult,
 )
 from src.common.rabbitmq import declare_queues, get_connection_string
+from src.orchestrator.fallback import ExternalAIFallback
+from src.orchestrator.git_service import GitService, GitServiceError
 from src.orchestrator.nlu import RequestDecomposer
+from src.orchestrator.pause_manager import PauseManager
 from src.orchestrator.planner import WorkPlanner
 from src.orchestrator.router import AgentRouter
-from src.orchestrator.fallback import ExternalAIFallback
-from src.orchestrator.pause_manager import PauseManager
-from src.orchestrator.git_service import GitService, GitServiceError
-from src.common.litellm_client import LiteLLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -693,7 +692,7 @@ class OrchestratorService:
                     offline_agents = (
                         self.db.query(AgentRegistry)
                         .filter(
-                            (AgentRegistry.last_heartbeat_at == None)
+                            (AgentRegistry.last_heartbeat_at.is_(None))
                             | (AgentRegistry.last_heartbeat_at < timeout_threshold)
                         )
                         .filter(AgentRegistry.status != "offline")

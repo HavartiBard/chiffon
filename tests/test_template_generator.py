@@ -20,7 +20,6 @@ from src.agents.infra_agent.template_generator import (
     GeneratedTemplate,
     InvalidServiceNameError,
     TemplateGenerator,
-    TemplateRenderError,
 )
 from src.common.protocol import WorkRequest
 

@@ -11,16 +11,15 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from src.common.models import (
-    AgentRegistry,
     AgentPerformance,
+    AgentRegistry,
     RoutingDecision,
     WorkTask,
 )
-from pydantic import BaseModel, Field
-
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +174,7 @@ class AgentRouter:
                     raise ValueError(f"Failed to dispatch task after {max_retries} retries: {e}")
 
         # Should not reach here
-        raise ValueError(f"Unexpected error: all retries exhausted")
+        raise ValueError("Unexpected error: all retries exhausted")
 
     def _score_agent(self, agent: AgentRegistry, task: WorkTask) -> int:
         """Calculate routing score for an agent (0-100).

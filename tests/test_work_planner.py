@@ -16,10 +16,8 @@ import pytest
 from src.common.models import (
     DecomposedRequest,
     Subtask,
-    WorkTask,
 )
 from src.orchestrator.planner import WorkPlanner
-
 
 # ============================================================================
 # FIXTURES

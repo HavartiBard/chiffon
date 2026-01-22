@@ -6,22 +6,23 @@ scenario."""
 
 import json
 import subprocess
-from datetime import datetime
 from pathlib import Path
 from typing import Any
-from uuid import UUID, uuid4
+from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 from sqlalchemy.orm import Session
-from unittest.mock import AsyncMock
 
-from src.agents.infra_agent.analyzer import AnalysisResult, PlaybookAnalyzer, Suggestion
-from src.agents.infra_agent.executor import ExecutionSummary, PlaybookExecutor
+from src.agents.infra_agent.analyzer import PlaybookAnalyzer
+from src.agents.infra_agent.executor import PlaybookExecutor
 from src.agents.infra_agent.playbook_discovery import PlaybookDiscovery
 from src.agents.infra_agent.task_mapper import (
     MappingResult,
-    PlaybookMetadata as TaskMapperPlaybook,
     TaskMapper,
+)
+from src.agents.infra_agent.task_mapper import (
+    PlaybookMetadata as TaskMapperPlaybook,
 )
 from src.common.models import PlaybookSuggestion, Task
 from src.common.protocol import WorkRequest

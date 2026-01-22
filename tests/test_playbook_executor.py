@@ -11,17 +11,15 @@ Comprehensive test suite covering:
 All tests use mocked ansible-runner to avoid CI dependencies.
 """
 
-import asyncio
 import json
-import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
-from uuid import UUID, uuid4
+from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 import pytest
 
+from src.agents.infra_agent.agent import InfraAgent
 from src.agents.infra_agent.executor import (
     AnsibleRunnerError,
     ExecutionSummary,
@@ -29,9 +27,8 @@ from src.agents.infra_agent.executor import (
     PlaybookExecutor,
     PlaybookNotFoundError,
 )
-from src.agents.infra_agent.agent import InfraAgent
 from src.common.config import Config
-from src.common.protocol import WorkRequest, WorkResult
+from src.common.protocol import WorkRequest
 
 
 # Test data fixtures

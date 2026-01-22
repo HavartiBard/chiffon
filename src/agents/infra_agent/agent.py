@@ -11,14 +11,14 @@ Provides:
 import json
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from src.agents.base import BaseAgent
 from src.common.config import Config
 from src.common.protocol import WorkRequest, WorkResult
 
-from .analyzer import AnalysisResult, PlaybookAnalyzer
+from .analyzer import PlaybookAnalyzer
 from .executor import (
     AnsibleRunnerError,
     ExecutionSummary,
@@ -26,7 +26,7 @@ from .executor import (
     PlaybookExecutor,
     PlaybookNotFoundError,
 )
-from .template_generator import GeneratedTemplate, TemplateGenerator
+from .template_generator import TemplateGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -159,8 +159,8 @@ class InfraAgent(BaseAgent):
         Returns:
             WorkResult with generated template content
         """
-        from uuid import uuid4
         import time
+        from uuid import uuid4
 
         start_time = time.time()
 
@@ -285,8 +285,8 @@ class InfraAgent(BaseAgent):
         Returns:
             WorkResult with analysis results as JSON
         """
-        from uuid import uuid4
         import time
+        from uuid import uuid4
 
         start_time = time.time()
 
@@ -470,13 +470,13 @@ class InfraAgent(BaseAgent):
             )
 
         # Import TaskMapper and CacheManager here to avoid circular deps
-        from .cache_manager import CacheManager
-        from .task_mapper import TaskMapper
-
         # Create cache manager and task mapper
         # Note: In production, these should be initialized once in __init__
         # For now, create them per-request for simplicity
         from src.common.config import Config
+
+        from .cache_manager import CacheManager
+        from .task_mapper import TaskMapper
 
         cache_manager = CacheManager(Config())
 

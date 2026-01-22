@@ -12,7 +12,7 @@ import logging
 import os
 from datetime import datetime
 from typing import List, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -68,7 +68,7 @@ class PauseManager:
             self.polling_interval_seconds = int(env_poll_interval)
         except ValueError:
             self.polling_interval_seconds = 10
-            self.logger.warning(f"Invalid PAUSE_POLLING_INTERVAL_SECONDS, using default: 10s")
+            self.logger.warning("Invalid PAUSE_POLLING_INTERVAL_SECONDS, using default: 10s")
 
         # Background polling state
         self.polling_active = False
@@ -234,7 +234,7 @@ class PauseManager:
             paused_entries = (
                 self.db.query(PauseQueueEntry)
                 .filter(
-                    (PauseQueueEntry.resume_after == None)
+                    (PauseQueueEntry.resume_after.is_(None))
                     | (PauseQueueEntry.resume_after <= datetime.utcnow())
                 )
                 .all()
@@ -340,5 +340,5 @@ class PauseManager:
         """Cleanup on garbage collection."""
         try:
             self.stop_resume_polling()
-        except:
+        except Exception:
             pass

@@ -12,11 +12,10 @@ Tests cover:
 
 import hashlib
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import numpy as np
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.agents.infra_agent.cache_manager import CacheManager
 from src.agents.infra_agent.task_mapper import (
@@ -25,7 +24,6 @@ from src.agents.infra_agent.task_mapper import (
     TaskMapper,
 )
 from src.common.models import PlaybookMapping
-
 
 # --- Fixtures ---
 
@@ -76,6 +74,7 @@ async def in_memory_db_session():
     """SQLite in-memory database session for integration tests."""
     from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
     from sqlalchemy.orm import sessionmaker
+
     from src.common.database import Base
 
     # Create in-memory SQLite database

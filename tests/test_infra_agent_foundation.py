@@ -8,9 +8,9 @@ Test coverage:
 
 import asyncio
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -21,7 +21,6 @@ from src.agents.infra_agent.playbook_discovery import (
 )
 from src.common.config import Config
 from src.common.protocol import WorkRequest, WorkResult
-
 
 # ============================================================================
 # Fixtures

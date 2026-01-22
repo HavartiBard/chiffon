@@ -20,19 +20,17 @@ Note: Tests skip gracefully if RabbitMQ or PostgreSQL are unavailable.
 import asyncio
 import json
 import logging
-import time
-from typing import Any, Optional
 from uuid import UUID, uuid4
 
 import aio_pika
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from src.agents.test_agent import TestAgent
 from src.common.config import Config
 from src.common.models import Base, Task
-from src.common.protocol import MessageEnvelope, WorkRequest, WorkResult
+from src.common.protocol import MessageEnvelope
 from src.common.rabbitmq import declare_queues, get_connection_string
 from src.orchestrator.service import OrchestratorService
 

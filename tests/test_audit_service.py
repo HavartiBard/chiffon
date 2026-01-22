@@ -7,23 +7,20 @@ Tests:
 - Response format validation
 """
 
-import json
 from datetime import datetime, timedelta
-from typing import Generator
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
 from src.orchestrator.api import (
+    AuditQueryResponse,
+    TaskAuditResponse,
     router,
     task_to_audit_response,
-    TaskAuditResponse,
-    AuditQueryResponse,
 )
 from src.orchestrator.audit import AuditService
 from src.orchestrator.main import app
-
 
 # ==================== Mock Fixtures ====================
 

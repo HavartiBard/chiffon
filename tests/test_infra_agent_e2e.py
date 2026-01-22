@@ -8,24 +8,19 @@ Test coverage:
 - Error handling and recovery paths
 """
 
-import asyncio
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 from src.agents.infra_agent import InfraAgent
-from src.agents.infra_agent.analyzer import AnalysisResult, PlaybookAnalyzer, Suggestion
-from src.agents.infra_agent.executor import ExecutionSummary, PlaybookExecutor
-from src.agents.infra_agent.playbook_discovery import PlaybookDiscovery, PlaybookMetadata
-from src.agents.infra_agent.task_mapper import MappingResult, TaskMapper
-from src.agents.infra_agent.template_generator import GeneratedTemplate, TemplateGenerator
+from src.agents.infra_agent.analyzer import AnalysisResult, Suggestion
+from src.agents.infra_agent.executor import ExecutionSummary
 from src.common.config import Config
 from src.common.protocol import WorkRequest, WorkResult
-
 
 # ============================================================================
 # Fixtures

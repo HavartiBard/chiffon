@@ -19,19 +19,19 @@ For integration testing with PostgreSQL, run with a real database using:
   DATABASE_URL=postgresql://user:pass@localhost/chiffon_test pytest
 """
 
-import pytest
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from uuid import uuid4
+
+import pytest
 from pydantic import ValidationError
 
 from src.common.models import (
-    Task,
     PauseQueueEntry,
     PauseQueueEntryModel,
+    Task,
     WorkPlan,
     WorkTask,
 )
-
 
 # ============================================================================
 # Fixtures for Pydantic model tests

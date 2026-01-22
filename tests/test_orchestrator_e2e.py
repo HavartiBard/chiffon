@@ -8,29 +8,26 @@ Tests cover:
 - Audit trail recording
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
-from datetime import datetime
 
+import pytest
 from sqlalchemy.orm import Session
-from fastapi.testclient import TestClient
 
 from src.common.config import Config
 from src.common.litellm_client import LiteLLMClient
 from src.common.models import (
+    DecomposedRequest,
+    FallbackDecision,
+    Subtask,
     WorkPlan,
     WorkTask,
-    DecomposedRequest,
-    Subtask,
-    FallbackDecision,
 )
-from src.orchestrator.service import OrchestratorService
+from src.orchestrator.fallback import ExternalAIFallback
 from src.orchestrator.nlu import RequestDecomposer
 from src.orchestrator.planner import WorkPlanner
 from src.orchestrator.router import AgentRouter
-from src.orchestrator.fallback import ExternalAIFallback
-
+from src.orchestrator.service import OrchestratorService
 
 # ============================================================================
 # Fixtures

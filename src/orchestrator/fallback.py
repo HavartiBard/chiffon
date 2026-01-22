@@ -7,7 +7,6 @@ Manages intelligent routing between Claude (external) and Ollama (local) based o
 """
 
 import asyncio
-import json
 import logging
 from typing import Optional, Tuple
 from uuid import UUID
@@ -82,7 +81,7 @@ class ExternalAIFallback:
 
             # Step 2: Check complexity
             if plan.complexity_level == "complex":
-                self.logger.info(f"Complex plan detected, using Claude for better reasoning")
+                self.logger.info("Complex plan detected, using Claude for better reasoning")
                 decision = FallbackDecision(
                     task_id=str(plan.plan_id),
                     decision="use_claude",

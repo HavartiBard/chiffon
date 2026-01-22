@@ -10,15 +10,13 @@ Tests cover:
 - Audit logging
 """
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
-from uuid import uuid4
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.common.config import Config
 from src.common.litellm_client import LiteLLMClient
-from src.common.models import FallbackDecision, WorkPlan
+from src.common.models import WorkPlan
 from src.orchestrator.fallback import ExternalAIFallback
 
 

@@ -9,21 +9,21 @@ Tests cover:
 - Error handling
 """
 
-import pytest
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
+import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 
 from src.common.models import (
-    Base,
-    AgentRegistry,
     AgentPerformance,
+    AgentRegistry,
+    Base,
     RoutingDecision,
     WorkTask,
 )
-from src.orchestrator.router import AgentRouter, AgentSelection
+from src.orchestrator.router import AgentRouter
 
 
 # Create in-memory SQLite database for testing

@@ -9,17 +9,15 @@ Tests cover:
 """
 
 import json
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
-from uuid import uuid4
 
-from src.orchestrator.nlu import RequestDecomposer
 from src.common.models import (
-    RequestParsingConfig,
     DecomposedRequest,
-    Subtask,
+    RequestParsingConfig,
 )
-
+from src.orchestrator.nlu import RequestDecomposer
 
 # ============================================================================
 # Fixtures

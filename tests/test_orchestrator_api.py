@@ -7,9 +7,8 @@ Tests cover:
 - POST /api/v1/cancel/{task_id}
 """
 
-import json
+from unittest.mock import AsyncMock
 from uuid import uuid4
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import AsyncClient

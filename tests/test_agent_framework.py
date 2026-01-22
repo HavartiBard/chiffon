@@ -9,8 +9,6 @@ Tests cover:
 - Error handling and NACK behavior
 """
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -22,7 +20,6 @@ from src.common.protocol import (
     MessageEnvelope,
     StatusUpdate,
     WorkRequest,
-    WorkResult,
 )
 
 

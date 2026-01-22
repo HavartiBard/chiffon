@@ -11,7 +11,7 @@ Test coverage:
 
 import json
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -21,7 +21,6 @@ from src.agents.infra_agent.analyzer import AnalysisResult, Suggestion
 from src.agents.infra_agent.executor import ExecutionSummary
 from src.common.config import Config
 from src.common.protocol import MessageEnvelope, WorkRequest, WorkResult
-
 
 # ============================================================================
 # Fixtures

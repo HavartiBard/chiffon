@@ -12,15 +12,14 @@ Tests cover:
 
 import asyncio
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
-from uuid import UUID, uuid4
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import pytest
 
 from src.agents.desktop_agent import DesktopAgent
 from src.common.config import Config
-from src.common.models import AgentRegistry
-from src.common.protocol import MessageEnvelope, StatusUpdate
+from src.common.protocol import StatusUpdate
 from src.orchestrator.service import OrchestratorService
 
 

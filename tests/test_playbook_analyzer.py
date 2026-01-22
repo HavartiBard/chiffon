@@ -11,20 +11,17 @@ Test coverage:
 """
 
 import json
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 import pytest
-from pydantic import ValidationError
 
 from src.agents.infra_agent.analyzer import (
     AnalysisResult,
     PlaybookAnalyzer,
     Suggestion,
 )
-from src.common.models import PlaybookSuggestion
 
 
 class TestSuggestionModel:

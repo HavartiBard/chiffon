@@ -9,7 +9,8 @@ from typing import Iterator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import router as dashboard_router, session_store
+from .api import router as dashboard_router
+from .api import session_store
 from .websocket import ws_manager
 
 logger = logging.getLogger("dashboard.main")

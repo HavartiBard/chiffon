@@ -501,8 +501,8 @@ class TestIntegrationWithOrchestratorService:
     @pytest.mark.asyncio
     async def test_orchestrator_service_imports_git_service(self):
         """Test that OrchestratorService can import GitService."""
-        from src.orchestrator.service import OrchestratorService
         from src.orchestrator.git_service import GitService
+        from src.orchestrator.service import OrchestratorService
 
         # Verify import succeeded
         assert OrchestratorService is not None
@@ -511,9 +511,10 @@ class TestIntegrationWithOrchestratorService:
     @pytest.mark.asyncio
     async def test_orchestrator_service_initializes_git_service(self, temp_git_repo):
         """Test that OrchestratorService initializes GitService in __init__."""
-        from src.orchestrator.service import OrchestratorService
-        from src.common.config import Config
         from unittest.mock import MagicMock
+
+        from src.common.config import Config
+        from src.orchestrator.service import OrchestratorService
 
         # Create mock config and db_session
         config = MagicMock(spec=Config)
@@ -533,10 +534,11 @@ class TestIntegrationWithOrchestratorService:
     @pytest.mark.asyncio
     async def test_git_commit_on_task_completion(self, temp_git_repo, mock_task):
         """Test that git commit happens on task completion."""
-        from src.orchestrator.service import OrchestratorService
+        from unittest.mock import MagicMock
+
         from src.common.config import Config
         from src.common.protocol import WorkResult
-        from unittest.mock import MagicMock, AsyncMock
+        from src.orchestrator.service import OrchestratorService
 
         # Create orchestrator
         config = MagicMock(spec=Config)
@@ -570,10 +572,11 @@ class TestIntegrationWithOrchestratorService:
     @pytest.mark.asyncio
     async def test_failed_tasks_also_committed(self, temp_git_repo, mock_task):
         """Test that failed tasks are also committed to git."""
-        from src.orchestrator.service import OrchestratorService
+        from unittest.mock import MagicMock
+
         from src.common.config import Config
         from src.common.protocol import WorkResult
-        from unittest.mock import MagicMock
+        from src.orchestrator.service import OrchestratorService
 
         config = MagicMock(spec=Config)
         db_session = MagicMock()
@@ -604,10 +607,11 @@ class TestIntegrationWithOrchestratorService:
     @pytest.mark.asyncio
     async def test_git_error_doesnt_block_orchestrator(self, temp_git_repo, mock_task):
         """Test that git commit errors don't block orchestrator execution."""
-        from src.orchestrator.service import OrchestratorService
+        from unittest.mock import MagicMock
+
         from src.common.config import Config
         from src.common.protocol import WorkResult
-        from unittest.mock import MagicMock, patch
+        from src.orchestrator.service import OrchestratorService
 
         config = MagicMock(spec=Config)
         db_session = MagicMock()
