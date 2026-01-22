@@ -164,15 +164,22 @@ class OrchestratorService:
         try:
             # Read capacity threshold from environment (default 0.2 = 20%)
             import os
+
             capacity_threshold = float(os.getenv("PAUSE_CAPACITY_THRESHOLD_PERCENT", "0.2"))
-            self.pause_manager = PauseManager(db=db_session, capacity_threshold_percent=capacity_threshold)
-            self.logger.info(f"PauseManager initialized with {capacity_threshold * 100:.0f}% threshold")
+            self.pause_manager = PauseManager(
+                db=db_session, capacity_threshold_percent=capacity_threshold
+            )
+            self.logger.info(
+                f"PauseManager initialized with {capacity_threshold * 100:.0f}% threshold"
+            )
         except Exception as e:
             self.logger.warning(f"PauseManager initialization failed: {e}")
             self.pause_manager = None
 
         # Store for request → plan mappings (request_id → plan)
-        self._request_plans: dict[str, WorkPlan] = {}  # Simple in-memory store, would use DB in production
+        self._request_plans: dict[
+            str, WorkPlan
+        ] = {}  # Simple in-memory store, would use DB in production
         # Store for request → decomposed_request mappings (request_id → decomposed_request)
         self._decomposed_requests: dict[str, DecomposedRequest] = {}  # Simple in-memory store
 
@@ -264,8 +271,7 @@ class OrchestratorService:
             return mapping[work_type]
         else:
             raise ValueError(
-                f"Unknown work_type: {work_type}. "
-                f"Valid types: {', '.join(mapping.keys())}"
+                f"Unknown work_type: {work_type}. " f"Valid types: {', '.join(mapping.keys())}"
             )
 
     async def dispatch_work(
@@ -414,9 +420,7 @@ class OrchestratorService:
                 "error_message": task.error_message,
                 "result": None,  # TODO: aggregate actual_resources
                 "created_at": task.created_at.isoformat() if task.created_at else None,
-                "updated_at": task.completed_at.isoformat()
-                if task.completed_at
-                else None,
+                "updated_at": task.completed_at.isoformat() if task.completed_at else None,
             }
         except ValueError:
             raise
@@ -609,9 +613,7 @@ class OrchestratorService:
             },
         )
 
-    async def handle_agent_heartbeat(
-        self, heartbeat: StatusUpdate, db: Session
-    ) -> None:
+    async def handle_agent_heartbeat(self, heartbeat: StatusUpdate, db: Session) -> None:
         """Handle agent heartbeat and persist resource metrics to database.
 
         Receives heartbeat from agent with current resource metrics.
@@ -631,9 +633,7 @@ class OrchestratorService:
             agent_type = heartbeat.agent_type
 
             # Look up agent in registry
-            agent = db.query(AgentRegistry).filter(
-                AgentRegistry.agent_id == agent_id
-            ).first()
+            agent = db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
             # Auto-register new agent
             if not agent:
@@ -690,10 +690,15 @@ class OrchestratorService:
                     # Query agents offline > timeout
                     timeout_threshold = datetime.utcnow() - timedelta(seconds=timeout_seconds)
                     # Approximate: if last_heartbeat_at is None or far in past
-                    offline_agents = self.db.query(AgentRegistry).filter(
-                        (AgentRegistry.last_heartbeat_at == None) |
-                        (AgentRegistry.last_heartbeat_at < timeout_threshold)
-                    ).filter(AgentRegistry.status != "offline").all()
+                    offline_agents = (
+                        self.db.query(AgentRegistry)
+                        .filter(
+                            (AgentRegistry.last_heartbeat_at == None)
+                            | (AgentRegistry.last_heartbeat_at < timeout_threshold)
+                        )
+                        .filter(AgentRegistry.status != "offline")
+                        .all()
+                    )
 
                     # Mark offline
                     for agent in offline_agents:
@@ -845,7 +850,9 @@ class OrchestratorService:
                 # Check fallback decision
                 if self.fallback:
                     try:
-                        fallback_decision, use_claude = await self.fallback.should_use_external_ai(plan)
+                        fallback_decision, use_claude = await self.fallback.should_use_external_ai(
+                            plan
+                        )
                         plan.will_use_external_ai = use_claude
                         self.logger.info(f"Fallback decision: {fallback_decision.decision}")
                     except Exception as fallback_err:
@@ -956,26 +963,41 @@ class OrchestratorService:
                         self.logger.warning(f"Capacity exhausted, pausing plan {plan_id}")
 
                         # Create list of task IDs
-                        task_ids = [str(task.task_id) if hasattr(task, 'task_id') else f"task-{i}" for i, task in enumerate(plan.tasks)]
+                        task_ids = [
+                            str(task.task_id) if hasattr(task, "task_id") else f"task-{i}"
+                            for i, task in enumerate(plan.tasks)
+                        ]
 
                         # Pause work
                         paused_count = await self.pause_manager.pause_work(
                             plan_id=plan_id,
                             task_ids=task_ids,
-                            work_plan_json=plan.model_dump() if hasattr(plan, 'model_dump') else None,
+                            work_plan_json=plan.model_dump()
+                            if hasattr(plan, "model_dump")
+                            else None,
                         )
 
                         # Update task status to paused
                         try:
                             for task_id_str in task_ids:
-                                task_uuid = UUID(task_id_str) if task_id_str.startswith('task-') is False else None
+                                task_uuid = (
+                                    UUID(task_id_str)
+                                    if task_id_str.startswith("task-") is False
+                                    else None
+                                )
                                 if task_uuid:
-                                    task_rec = self.db.query(Task).filter(Task.task_id == task_uuid).first()
+                                    task_rec = (
+                                        self.db.query(Task)
+                                        .filter(Task.task_id == task_uuid)
+                                        .first()
+                                    )
                                     if task_rec:
-                                        task_rec.status = 'paused'
+                                        task_rec.status = "paused"
                             self.db.commit()
                         except Exception as update_err:
-                            self.logger.warning(f"Could not update task status to paused: {update_err}")
+                            self.logger.warning(
+                                f"Could not update task status to paused: {update_err}"
+                            )
                             self.db.rollback()
 
                         return {
@@ -985,7 +1007,9 @@ class OrchestratorService:
                             "message": f"Plan paused due to insufficient agent capacity. {paused_count} tasks queued for resume.",
                         }
                 except Exception as capacity_err:
-                    self.logger.warning(f"Capacity check failed, proceeding with dispatch: {capacity_err}")
+                    self.logger.warning(
+                        f"Capacity check failed, proceeding with dispatch: {capacity_err}"
+                    )
 
             dispatched_tasks = []
 
@@ -1005,13 +1029,15 @@ class OrchestratorService:
                     )
 
                     # Record routing decision (AgentRouter already does this)
-                    dispatched_tasks.append({
-                        **dispatch_result,
-                        "agent_id": str(agent_selection.agent_id),
-                        "agent_type": agent_selection.agent_type,
-                        "routing_score": agent_selection.score,
-                        "selection_reason": agent_selection.selected_reason,
-                    })
+                    dispatched_tasks.append(
+                        {
+                            **dispatch_result,
+                            "agent_id": str(agent_selection.agent_id),
+                            "agent_type": agent_selection.agent_type,
+                            "routing_score": agent_selection.score,
+                            "selection_reason": agent_selection.selected_reason,
+                        }
+                    )
 
                     self.logger.info(
                         f"Dispatched task {task.name} (task_id={task_id}) "
@@ -1019,11 +1045,13 @@ class OrchestratorService:
                     )
                 except Exception as task_err:
                     self.logger.error(f"Failed to dispatch task {task.name}: {task_err}")
-                    dispatched_tasks.append({
-                        "name": task.name,
-                        "work_type": task.work_type,
-                        "error": str(task_err),
-                    })
+                    dispatched_tasks.append(
+                        {
+                            "name": task.name,
+                            "work_type": task.work_type,
+                            "error": str(task_err),
+                        }
+                    )
 
             plan.status = "executing"
             self.logger.info(
@@ -1068,7 +1096,9 @@ class OrchestratorService:
                 "plan_id": plan_id,
                 "request_id": plan.request_id,
                 "status": plan.status,
-                "tasks": [{"order": t.order, "name": t.name, "work_type": t.work_type} for t in plan.tasks],
+                "tasks": [
+                    {"order": t.order, "name": t.name, "work_type": t.work_type} for t in plan.tasks
+                ],
                 "complexity_level": plan.complexity_level,
                 "will_use_external_ai": plan.will_use_external_ai,
                 "created_at": plan.created_at.isoformat() if plan.created_at else None,
@@ -1152,7 +1182,9 @@ class OrchestratorService:
                 "gpu_vram_available_gb": metrics.get("gpu_vram_available_gb", 0.0),
                 "gpu_vram_total_gb": metrics.get("gpu_vram_total_gb", 0.0),
                 "gpu_type": metrics.get("gpu_type", "none"),
-                "timestamp": agent.last_heartbeat_at.isoformat() if agent.last_heartbeat_at else None,
+                "timestamp": agent.last_heartbeat_at.isoformat()
+                if agent.last_heartbeat_at
+                else None,
             }
 
             self.logger.debug(f"Agent capacity: {agent_id} -> {capacity}")
@@ -1192,10 +1224,11 @@ class OrchestratorService:
         """
         try:
             # Query online desktop agents
-            agents = db.query(AgentRegistry).filter(
-                AgentRegistry.agent_type == "desktop",
-                AgentRegistry.status == "online"
-            ).all()
+            agents = (
+                db.query(AgentRegistry)
+                .filter(AgentRegistry.agent_type == "desktop", AgentRegistry.status == "online")
+                .all()
+            )
 
             result = []
 
@@ -1208,16 +1241,20 @@ class OrchestratorService:
 
                     # Check if agent meets requirements
                     if gpu_vram >= min_gpu_vram_gb and cpu_cores >= min_cpu_cores:
-                        result.append({
-                            "agent_id": str(agent.agent_id),
-                            "agent_type": agent.agent_type,
-                            "pool_name": agent.pool_name,
-                            "status": agent.status,
-                            "gpu_vram_available_gb": gpu_vram,
-                            "cpu_cores_available": cpu_cores,
-                            "cpu_load_1min": metrics.get("cpu_load_1min", 0.0),
-                            "last_heartbeat_at": agent.last_heartbeat_at.isoformat() if agent.last_heartbeat_at else None,
-                        })
+                        result.append(
+                            {
+                                "agent_id": str(agent.agent_id),
+                                "agent_type": agent.agent_type,
+                                "pool_name": agent.pool_name,
+                                "status": agent.status,
+                                "gpu_vram_available_gb": gpu_vram,
+                                "cpu_cores_available": cpu_cores,
+                                "cpu_load_1min": metrics.get("cpu_load_1min", 0.0),
+                                "last_heartbeat_at": agent.last_heartbeat_at.isoformat()
+                                if agent.last_heartbeat_at
+                                else None,
+                            }
+                        )
                 except Exception as agent_err:
                     self.logger.warning(f"Error processing agent {agent.agent_id}: {agent_err}")
                     # Skip this agent and continue

@@ -26,18 +26,14 @@ class ExecutionSummary(BaseModel):
     This reduces RabbitMQ overhead for large playbook executions.
     """
 
-    status: str = Field(
-        description="Execution status: successful, failed, timeout, cancelled"
-    )
+    status: str = Field(description="Execution status: successful, failed, timeout, cancelled")
     exit_code: int = Field(description="Ansible-runner return code (0=success)")
     duration_ms: int = Field(description="Total execution time in milliseconds")
     changed_count: int = Field(default=0, description="Number of tasks that changed state")
     ok_count: int = Field(default=0, description="Number of successful tasks")
     failed_count: int = Field(default=0, description="Number of failed tasks")
     skipped_count: int = Field(default=0, description="Number of skipped tasks")
-    failed_tasks: list[str] = Field(
-        default_factory=list, description="Names of failed tasks"
-    )
+    failed_tasks: list[str] = Field(default_factory=list, description="Names of failed tasks")
     key_errors: list[str] = Field(
         default_factory=list,
         description="Error messages from failed tasks (max 5)",
@@ -205,9 +201,7 @@ class PlaybookExecutor:
                 f"Playbook execution timed out after {timeout_seconds}s",
                 extra={"playbook": str(relative_playbook)},
             )
-            raise ExecutionTimeoutError(
-                f"Playbook execution exceeded {timeout_seconds}s timeout"
-            )
+            raise ExecutionTimeoutError(f"Playbook execution exceeded {timeout_seconds}s timeout")
 
         except Exception as e:
             logger.error(

@@ -251,9 +251,7 @@ class TestAgentRouting:
         selection = await router.route_task(deploy_task)
         assert selection.agent_id == specialist.agent_id
 
-    async def test_route_balances_load(
-        self, router, test_db, deploy_task
-    ):
+    async def test_route_balances_load(self, router, test_db, deploy_task):
         """Load factor contributes to scoring."""
         agent1 = AgentRegistry(
             agent_id=uuid4(),
@@ -472,9 +470,7 @@ class TestScoringAlgorithm:
 class TestRoutingAudit:
     """Test routing decision audit trail."""
 
-    async def test_routing_decision_logged(
-        self, router, infra_agent_online, deploy_task
-    ):
+    async def test_routing_decision_logged(self, router, infra_agent_online, deploy_task):
         """Each routing creates RoutingDecision record."""
         await router.route_task(deploy_task)
 
@@ -489,9 +485,7 @@ class TestRoutingAudit:
         )
         assert len(decisions) == 1
 
-    async def test_routing_decision_includes_reason(
-        self, router, infra_agent_online, deploy_task
-    ):
+    async def test_routing_decision_includes_reason(self, router, infra_agent_online, deploy_task):
         """RoutingDecision has explanatory reason."""
         await router.route_task(deploy_task)
 
@@ -503,9 +497,7 @@ class TestRoutingAudit:
         assert decision.reason is not None
         assert len(decision.reason) > 0
 
-    async def test_routing_includes_retry_flag(
-        self, router, infra_agent_online, deploy_task
-    ):
+    async def test_routing_includes_retry_flag(self, router, infra_agent_online, deploy_task):
         """Retry attempts marked in routing decision."""
         await router.route_task(deploy_task, retry_count=0)
         await router.route_task(deploy_task, retry_count=1)
@@ -570,16 +562,12 @@ class TestRetryLogic:
         assert result["status"] == "dispatched"
         assert result["task_id"] == deploy_task.order
 
-    async def test_permanent_error_no_retry(
-        self, router, infra_agent_offline, deploy_task
-    ):
+    async def test_permanent_error_no_retry(self, router, infra_agent_offline, deploy_task):
         """Agent pool offline doesn't retry."""
         with pytest.raises(ValueError, match="offline"):
             await router.dispatch_with_retry(deploy_task, max_retries=3)
 
-    async def test_max_retries_respected(
-        self, router, test_db, infra_agent_online, deploy_task
-    ):
+    async def test_max_retries_respected(self, router, test_db, infra_agent_online, deploy_task):
         """Max retries limit enforced."""
         # This would need to simulate failures, which is complex in this test
         # Just verify max_retries parameter is used
@@ -605,9 +593,7 @@ class TestAgentRegistration:
         test_db.commit()
 
         retrieved = (
-            test_db.query(AgentRegistry)
-            .filter(AgentRegistry.agent_id == agent.agent_id)
-            .first()
+            test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent.agent_id).first()
         )
         assert retrieved is not None
         assert retrieved.capabilities == ["deploy_service", "run_playbook"]
@@ -633,9 +619,7 @@ class TestAgentRegistration:
         test_db.commit()
 
         retrieved = (
-            test_db.query(AgentRegistry)
-            .filter(AgentRegistry.agent_id == agent.agent_id)
-            .first()
+            test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent.agent_id).first()
         )
         assert retrieved.capabilities == capabilities
 
@@ -653,8 +637,6 @@ class TestAgentRegistration:
         test_db.commit()
 
         retrieved = (
-            test_db.query(AgentRegistry)
-            .filter(AgentRegistry.agent_id == agent.agent_id)
-            .first()
+            test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent.agent_id).first()
         )
         assert retrieved.specializations is None

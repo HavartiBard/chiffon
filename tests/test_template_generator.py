@@ -230,9 +230,7 @@ class TestTemplateRendering:
         """Test that chiffon metadata comments are in playbook."""
         generator = TemplateGenerator()
 
-        template = await generator.generate_template(
-            "myapp", description="Test service"
-        )
+        template = await generator.generate_template("myapp", description="Test service")
 
         assert "chiffon:service=myapp" in template.playbook_content
         assert "chiffon:description=" in template.playbook_content
@@ -353,9 +351,7 @@ class TestTemplateGeneration:
         """Test template generation with description."""
         generator = TemplateGenerator()
 
-        template = await generator.generate_template(
-            "testapp", description="My test application"
-        )
+        template = await generator.generate_template("testapp", description="My test application")
 
         assert "My test application" in template.playbook_content
 

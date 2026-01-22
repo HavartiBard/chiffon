@@ -42,7 +42,9 @@ def inject_mock_service(mock_orchestrator_service):
 class TestDispatchEndpoint:
     """Tests for POST /api/v1/dispatch."""
 
-    async def test_dispatch_accepts_valid_request(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_dispatch_accepts_valid_request(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test dispatch with valid request."""
         task_id = str(uuid4())
         trace_id = str(uuid4())
@@ -72,7 +74,9 @@ class TestDispatchEndpoint:
         assert data["task_id"] == task_id
         assert data["status"] == "pending"
 
-    async def test_dispatch_returns_trace_id_and_request_id(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_dispatch_returns_trace_id_and_request_id(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test that dispatch returns both trace_id and request_id."""
         task_id = str(uuid4())
         trace_id = str(uuid4())
@@ -112,7 +116,9 @@ class TestDispatchEndpoint:
 
         assert response.status_code == 422  # Validation error
 
-    async def test_dispatch_requires_work_type(self, async_client: AsyncClient, inject_mock_service):
+    async def test_dispatch_requires_work_type(
+        self, async_client: AsyncClient, inject_mock_service
+    ):
         """Test that dispatch rejects missing work_type."""
         task_id = str(uuid4())
 
@@ -126,7 +132,9 @@ class TestDispatchEndpoint:
 
         assert response.status_code == 422
 
-    async def test_dispatch_validates_priority_range_1_to_5(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_dispatch_validates_priority_range_1_to_5(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test that dispatch validates priority range."""
         task_id = str(uuid4())
 
@@ -154,11 +162,15 @@ class TestDispatchEndpoint:
         )
         assert response.status_code == 422
 
-    async def test_dispatch_error_on_invalid_work_type(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_dispatch_error_on_invalid_work_type(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test dispatch error handling for invalid work_type."""
         task_id = str(uuid4())
 
-        mock_orchestrator_service.dispatch_work.side_effect = ValueError("Unknown work_type: invalid")
+        mock_orchestrator_service.dispatch_work.side_effect = ValueError(
+            "Unknown work_type: invalid"
+        )
 
         response = await async_client.post(
             "/api/v1/dispatch",
@@ -178,7 +190,9 @@ class TestDispatchEndpoint:
 class TestStatusEndpoint:
     """Tests for GET /api/v1/status/{task_id}."""
 
-    async def test_status_returns_task_info(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_status_returns_task_info(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test status endpoint returns task information."""
         task_id = str(uuid4())
 
@@ -199,17 +213,23 @@ class TestStatusEndpoint:
         assert data["task_id"] == task_id
         assert data["status"] == "pending"
 
-    async def test_status_returns_404_for_missing_task(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_status_returns_404_for_missing_task(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test status returns 404 for unknown task."""
         task_id = str(uuid4())
 
-        mock_orchestrator_service.get_task_status.side_effect = ValueError(f"Task not found: {task_id}")
+        mock_orchestrator_service.get_task_status.side_effect = ValueError(
+            f"Task not found: {task_id}"
+        )
 
         response = await async_client.get(f"/api/v1/status/{task_id}")
 
         assert response.status_code == 404
 
-    async def test_status_returns_trace_id_for_correlation(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_status_returns_trace_id_for_correlation(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test status returns trace_id."""
         task_id = str(uuid4())
         trace_id = str(uuid4())
@@ -227,7 +247,9 @@ class TestStatusEndpoint:
         data = response.json()
         assert "trace_id" in data
 
-    async def test_status_returns_timestamps(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_status_returns_timestamps(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test status returns creation and update timestamps."""
         task_id = str(uuid4())
 
@@ -250,7 +272,9 @@ class TestStatusEndpoint:
 class TestAgentsEndpoint:
     """Tests for GET /api/v1/agents."""
 
-    async def test_list_agents_returns_all_agents(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_list_agents_returns_all_agents(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test agents endpoint returns list."""
         agent1_id = str(uuid4())
         agent2_id = str(uuid4())
@@ -280,7 +304,9 @@ class TestAgentsEndpoint:
         assert data[0]["agent_type"] == "infra"
         assert data[1]["agent_type"] == "desktop"
 
-    async def test_list_agents_filters_by_agent_type(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_list_agents_filters_by_agent_type(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test agents endpoint filters by type."""
         agent_id = str(uuid4())
 
@@ -302,7 +328,9 @@ class TestAgentsEndpoint:
             status=None,
         )
 
-    async def test_list_agents_filters_by_status(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_list_agents_filters_by_status(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test agents endpoint filters by status."""
         agent_id = str(uuid4())
 
@@ -329,7 +357,9 @@ class TestAgentsEndpoint:
 class TestCancelEndpoint:
     """Tests for POST /api/v1/cancel/{task_id}."""
 
-    async def test_cancel_cancels_pending_task(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_cancel_cancels_pending_task(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test cancelling a pending task."""
         task_id = str(uuid4())
 
@@ -345,7 +375,9 @@ class TestCancelEndpoint:
         assert data["task_id"] == task_id
         assert data["status"] == "cancelled"
 
-    async def test_cancel_rejects_completed_task(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_cancel_rejects_completed_task(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test that cancel rejects already completed tasks."""
         task_id = str(uuid4())
 
@@ -357,7 +389,9 @@ class TestCancelEndpoint:
 
         assert response.status_code == 400
 
-    async def test_cancel_returns_404_for_missing_task(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_cancel_returns_404_for_missing_task(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test cancel returns 404 for unknown task."""
         task_id = str(uuid4())
 
@@ -372,7 +406,9 @@ class TestCancelEndpoint:
 class TestErrorResponses:
     """Tests for error response format."""
 
-    async def test_error_response_has_error_code(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_error_response_has_error_code(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test error responses include error_code."""
         task_id = str(uuid4())
 
@@ -382,7 +418,9 @@ class TestErrorResponses:
 
         assert response.status_code == 404
 
-    async def test_error_response_has_error_message(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_error_response_has_error_message(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test error responses include error_message."""
         mock_orchestrator_service.dispatch_work.side_effect = ValueError("Invalid priority")
 
@@ -399,13 +437,17 @@ class TestErrorResponses:
         data = response.json()
         assert "detail" in data
 
-    async def test_error_response_includes_trace_id_when_available(self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service):
+    async def test_error_response_includes_trace_id_when_available(
+        self, async_client: AsyncClient, inject_mock_service, mock_orchestrator_service
+    ):
         """Test error responses can include trace_id."""
         # This is for future implementation when trace_id propagation is added
         # For now, just verify the response structure is consistent
         task_id = str(uuid4())
 
-        mock_orchestrator_service.get_task_status.side_effect = ValueError(f"Task not found: {task_id}")
+        mock_orchestrator_service.get_task_status.side_effect = ValueError(
+            f"Task not found: {task_id}"
+        )
 
         response = await async_client.get(f"/api/v1/status/{task_id}")
 

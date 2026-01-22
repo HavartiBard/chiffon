@@ -203,9 +203,7 @@ class TestRoundTrip:
         assert task is not None
         assert task.status == "pending"
 
-    async def test_work_round_trip_with_parameters(
-        self, orchestrator_service, started_test_agent
-    ):
+    async def test_work_round_trip_with_parameters(self, orchestrator_service, started_test_agent):
         """Dispatch work with parameters, verify dispatch succeeds.
 
         Validates:
@@ -225,9 +223,7 @@ class TestRoundTrip:
         assert result["status"] == "pending"
         assert result["task_id"] == str(task_id)
 
-    async def test_work_round_trip_with_priority(
-        self, orchestrator_service, started_test_agent
-    ):
+    async def test_work_round_trip_with_priority(self, orchestrator_service, started_test_agent):
         """Dispatch high and low priority work, verify both dispatch.
 
         Validates:
@@ -376,10 +372,12 @@ class TestErrorScenarios:
 
         try:
             # Publish valid JSON but invalid envelope (missing required fields)
-            invalid_envelope = json.dumps({
-                "from_agent": "test",
-                # Missing required fields: to_agent, type, trace_id, etc.
-            })
+            invalid_envelope = json.dumps(
+                {
+                    "from_agent": "test",
+                    # Missing required fields: to_agent, type, trace_id, etc.
+                }
+            )
 
             message = aio_pika.Message(
                 body=invalid_envelope.encode(),
@@ -402,9 +400,7 @@ class TestErrorScenarios:
             await channel.close()
             await connection.close()
 
-    async def test_agent_crash_leaves_message_in_queue(
-        self, orchestrator_service, test_config
-    ):
+    async def test_agent_crash_leaves_message_in_queue(self, orchestrator_service, test_config):
         """Agent consumes message but crashes before ACK; message should remain in queue.
 
         Validates:
@@ -629,18 +625,14 @@ class TestConcurrency:
         finally:
             await agent.disconnect()
 
-    async def test_agent_registry_updates_concurrently(
-        self, orchestrator_service, test_config
-    ):
+    async def test_agent_registry_updates_concurrently(self, orchestrator_service, test_config):
         """Create 3 agents sending heartbeats concurrently.
 
         Validates:
         - Concurrent heartbeats don't corrupt registry
         - All agents are registered
         """
-        agents = [
-            TestAgent(test_config, agent_id=f"agent-{i}") for i in range(3)
-        ]
+        agents = [TestAgent(test_config, agent_id=f"agent-{i}") for i in range(3)]
 
         for agent in agents:
             await agent.connect()

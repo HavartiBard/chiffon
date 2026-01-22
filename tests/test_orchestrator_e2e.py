@@ -71,7 +71,7 @@ def mock_decomposer():
                     name="Deploy Kuma",
                     intent="deploy_kuma",
                     confidence=0.95,
-                    parameters={"service": "kuma"}
+                    parameters={"service": "kuma"},
                 )
             ],
             ambiguities=[],
@@ -103,7 +103,7 @@ def mock_planner():
                     resource_requirements={
                         "estimated_duration_seconds": 180,
                         "gpu_vram_mb": 0,
-                        "cpu_cores": 2
+                        "cpu_cores": 2,
                     },
                 )
             ],
@@ -145,7 +145,9 @@ def mock_fallback():
 
 
 @pytest.fixture
-def orchestrator(config, mock_db, mock_litellm, mock_decomposer, mock_planner, mock_router, mock_fallback):
+def orchestrator(
+    config, mock_db, mock_litellm, mock_decomposer, mock_planner, mock_router, mock_fallback
+):
     """Create OrchestratorService with mocked components."""
     service = OrchestratorService(config, mock_db, mock_litellm)
     service.initialize_components(
@@ -170,8 +172,7 @@ class TestCompleteWorkflow:
         """Full "Deploy Kuma and add portals" workflow."""
         # Step 1: Submit request
         result = await orchestrator.submit_request(
-            "Deploy Kuma and add existing portals to config",
-            "user123"
+            "Deploy Kuma and add existing portals to config", "user123"
         )
         assert result["status"] == "parsing_complete"
         assert "request_id" in result
@@ -203,6 +204,7 @@ class TestCompleteWorkflow:
     @pytest.mark.asyncio
     async def test_complex_request_detection(self, orchestrator, mock_planner):
         """Complex request triggers Claude fallback."""
+
         # Override planner to return complex plan
         async def mock_complex_plan(decomposed, available_resources):
             return WorkPlan(
@@ -327,6 +329,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_ambiguous_request_flagged(self, orchestrator, mock_decomposer):
         """Ambiguous request returns clarification status."""
+
         async def mock_ambiguous_decompose(request_text):
             return DecomposedRequest(
                 request_id=str(uuid4()),
@@ -347,6 +350,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_out_of_scope_request_logged(self, orchestrator, mock_decomposer):
         """Out-of-scope items flagged."""
+
         async def mock_out_of_scope_decompose(request_text):
             return DecomposedRequest(
                 request_id=str(uuid4()),
@@ -367,6 +371,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_plan_generation_failure_handled(self, orchestrator, mock_planner):
         """Plan generation failure returns error response."""
+
         async def mock_failing_planner(decomposed, available_resources):
             raise Exception("Plan generation failed")
 
@@ -397,6 +402,7 @@ class TestQuotaAndFallback:
     @pytest.mark.asyncio
     async def test_simple_plan_no_fallback(self, orchestrator, mock_fallback):
         """Simple plan doesn't trigger fallback."""
+
         async def mock_simple_fallback(plan):
             decision = FallbackDecision(
                 task_id=None,
@@ -420,6 +426,7 @@ class TestQuotaAndFallback:
     @pytest.mark.asyncio
     async def test_complex_plan_uses_claude(self, orchestrator, mock_fallback, mock_planner):
         """Complex plan uses Claude."""
+
         async def mock_complex_plan(decomposed, available_resources):
             return WorkPlan(
                 plan_id=str(uuid4()),
@@ -515,21 +522,25 @@ class TestRESTAPI:
         # Note: This would require a running FastAPI app
         # For now, just verify imports
         from src.orchestrator.api import submit_request
+
         assert submit_request is not None
 
     def test_get_plan_endpoint(self):
         """GET /api/v1/plan/{request_id} endpoint exists."""
         from src.orchestrator.api import get_plan
+
         assert get_plan is not None
 
     def test_approve_plan_endpoint(self):
         """POST /api/v1/plan/{plan_id}/approve endpoint exists."""
         from src.orchestrator.api import approve_plan
+
         assert approve_plan is not None
 
     def test_get_status_endpoint(self):
         """GET /api/v1/plan/{plan_id}/status endpoint exists."""
         from src.orchestrator.api import get_plan_status
+
         assert get_plan_status is not None
 
 

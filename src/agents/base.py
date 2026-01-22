@@ -287,7 +287,9 @@ class BaseAgent(ABC):
                 return
             except aio_pika.exceptions.AMQPConnectionError as e:
                 if attempt < max_retries - 1:
-                    self.logger.warning(f"Attempt {attempt + 1} failed, retrying in {backoff_seconds}s: {e}")
+                    self.logger.warning(
+                        f"Attempt {attempt + 1} failed, retrying in {backoff_seconds}s: {e}"
+                    )
                     await asyncio.sleep(backoff_seconds)
                     backoff_seconds = min(backoff_seconds * 2, 60)  # Cap at 60s
                 else:
@@ -315,7 +317,9 @@ class BaseAgent(ABC):
                 try:
                     await self._connect_with_backoff(max_retries=3)
                 except Exception as reconnect_error:
-                    self.logger.error(f"Reconnection failed: {reconnect_error}, exiting heartbeat loop")
+                    self.logger.error(
+                        f"Reconnection failed: {reconnect_error}, exiting heartbeat loop"
+                    )
                     break
             except asyncio.CancelledError:
                 self.logger.info("Heartbeat loop cancelled")
@@ -345,9 +349,7 @@ class BaseAgent(ABC):
         # Could add blocked_agents list here in future
         return True
 
-    async def _process_single_message(
-        self, message: Any
-    ) -> None:
+    async def _process_single_message(self, message: Any) -> None:
         """Process a single work request message.
 
         Args:
@@ -356,9 +358,7 @@ class BaseAgent(ABC):
         try:
             # Deserialize envelope
             try:
-                envelope = MessageEnvelope.from_json(
-                    message.body.decode()
-                )
+                envelope = MessageEnvelope.from_json(message.body.decode())
             except (ValidationError, ValueError) as e:
                 self.logger.error(f"Invalid message envelope: {e}")
                 await message.nack(requeue=False)
@@ -366,17 +366,13 @@ class BaseAgent(ABC):
 
             # Validate envelope
             if not self._validate_envelope(envelope):
-                self.logger.warning(
-                    f"Envelope validation failed for message {envelope.message_id}"
-                )
+                self.logger.warning(f"Envelope validation failed for message {envelope.message_id}")
                 await message.nack(requeue=False)
                 return
 
             # Check message type
             if envelope.type != "work_request":
-                self.logger.warning(
-                    f"Unexpected message type: {envelope.type}"
-                )
+                self.logger.warning(f"Unexpected message type: {envelope.type}")
                 await message.nack(requeue=False)
                 return
 
@@ -389,9 +385,7 @@ class BaseAgent(ABC):
 
             # Deserialize work request
             try:
-                work_request = WorkRequest.model_validate(
-                    envelope.payload
-                )
+                work_request = WorkRequest.model_validate(envelope.payload)
             except ValidationError as e:
                 self.logger.error(f"Invalid work request: {e}")
                 return
@@ -434,16 +428,12 @@ class BaseAgent(ABC):
                     },
                 )
             except Exception as e:
-                self.logger.error(
-                    f"Error executing work: {e}", exc_info=True
-                )
+                self.logger.error(f"Error executing work: {e}", exc_info=True)
             finally:
                 self.current_task_id = None
 
         except Exception as e:
-            self.logger.error(
-                f"Error processing message: {e}", exc_info=True
-            )
+            self.logger.error(f"Error processing message: {e}", exc_info=True)
 
     async def consume_work_requests(self) -> None:
         """Main work processing loop.

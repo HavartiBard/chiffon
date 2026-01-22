@@ -36,7 +36,8 @@ def temp_playbook_dir():
 
         # Create valid playbook files
         kuma_playbook = tmpdir_path / "kuma-deploy.yml"
-        kuma_playbook.write_text("""---
+        kuma_playbook.write_text(
+            """---
 # chiffon:service=kuma
 # chiffon:description=Deploy Kuma service mesh
 - name: Deploy Kuma Service Mesh
@@ -51,10 +52,12 @@ def temp_playbook_dir():
     - name: Install Kuma
       debug:
         msg: "Installing Kuma"
-""")
+"""
+        )
 
         postgres_playbook = tmpdir_path / "postgres-setup.yaml"
-        postgres_playbook.write_text("""---
+        postgres_playbook.write_text(
+            """---
 - name: Setup PostgreSQL Database
   hosts: db_servers
   vars:
@@ -66,14 +69,17 @@ def temp_playbook_dir():
     - name: Install PostgreSQL
       debug:
         msg: "Installing PostgreSQL"
-""")
+"""
+        )
 
         # Create invalid playbook (malformed YAML)
         invalid_playbook = tmpdir_path / "invalid.yml"
-        invalid_playbook.write_text("""---
+        invalid_playbook.write_text(
+            """---
 This is not valid YAML: {[}]
   - broken indentation
-""")
+"""
+        )
 
         yield tmpdir_path
 

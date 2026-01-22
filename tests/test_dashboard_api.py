@@ -101,7 +101,9 @@ def orchestrator_stub(monkeypatch) -> Dict[str, Any]:
             return {"status": "cancelled"}
         raise AssertionError(f"Unexpected orchestrator path: {path}")
 
-    monkeypatch.setattr(dashboard_api, "_orchestrator_request", AsyncMock(side_effect=fake_orchestrator_request))
+    monkeypatch.setattr(
+        dashboard_api, "_orchestrator_request", AsyncMock(side_effect=fake_orchestrator_request)
+    )
     return {"plan_payload": plan_payload, "state": state}
 
 
@@ -115,7 +117,9 @@ def test_create_session_returns_session(test_client: TestClient) -> None:
     assert data["status"] == "idle"
 
 
-def test_chat_returns_plan_and_messages(test_client: TestClient, orchestrator_stub: Dict[str, Any]) -> None:
+def test_chat_returns_plan_and_messages(
+    test_client: TestClient, orchestrator_stub: Dict[str, Any]
+) -> None:
     session_response = test_client.post("/api/dashboard/session", json={"user_id": "deploy-user"})
     session_id = session_response.json()["session_id"]
 
@@ -175,10 +179,15 @@ def test_reject_plan_resets_session(
     assert reject_response.json()["status"] == "rejected"
     session = session_store.get_session(session_id)
     assert session.status == "idle"
-    assert any(msg["metadata"].get("plan_id") == orchestrator_stub["plan_payload"]["plan_id"] for msg in session.messages)
+    assert any(
+        msg["metadata"].get("plan_id") == orchestrator_stub["plan_payload"]["plan_id"]
+        for msg in session.messages
+    )
 
 
-def test_plan_status_returns_steps(test_client: TestClient, orchestrator_stub: Dict[str, Any]) -> None:
+def test_plan_status_returns_steps(
+    test_client: TestClient, orchestrator_stub: Dict[str, Any]
+) -> None:
     plan_id = orchestrator_stub["plan_payload"]["plan_id"]
     response = test_client.get(f"/api/dashboard/plan/{plan_id}/status")
 
@@ -188,7 +197,9 @@ def test_plan_status_returns_steps(test_client: TestClient, orchestrator_stub: D
     assert len(data["steps"]) == 2
 
 
-def test_abort_plan_cancels_tasks(test_client: TestClient, orchestrator_stub: Dict[str, Any]) -> None:
+def test_abort_plan_cancels_tasks(
+    test_client: TestClient, orchestrator_stub: Dict[str, Any]
+) -> None:
     session_response = test_client.post("/api/dashboard/session", json={"user_id": "aborter"})
     session_id = session_response.json()["session_id"]
 

@@ -137,7 +137,9 @@ class DesktopAgent(BaseAgent):
                         }
 
         except subprocess.TimeoutExpired:
-            logger.debug(f"nvidia-smi timeout ({self.gpu_detection_timeout_seconds}s) - GPU query too slow")
+            logger.debug(
+                f"nvidia-smi timeout ({self.gpu_detection_timeout_seconds}s) - GPU query too slow"
+            )
         except (FileNotFoundError, subprocess.SubprocessError) as e:
             logger.debug(f"nvidia-smi error or not found: {e}")
         except (ValueError, IndexError) as e:

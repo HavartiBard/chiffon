@@ -41,8 +41,12 @@ class RequestSubmissionResponse(BaseModel):
     """Response from request submission."""
 
     request_id: str = Field(description="Unique request ID")
-    status: str = Field(description="Status: parsing_complete|requires_clarification|parsing_failed")
-    decomposed_request: Optional[dict] = Field(default=None, description="Decomposed request if successful")
+    status: str = Field(
+        description="Status: parsing_complete|requires_clarification|parsing_failed"
+    )
+    decomposed_request: Optional[dict] = Field(
+        default=None, description="Decomposed request if successful"
+    )
     ambiguities: Optional[list] = Field(default=None, description="Ambiguities found")
     out_of_scope: Optional[list] = Field(default=None, description="Out-of-scope items")
     error: Optional[str] = Field(default=None, description="Error message if failed")

@@ -211,11 +211,15 @@ class TestWorkRequestProcessing:
         agent = TestAgent(config)
 
         # Create invalid envelope (bad protocol version)
-        invalid_json = '{"protocol_version": "2.0", "from_agent": "orchestrator", "to_agent": "infra", "type": "work_request", "trace_id": "' + str(
-            uuid4()
-        ) + '", "request_id": "' + str(uuid4()) + '", "message_id": "' + str(
-            uuid4()
-        ) + '", "timestamp": "2026-01-19T00:00:00Z", "priority": 3, "payload": {}}'
+        invalid_json = (
+            '{"protocol_version": "2.0", "from_agent": "orchestrator", "to_agent": "infra", "type": "work_request", "trace_id": "'
+            + str(uuid4())
+            + '", "request_id": "'
+            + str(uuid4())
+            + '", "message_id": "'
+            + str(uuid4())
+            + '", "timestamp": "2026-01-19T00:00:00Z", "priority": 3, "payload": {}}'
+        )
 
         try:
             envelope = MessageEnvelope.from_json(invalid_json)

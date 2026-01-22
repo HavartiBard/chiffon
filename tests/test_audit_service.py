@@ -15,7 +15,12 @@ from unittest.mock import Mock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from src.orchestrator.api import router, task_to_audit_response, TaskAuditResponse, AuditQueryResponse
+from src.orchestrator.api import (
+    router,
+    task_to_audit_response,
+    TaskAuditResponse,
+    AuditQueryResponse,
+)
 from src.orchestrator.audit import AuditService
 from src.orchestrator.main import app
 

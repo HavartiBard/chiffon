@@ -48,8 +48,7 @@ class CacheManager:
 
         # Query for cached mapping with confidence threshold
         stmt = select(PlaybookMapping).where(
-            PlaybookMapping.intent_hash == intent_hash,
-            PlaybookMapping.confidence >= 0.85
+            PlaybookMapping.intent_hash == intent_hash, PlaybookMapping.confidence >= 0.85
         )
         result = await self.db.execute(stmt)
         mapping = result.scalar_one_or_none()
@@ -66,7 +65,7 @@ class CacheManager:
         playbook_path: str,
         confidence: float,
         method: str,
-        embedding: Optional[list[float]] = None
+        embedding: Optional[list[float]] = None,
     ):
         """Cache a task-to-playbook mapping.
 
@@ -91,19 +90,19 @@ class CacheManager:
             embedding_vector=embedding,
             created_at=datetime.utcnow(),
             last_used_at=datetime.utcnow(),
-            use_count=1
+            use_count=1,
         )
 
         # On conflict, update with new values
         stmt = stmt.on_conflict_do_update(
-            index_elements=['intent_hash'],
+            index_elements=["intent_hash"],
             set_={
-                'playbook_path': playbook_path,
-                'confidence': confidence,
-                'match_method': method,
-                'embedding_vector': embedding,
-                'last_used_at': datetime.utcnow(),
-            }
+                "playbook_path": playbook_path,
+                "confidence": confidence,
+                "match_method": method,
+                "embedding_vector": embedding,
+                "last_used_at": datetime.utcnow(),
+            },
         )
 
         await self.db.execute(stmt)
@@ -115,10 +114,7 @@ class CacheManager:
         Returns:
             List of (playbook_path, embedding_vector) tuples for entries with embeddings
         """
-        stmt = select(
-            PlaybookMapping.playbook_path,
-            PlaybookMapping.embedding_vector
-        ).where(
+        stmt = select(PlaybookMapping.playbook_path, PlaybookMapping.embedding_vector).where(
             PlaybookMapping.embedding_vector.is_not(None)
         )
 
@@ -134,11 +130,10 @@ class CacheManager:
         Args:
             mapping_id: ID of the PlaybookMapping to update
         """
-        stmt = update(PlaybookMapping).where(
-            PlaybookMapping.id == mapping_id
-        ).values(
-            last_used_at=datetime.utcnow(),
-            use_count=PlaybookMapping.use_count + 1
+        stmt = (
+            update(PlaybookMapping)
+            .where(PlaybookMapping.id == mapping_id)
+            .values(last_used_at=datetime.utcnow(), use_count=PlaybookMapping.use_count + 1)
         )
 
         await self.db.execute(stmt)
@@ -154,4 +149,4 @@ class CacheManager:
         Returns:
             Hexadecimal SHA256 hash string
         """
-        return hashlib.sha256(normalized_intent.encode('utf-8')).hexdigest()
+        return hashlib.sha256(normalized_intent.encode("utf-8")).hexdigest()

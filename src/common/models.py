@@ -283,7 +283,9 @@ class RoutingDecision(Base):
     agent_pool = Column(String(100), nullable=False)
     # Pool name (e.g., "infra_pool_1")
 
-    selected_agent_id = Column(UUID(as_uuid=True), ForeignKey("agent_registry.agent_id"), nullable=True)
+    selected_agent_id = Column(
+        UUID(as_uuid=True), ForeignKey("agent_registry.agent_id"), nullable=True
+    )
 
     # Scoring factors
     success_rate_percent = Column(Integer, nullable=True)
@@ -474,9 +476,15 @@ class PlaybookSuggestion(Base):
     __tablename__ = "playbook_suggestions"
 
     # Choices constants
-    CATEGORY_CHOICES = ['idempotency', 'error_handling', 'performance', 'best_practices', 'standards']
-    SEVERITY_CHOICES = ['error', 'warning', 'info']
-    STATUS_CHOICES = ['pending', 'applied', 'dismissed']
+    CATEGORY_CHOICES = [
+        "idempotency",
+        "error_handling",
+        "performance",
+        "best_practices",
+        "standards",
+    ]
+    SEVERITY_CHOICES = ["error", "warning", "info"]
+    STATUS_CHOICES = ["pending", "applied", "dismissed"]
 
     # Primary key
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -485,7 +493,9 @@ class PlaybookSuggestion(Base):
     playbook_path = Column(String(500), nullable=False, index=True)
     # Path to playbook that needs improvement
 
-    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.task_id", ondelete="SET NULL"), nullable=True)
+    task_id = Column(
+        UUID(as_uuid=True), ForeignKey("tasks.task_id", ondelete="SET NULL"), nullable=True
+    )
     # FK to tasks if suggestion from execution
 
     # Categorization
@@ -509,7 +519,7 @@ class PlaybookSuggestion(Base):
     # One of: error, warning, info
 
     # Status tracking
-    status = Column(String(20), nullable=False, default='pending', index=True)
+    status = Column(String(20), nullable=False, default="pending", index=True)
     # One of: pending, applied, dismissed
 
     # Timestamps
@@ -541,11 +551,14 @@ class Subtask(BaseModel):
         confidence: Confidence in this decomposition (0.0-1.0)
         parameters: Optional task-specific parameters
     """
+
     order: int = Field(..., description="Task sequence, 1-based")
     name: str = Field(..., description="Human-readable task name")
     intent: str = Field(..., description="Recognized work type for routing")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Decomposition confidence")
-    parameters: Optional[Dict[str, Any]] = Field(default=None, description="Task-specific parameters")
+    parameters: Optional[Dict[str, Any]] = Field(
+        default=None, description="Task-specific parameters"
+    )
 
 
 class DecomposedRequest(BaseModel):
@@ -560,6 +573,7 @@ class DecomposedRequest(BaseModel):
         complexity_level: Assessment of request complexity
         decomposer_model: Which LLM performed the decomposition
     """
+
     request_id: str = Field(..., description="UUID assigned by orchestrator")
     original_request: str = Field(..., description="Full user input")
     subtasks: List[Subtask] = Field(default_factory=list, description="Decomposed tasks")
@@ -578,21 +592,15 @@ class RequestParsingConfig(BaseModel):
         use_claude_for_complex: Use Claude for complex requests vs Ollama
         log_out_of_scope: Log out-of-scope requests to database
     """
+
     min_confidence_threshold: float = Field(
-        default=0.60,
-        ge=0.0,
-        le=1.0,
-        description="Below this, task flagged as ambiguous"
+        default=0.60, ge=0.0, le=1.0, description="Below this, task flagged as ambiguous"
     )
     max_subtasks: int = Field(default=10, ge=1, description="Max subtasks per request")
     use_claude_for_complex: bool = Field(
-        default=True,
-        description="Use Claude for complex requests vs Ollama"
+        default=True, description="Use Claude for complex requests vs Ollama"
     )
-    log_out_of_scope: bool = Field(
-        default=True,
-        description="Log out-of-scope requests to DB"
-    )
+    log_out_of_scope: bool = Field(default=True, description="Log out-of-scope requests to DB")
 
 
 class WorkTask(BaseModel):
@@ -612,34 +620,26 @@ class WorkTask(BaseModel):
         alternatives: List of alternative approaches if resources unavailable
         estimated_external_ai_calls: Estimated number of Claude API calls needed
     """
+
     order: int = Field(..., ge=1, description="Task sequence number, 1-based")
     name: str = Field(..., description="Human-readable task name")
     work_type: str = Field(..., description="Type of work to execute")
     agent_type: str = Field(
-        ...,
-        pattern="^(infra|code|research|desktop)$",
-        description="Target agent type"
+        ..., pattern="^(infra|code|research|desktop)$", description="Target agent type"
     )
-    parameters: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Task-specific parameters"
-    )
+    parameters: Dict[str, Any] = Field(default_factory=dict, description="Task-specific parameters")
     resource_requirements: Dict[str, int] = Field(
         ...,
-        description="Resource requirements with estimated_duration_seconds, gpu_vram_mb, cpu_cores"
+        description="Resource requirements with estimated_duration_seconds, gpu_vram_mb, cpu_cores",
     )
     depends_on: List[int] = Field(
-        default_factory=list,
-        description="Task orders this task depends on"
+        default_factory=list, description="Task orders this task depends on"
     )
     alternatives: List[Dict[str, Any]] = Field(
-        default_factory=list,
-        description="Alternative approaches if primary resources unavailable"
+        default_factory=list, description="Alternative approaches if primary resources unavailable"
     )
     estimated_external_ai_calls: int = Field(
-        default=0,
-        ge=0,
-        description="Estimated number of Claude API calls needed"
+        default=0, ge=0, description="Estimated number of Claude API calls needed"
     )
 
 
@@ -661,39 +661,30 @@ class WorkPlan(BaseModel):
         approved_at: When user approved (if applicable)
         human_readable_summary: Plain text summary for user review
     """
+
     plan_id: str = Field(..., description="Unique plan identifier (UUID)")
     request_id: str = Field(..., description="UUID of original request")
     tasks: List[WorkTask] = Field(..., description="Ordered execution tasks")
     estimated_duration_seconds: int = Field(
-        ...,
-        ge=0,
-        description="Total estimated execution time in seconds"
+        ..., ge=0, description="Total estimated execution time in seconds"
     )
     complexity_level: str = Field(
-        ...,
-        pattern="^(simple|medium|complex)$",
-        description="Plan complexity assessment"
+        ..., pattern="^(simple|medium|complex)$", description="Plan complexity assessment"
     )
     will_use_external_ai: bool = Field(
-        default=False,
-        description="True if any task requires Claude fallback"
+        default=False, description="True if any task requires Claude fallback"
     )
     status: str = Field(
         default="pending_approval",
         pattern="^(pending_approval|approved|executing|completed|rejected)$",
-        description="Current plan status"
+        description="Current plan status",
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
-        description="When plan was generated"
+        default_factory=datetime.utcnow, description="When plan was generated"
     )
-    approved_at: Optional[datetime] = Field(
-        default=None,
-        description="When user approved the plan"
-    )
+    approved_at: Optional[datetime] = Field(default=None, description="When user approved the plan")
     human_readable_summary: str = Field(
-        ...,
-        description="Plain text summary of plan for user review"
+        ..., description="Plain text summary of plan for user review"
     )
 
 
@@ -712,31 +703,18 @@ class IntentToWorkTypeMapping(BaseModel):
         cpu_cores: Required CPU cores
         alternatives: List of alternative approaches with different resources
     """
+
     intent: str = Field(..., description="Intent from decomposer")
     work_type: str = Field(..., description="Mapped work type")
     agent_type: str = Field(
-        ...,
-        pattern="^(infra|code|research|desktop)$",
-        description="Target agent type"
+        ..., pattern="^(infra|code|research|desktop)$", description="Target agent type"
     )
-    estimated_duration_seconds: int = Field(
-        ...,
-        ge=0,
-        description="Estimated execution time"
-    )
-    gpu_vram_mb: int = Field(
-        default=0,
-        ge=0,
-        description="Required GPU VRAM in MB"
-    )
-    cpu_cores: int = Field(
-        default=1,
-        ge=1,
-        description="Required CPU cores"
-    )
+    estimated_duration_seconds: int = Field(..., ge=0, description="Estimated execution time")
+    gpu_vram_mb: int = Field(default=0, ge=0, description="Required GPU VRAM in MB")
+    cpu_cores: int = Field(default=1, ge=1, description="Required CPU cores")
     alternatives: List[Dict[str, Any]] = Field(
         default_factory=list,
-        description="Alternative approaches with different resource requirements"
+        description="Alternative approaches with different resource requirements",
     )
 
 
@@ -762,55 +740,44 @@ class FallbackDecision(BaseModel):
         error_message: Error description if fallback occurred
         created_at: When decision was made
     """
+
     task_id: str = Field(..., description="UUID of task this decision applies to")
     decision: str = Field(
         ...,
         pattern="^(use_claude|use_ollama|no_fallback)$",
-        description="Selected action: use_claude, use_ollama, or no_fallback"
+        description="Selected action: use_claude, use_ollama, or no_fallback",
     )
     reason: str = Field(
         ...,
         pattern="^(quota_critical|high_complexity|local_sufficient|claude_failed)$",
-        description="Why this decision was made"
+        description="Why this decision was made",
     )
     quota_remaining_percent: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Quota remaining (0.0-1.0) at decision time"
+        ..., ge=0.0, le=1.0, description="Quota remaining (0.0-1.0) at decision time"
     )
     complexity_level: str = Field(
         ...,
         pattern="^(simple|medium|complex)$",
-        description="Task complexity: simple, medium, or complex"
+        description="Task complexity: simple, medium, or complex",
     )
     fallback_tier: int = Field(
         ...,
         ge=0,
         le=2,
-        description="Fallback tier used: 0=primary Claude, 1=fallback Ollama, 2=failure"
+        description="Fallback tier used: 0=primary Claude, 1=fallback Ollama, 2=failure",
     )
     model_used: str = Field(
-        ...,
-        description="LLM model used (claude-opus-4.5, ollama/neural-chat, etc)"
+        ..., description="LLM model used (claude-opus-4.5, ollama/neural-chat, etc)"
     )
-    tokens_used: Optional[int] = Field(
-        default=None,
-        ge=0,
-        description="Token count if available"
-    )
+    tokens_used: Optional[int] = Field(default=None, ge=0, description="Token count if available")
     cost_usd: Optional[float] = Field(
-        default=None,
-        ge=0.0,
-        description="Estimated cost in USD if available"
+        default=None, ge=0.0, description="Estimated cost in USD if available"
     )
     error_message: Optional[str] = Field(
-        default=None,
-        description="Error message if fallback occurred"
+        default=None, description="Error message if fallback occurred"
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
-        description="When decision was made"
+        default_factory=datetime.utcnow, description="When decision was made"
     )
 
 
@@ -828,25 +795,15 @@ class PauseQueueEntryModel(BaseModel):
         resume_after: Optional datetime for timed auto-resume
         priority: Priority level for resume ordering (default 3)
     """
+
     id: Optional[int] = Field(default=None, description="Auto-generated ID (None for new entries)")
     task_id: str = Field(..., description="UUID of the paused task")
     work_plan: WorkPlan = Field(..., description="The paused work plan")
     reason: str = Field(
-        ...,
-        pattern="^(insufficient_capacity|manual_pause)$",
-        description="Why work was paused"
+        ..., pattern="^(insufficient_capacity|manual_pause)$", description="Why work was paused"
     )
-    paused_at: datetime = Field(
-        default_factory=datetime.utcnow,
-        description="When work was paused"
-    )
+    paused_at: datetime = Field(default_factory=datetime.utcnow, description="When work was paused")
     resume_after: Optional[datetime] = Field(
-        default=None,
-        description="Optional datetime for timed auto-resume"
+        default=None, description="Optional datetime for timed auto-resume"
     )
-    priority: int = Field(
-        default=3,
-        ge=1,
-        le=5,
-        description="Priority level (1=highest, 5=lowest)"
-    )
+    priority: int = Field(default=3, ge=1, le=5, description="Priority level (1=highest, 5=lowest)")

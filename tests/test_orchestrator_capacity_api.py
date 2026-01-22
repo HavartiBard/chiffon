@@ -508,11 +508,11 @@ async def test_capacity_queries_different_requirements(
     """Test capacity queries with various requirement combinations."""
     # Test combinations
     test_cases = [
-        (0.0, 1, True),      # Should find agent
-        (4.0, 12, True),     # Exact match
-        (5.0, 12, False),    # GPU too high
-        (4.0, 13, False),    # CPU too high
-        (0.0, 12, True),     # Only CPU requirement met
+        (0.0, 1, True),  # Should find agent
+        (4.0, 12, True),  # Exact match
+        (5.0, 12, False),  # GPU too high
+        (4.0, 13, False),  # CPU too high
+        (0.0, 12, True),  # Only CPU requirement met
     ]
 
     for min_gpu, min_cpu, should_find in test_cases:
@@ -523,8 +523,7 @@ async def test_capacity_queries_different_requirements(
         )
         found = any(a["agent_id"] == str(sample_agent_1.agent_id) for a in agents)
         assert found == should_find, (
-            f"Query (gpu={min_gpu}, cpu={min_cpu}) expected found={should_find}, "
-            f"got {found}"
+            f"Query (gpu={min_gpu}, cpu={min_cpu}) expected found={should_find}, " f"got {found}"
         )
 
 

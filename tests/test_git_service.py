@@ -264,10 +264,7 @@ class TestCommitAuditEntry:
             await git_service.commit_task_outcome(mock_task)
 
             # Verify git add was called
-            git_add_calls = [
-                call for call in mock_run.call_args_list
-                if "add" in str(call)
-            ]
+            git_add_calls = [call for call in mock_run.call_args_list if "add" in str(call)]
             assert len(git_add_calls) > 0
 
     @pytest.mark.asyncio
@@ -279,10 +276,7 @@ class TestCommitAuditEntry:
             await git_service.commit_task_outcome(mock_task)
 
             # Verify git commit was called
-            git_commit_calls = [
-                call for call in mock_run.call_args_list
-                if "commit" in str(call)
-            ]
+            git_commit_calls = [call for call in mock_run.call_args_list if "commit" in str(call)]
             assert len(git_commit_calls) > 0
 
     @pytest.mark.asyncio
@@ -374,6 +368,7 @@ class TestErrorHandling:
         """Test graceful handling when .git directory is missing."""
         # Remove .git directory
         import shutil
+
         git_dir = temp_git_repo / ".git"
         shutil.rmtree(git_dir)
 
@@ -626,9 +621,7 @@ class TestIntegrationWithOrchestratorService:
         db_session.query.return_value.filter.return_value.first.return_value = mock_task
 
         # Patch git_service to raise error
-        orchestrator.git_service.commit_task_outcome = AsyncMock(
-            side_effect=Exception("git error")
-        )
+        orchestrator.git_service.commit_task_outcome = AsyncMock(side_effect=Exception("git error"))
 
         work_result = WorkResult(
             task_id=mock_task.task_id,
@@ -671,10 +664,13 @@ class TestParametrizedScenarios:
         assert audit_file.exists()
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("error_type", [
-        GitServiceError("Missing git repo"),
-        Exception("Unexpected error"),
-    ])
+    @pytest.mark.parametrize(
+        "error_type",
+        [
+            GitServiceError("Missing git repo"),
+            Exception("Unexpected error"),
+        ],
+    )
     async def test_error_types(self, git_service, mock_task, error_type):
         """Test handling of various error types."""
         with patch("subprocess.run") as mock_run:

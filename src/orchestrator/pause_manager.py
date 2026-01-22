@@ -51,10 +51,14 @@ class PauseManager:
         if env_threshold:
             try:
                 self.capacity_threshold_percent = float(env_threshold)
-                self.logger.info(f"Capacity threshold from env: {self.capacity_threshold_percent * 100:.0f}%")
+                self.logger.info(
+                    f"Capacity threshold from env: {self.capacity_threshold_percent * 100:.0f}%"
+                )
             except ValueError:
                 self.capacity_threshold_percent = capacity_threshold_percent
-                self.logger.warning(f"Invalid PAUSE_CAPACITY_THRESHOLD_PERCENT, using default: {capacity_threshold_percent * 100:.0f}%")
+                self.logger.warning(
+                    f"Invalid PAUSE_CAPACITY_THRESHOLD_PERCENT, using default: {capacity_threshold_percent * 100:.0f}%"
+                )
         else:
             self.capacity_threshold_percent = capacity_threshold_percent
 
@@ -89,9 +93,11 @@ class PauseManager:
         """
         try:
             # Query all active agents
-            agents = self.db.query(AgentRegistry).filter(
-                AgentRegistry.status.in_(["online", "busy"])
-            ).all()
+            agents = (
+                self.db.query(AgentRegistry)
+                .filter(AgentRegistry.status.in_(["online", "busy"]))
+                .all()
+            )
 
             if not agents:
                 self.logger.warning(f"[{plan_id}] No online agents found, pausing work")
@@ -116,25 +122,33 @@ class PauseManager:
                     # Calculate agent's capacity percentage (simple heuristic)
                     # Available / (available + minimal_reserved)
                     agent_cap_pct = gpu_available / max(gpu_available + 2, 1)
-                    agent_capacities.append({
-                        "agent_id": agent.agent_id,
-                        "gpu_available_gb": gpu_available,
-                        "cpu_available": cpu_available,
-                        "capacity_pct": agent_cap_pct,
-                    })
+                    agent_capacities.append(
+                        {
+                            "agent_id": agent.agent_id,
+                            "gpu_available_gb": gpu_available,
+                            "cpu_available": cpu_available,
+                            "capacity_pct": agent_cap_pct,
+                        }
+                    )
                 except (ValueError, TypeError) as e:
                     self.logger.warning(f"Error reading metrics for agent {agent.agent_id}: {e}")
                     continue
 
             if not agent_capacities:
-                self.logger.warning(f"[{plan_id}] Could not read metrics from any agents, pausing work")
+                self.logger.warning(
+                    f"[{plan_id}] Could not read metrics from any agents, pausing work"
+                )
                 return True
 
             # Calculate average capacity across agents
-            avg_capacity_pct = sum(a["capacity_pct"] for a in agent_capacities) / len(agent_capacities)
+            avg_capacity_pct = sum(a["capacity_pct"] for a in agent_capacities) / len(
+                agent_capacities
+            )
 
             # Check if all agents below threshold
-            all_below_threshold = all(a["capacity_pct"] < self.capacity_threshold_percent for a in agent_capacities)
+            all_below_threshold = all(
+                a["capacity_pct"] < self.capacity_threshold_percent for a in agent_capacities
+            )
 
             self.logger.info(
                 f"[{plan_id}] Capacity check: {agent_count} agents online, "
@@ -150,7 +164,9 @@ class PauseManager:
             # Default to pausing on error (conservative approach)
             return True
 
-    async def pause_work(self, plan_id: str, task_ids: List[str], work_plan_json: Optional[dict] = None) -> int:
+    async def pause_work(
+        self, plan_id: str, task_ids: List[str], work_plan_json: Optional[dict] = None
+    ) -> int:
         """Pause work due to insufficient capacity.
 
         Creates PauseQueueEntry records for each task and persists to database.
@@ -190,7 +206,9 @@ class PauseManager:
             # Commit all paused entries
             try:
                 self.db.commit()
-                self.logger.info(f"Paused {paused_count} tasks from plan {plan_id} due to capacity constraints")
+                self.logger.info(
+                    f"Paused {paused_count} tasks from plan {plan_id} due to capacity constraints"
+                )
             except Exception as commit_err:
                 self.logger.error(f"Error committing paused tasks: {commit_err}")
                 self.db.rollback()
@@ -213,10 +231,14 @@ class PauseManager:
         """
         try:
             # Query paused entries ready for resume
-            paused_entries = self.db.query(PauseQueueEntry).filter(
-                (PauseQueueEntry.resume_after == None) |
-                (PauseQueueEntry.resume_after <= datetime.utcnow())
-            ).all()
+            paused_entries = (
+                self.db.query(PauseQueueEntry)
+                .filter(
+                    (PauseQueueEntry.resume_after == None)
+                    | (PauseQueueEntry.resume_after <= datetime.utcnow())
+                )
+                .all()
+            )
 
             if not paused_entries:
                 return 0
@@ -260,7 +282,9 @@ class PauseManager:
                     resumed_count = 0
 
             if resumed_count > 0 or skipped_count > 0:
-                self.logger.info(f"Resume check: {resumed_count} resumed, {skipped_count} still waiting")
+                self.logger.info(
+                    f"Resume check: {resumed_count} resumed, {skipped_count} still waiting"
+                )
 
             return resumed_count
 

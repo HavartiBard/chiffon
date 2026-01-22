@@ -36,7 +36,9 @@ class WorkPlanner:
     - Generate human-readable plan summaries
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None, logger_obj: Optional[logging.Logger] = None):
+    def __init__(
+        self, config: Optional[Dict[str, Any]] = None, logger_obj: Optional[logging.Logger] = None
+    ):
         """Initialize work planner.
 
         Args:
@@ -170,7 +172,9 @@ class WorkPlanner:
                         "cpu_cores": mapping.cpu_cores,
                     },
                     alternatives=mapping.alternatives,
-                    estimated_external_ai_calls=1 if mapping.agent_type in ["research", "code"] else 0,
+                    estimated_external_ai_calls=1
+                    if mapping.agent_type in ["research", "code"]
+                    else 0,
                 )
 
                 tasks.append(task)
@@ -184,7 +188,9 @@ class WorkPlanner:
             complexity = self._assess_complexity(work_types_used)
 
             # Determine if external AI will be used
-            will_use_external_ai = any(t.estimated_external_ai_calls > 0 for t in tasks) or complexity == "complex"
+            will_use_external_ai = (
+                any(t.estimated_external_ai_calls > 0 for t in tasks) or complexity == "complex"
+            )
 
             # Build human-readable summary
             human_summary = self._build_human_readable_summary(tasks)
@@ -263,7 +269,9 @@ class WorkPlanner:
             Complexity level: "simple", "medium", or "complex"
         """
         # Complex: research or code generation tasks
-        if any(wt in ["research_task", "code_generation", "architecture_review"] for wt in work_types):
+        if any(
+            wt in ["research_task", "code_generation", "architecture_review"] for wt in work_types
+        ):
             return "complex"
 
         # Medium: more than 3 tasks
@@ -295,7 +303,11 @@ class WorkPlanner:
             duration_min = duration_sec / 60
 
             if duration_min >= 1:
-                duration_str = f"~{int(duration_min)} minute" if duration_min == 1 else f"~{int(duration_min)} minutes"
+                duration_str = (
+                    f"~{int(duration_min)} minute"
+                    if duration_min == 1
+                    else f"~{int(duration_min)} minutes"
+                )
             else:
                 duration_str = f"{duration_sec} seconds"
 
@@ -306,14 +318,18 @@ class WorkPlanner:
         total_min = total_sec / 60
 
         if total_min >= 1:
-            total_str = f"~{int(total_min)} minute" if total_min == 1 else f"~{int(total_min)} minutes"
+            total_str = (
+                f"~{int(total_min)} minute" if total_min == 1 else f"~{int(total_min)} minutes"
+            )
         else:
             total_str = f"{total_sec} seconds"
 
         lines.append(f"\nTotal estimated time: {total_str}")
 
         # Add resource warnings if any high-resource tasks
-        high_resource_tasks = [t for t in tasks if t.resource_requirements.get("gpu_vram_mb", 0) > 4000]
+        high_resource_tasks = [
+            t for t in tasks if t.resource_requirements.get("gpu_vram_mb", 0) > 4000
+        ]
         if high_resource_tasks:
             lines.append("\nNote: This plan includes high-resource tasks requiring GPU access.")
 

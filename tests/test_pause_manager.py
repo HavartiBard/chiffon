@@ -37,7 +37,9 @@ class MockAgentRegistry:
 class MockPauseQueueEntry:
     """Mock PauseQueueEntry model for testing."""
 
-    def __init__(self, task_id, work_plan_json, reason, paused_at=None, resume_after=None, priority=3):
+    def __init__(
+        self, task_id, work_plan_json, reason, paused_at=None, resume_after=None, priority=3
+    ):
         self.id = None
         self.task_id = task_id
         self.work_plan_json = work_plan_json
@@ -97,7 +99,9 @@ def _create_query_mock(db, model):
         if model == MockAgentRegistry:
             results = [a for a in db.agents for k, v in kwargs.items() if getattr(a, k, None) == v]
         elif model == MockPauseQueueEntry:
-            results = [p for p in db.pause_queue for k, v in kwargs.items() if getattr(p, k, None) == v]
+            results = [
+                p for p in db.pause_queue for k, v in kwargs.items() if getattr(p, k, None) == v
+            ]
         elif model == MockTask:
             results = [t for t in db.tasks for k, v in kwargs.items() if getattr(t, k, None) == v]
         else:
@@ -110,7 +114,11 @@ def _create_query_mock(db, model):
         if model == MockAgentRegistry:
             results = [a for a in db.agents if a.status in ["online", "busy"]]
         elif model == MockPauseQueueEntry:
-            results = [p for p in db.pause_queue if p.resume_after is None or p.resume_after <= datetime.utcnow()]
+            results = [
+                p
+                for p in db.pause_queue
+                if p.resume_after is None or p.resume_after <= datetime.utcnow()
+            ]
         else:
             results = []
         f.all = Mock(return_value=results)
@@ -153,7 +161,7 @@ def low_capacity_agent(mock_db_session):
         status="online",
         resource_metrics={
             "gpu_vram_available_gb": 0.5,  # Very low
-            "cpu_cores_available": 1,      # Very low
+            "cpu_cores_available": 1,  # Very low
             "gpu_vram_total_gb": 8.0,
             "cpu_cores_total": 16,
         },

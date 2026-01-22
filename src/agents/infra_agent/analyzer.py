@@ -60,12 +60,8 @@ class AnalysisResult(BaseModel):
     suggestions: list[Suggestion] = Field(
         default_factory=list, description="Categorized suggestions"
     )
-    by_category: dict[str, int] = Field(
-        default_factory=dict, description="Issue count by category"
-    )
-    analyzed_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Analysis timestamp"
-    )
+    by_category: dict[str, int] = Field(default_factory=dict, description="Issue count by category")
+    analyzed_at: datetime = Field(default_factory=datetime.utcnow, description="Analysis timestamp")
 
 
 class PlaybookAnalyzer:
@@ -161,9 +157,7 @@ class PlaybookAnalyzer:
         try:
             lint_results = self._run_ansible_lint(playbook_path)
         except FileNotFoundError:
-            raise RuntimeError(
-                "ansible-lint not installed. Install with: pip install ansible-lint"
-            )
+            raise RuntimeError("ansible-lint not installed. Install with: pip install ansible-lint")
 
         # Convert lint results to categorized suggestions
         suggestions = []
@@ -198,9 +192,7 @@ class PlaybookAnalyzer:
         # Group by category for summary
         by_category: dict[str, int] = {}
         for suggestion in suggestions:
-            by_category[suggestion.category] = (
-                by_category.get(suggestion.category, 0) + 1
-            )
+            by_category[suggestion.category] = by_category.get(suggestion.category, 0) + 1
 
         analysis_result = AnalysisResult(
             playbook_path=playbook_path,

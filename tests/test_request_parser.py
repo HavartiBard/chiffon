@@ -597,9 +597,7 @@ class TestErrorHandling:
             await decomposer.decompose("Deploy Kuma")
 
     @pytest.mark.asyncio
-    async def test_markdown_code_block_parsing(
-        self, decomposer, mock_litellm_client
-    ):
+    async def test_markdown_code_block_parsing(self, decomposer, mock_litellm_client):
         """Test that markdown code blocks are stripped from JSON."""
         # Arrange
         response_data = {
@@ -614,9 +612,7 @@ class TestErrorHandling:
             "ambiguities": [],
             "out_of_scope": [],
         }
-        markdown_response = (
-            f"```json\n{json.dumps(response_data)}\n```"
-        )
+        markdown_response = f"```json\n{json.dumps(response_data)}\n```"
         mock_litellm_client.call_llm.return_value = {
             "choices": [{"message": {"content": markdown_response}}]
         }

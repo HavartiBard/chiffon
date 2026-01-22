@@ -48,9 +48,7 @@ class AgentRouter:
         self.db = db
         self.logger = logger_instance or logger
 
-    async def route_task(
-        self, task: WorkTask, retry_count: int = 0
-    ) -> AgentSelection:
+    async def route_task(self, task: WorkTask, retry_count: int = 0) -> AgentSelection:
         """Route a task to the best available agent.
 
         Scoring algorithm (0-100 points):
@@ -88,9 +86,7 @@ class AgentRouter:
 
         # Filter to agents with required capability
         capable_agents = [
-            agent
-            for agent in candidates
-            if task.work_type in (agent.capabilities or [])
+            agent for agent in candidates if task.work_type in (agent.capabilities or [])
         ]
 
         if not capable_agents:
@@ -127,9 +123,7 @@ class AgentRouter:
             score=best_score,
         )
 
-    async def dispatch_with_retry(
-        self, task: WorkTask, max_retries: int = 3
-    ) -> dict:
+    async def dispatch_with_retry(self, task: WorkTask, max_retries: int = 3) -> dict:
         """Dispatch task with automatic retry on failure.
 
         Retries on agent failure up to max_retries times.
@@ -165,9 +159,7 @@ class AgentRouter:
             except ValueError as e:
                 # Permanent error - don't retry
                 if "offline" in str(e).lower() or "capability" in str(e).lower():
-                    self.logger.error(
-                        f"Permanent error, not retrying: {e}", exc_info=True
-                    )
+                    self.logger.error(f"Permanent error, not retrying: {e}", exc_info=True)
                     raise
 
                 # Transient error - retry
@@ -180,9 +172,7 @@ class AgentRouter:
                         f"All {max_retries} attempts failed for {task.work_type}: {e}",
                         exc_info=True,
                     )
-                    raise ValueError(
-                        f"Failed to dispatch task after {max_retries} retries: {e}"
-                    )
+                    raise ValueError(f"Failed to dispatch task after {max_retries} retries: {e}")
 
         # Should not reach here
         raise ValueError(f"Unexpected error: all retries exhausted")
@@ -236,9 +226,7 @@ class AgentRouter:
 
         return min(score, 100)  # Cap at 100
 
-    def _check_recent_context(
-        self, agent_id: UUID, work_type: str, hours: int = 4
-    ) -> bool:
+    def _check_recent_context(self, agent_id: UUID, work_type: str, hours: int = 4) -> bool:
         """Check if agent recently executed this work type.
 
         Args:
@@ -354,8 +342,7 @@ class AgentRouter:
         self.db.commit()
 
         self.logger.debug(
-            f"Logged routing decision for task {task.work_type} "
-            f"to agent {agent.agent_id}"
+            f"Logged routing decision for task {task.work_type} " f"to agent {agent.agent_id}"
         )
 
     def _build_selection_reason(

@@ -48,16 +48,27 @@ class _AnsiblerunnerController:
     """Simple controller for mocking ansible_runner.run() results."""
 
     class RunnerStub:
-        def __init__(self, rc: int = 0, events: list[dict] | None = None, stats: dict[str, dict] | None = None):
+        def __init__(
+            self,
+            rc: int = 0,
+            events: list[dict] | None = None,
+            stats: dict[str, dict] | None = None,
+        ):
             self.rc = rc
-            self.events = events or [{"event": "runner_on_ok", "event_data": {"task": "noop", "res": {"changed": False}}}]
-            self.stats = stats or {"localhost": {"ok": 1, "changed": 0, "failures": 0, "skipped": 0}}
+            self.events = events or [
+                {"event": "runner_on_ok", "event_data": {"task": "noop", "res": {"changed": False}}}
+            ]
+            self.stats = stats or {
+                "localhost": {"ok": 1, "changed": 0, "failures": 0, "skipped": 0}
+            }
 
     def __init__(self):
         self.call_history: list[dict[str, Any]] = []
         self._responses: list[_AnsiblerunnerController.RunnerStub] = []
 
-    def queue_response(self, rc: int = 0, events: list[dict] | None = None, stats: dict[str, dict] | None = None) -> None:
+    def queue_response(
+        self, rc: int = 0, events: list[dict] | None = None, stats: dict[str, dict] | None = None
+    ) -> None:
         """Push a canned runner result for the next invocation."""
         self._responses.append(self.RunnerStub(rc=rc, events=events, stats=stats))
 
@@ -139,7 +150,13 @@ def temp_git_repo(tmp_path):
 
     repo_dir = tmp_path / "e2e_git_repo"
     repo_dir.mkdir()
-    subprocess.run(["git", "init"], cwd=repo_dir, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        ["git", "init"],
+        cwd=repo_dir,
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     subprocess.run(["git", "config", "user.email", "e2e@example.com"], cwd=repo_dir, check=True)
     subprocess.run(["git", "config", "user.name", "Chiffon E2E"], cwd=repo_dir, check=True)
     audit_dir = repo_dir / ".audit" / "tasks"
@@ -325,7 +342,13 @@ def mock_litellm():
         def __init__(self):
             self.usage_log: list[dict[str, Any]] = []
 
-        def call_llm(self, model: str, messages: list[dict[str, str]], temperature: float = 0.7, max_tokens: int | None = None):
+        def call_llm(
+            self,
+            model: str,
+            messages: list[dict[str, str]],
+            temperature: float = 0.7,
+            max_tokens: int | None = None,
+        ):
             record = {
                 "model": model,
                 "messages": messages,
@@ -334,9 +357,7 @@ def mock_litellm():
             }
             self.usage_log.append(record)
             return {
-                "choices": [
-                    {"message": {"content": f"{model} response"}}
-                ],
+                "choices": [{"message": {"content": f"{model} response"}}],
                 "usage": {"total_tokens": 128},
             }
 
@@ -360,28 +381,45 @@ def orchestrator_service_e2e(
     """Initialize OrchestratorService wired for E2E verification."""
 
     config = Config()
-    service = OrchestratorService(config, e2e_test_db, litellm_client=mock_litellm.client, repo_path=temp_git_repo)
+    service = OrchestratorService(
+        config, e2e_test_db, litellm_client=mock_litellm.client, repo_path=temp_git_repo
+    )
     service.channel = mock_rabbitmq["channel"]
     service.connection = mock_rabbitmq["connection"]
     service.ws_manager = SimpleNamespace(broadcast=AsyncMock())
 
     decomposer = AsyncMock()
+
     async def _decompose(request_text: str):
         return DecomposedRequest(
             request_id=str(uuid4()),
             original_request=request_text,
             subtasks=[
-                Subtask(order=1, name="Deploy Kuma", intent="deploy_kuma", confidence=0.95, parameters={"service": "kuma"}),
-                Subtask(order=2, name="Update portals", intent="update_portals", confidence=0.88, parameters={"portals": ["portal-1", "portal-2"]}),
+                Subtask(
+                    order=1,
+                    name="Deploy Kuma",
+                    intent="deploy_kuma",
+                    confidence=0.95,
+                    parameters={"service": "kuma"},
+                ),
+                Subtask(
+                    order=2,
+                    name="Update portals",
+                    intent="update_portals",
+                    confidence=0.88,
+                    parameters={"portals": ["portal-1", "portal-2"]},
+                ),
             ],
             ambiguities=[],
             out_of_scope=[],
             complexity_level="medium",
             decomposer_model="claude",
         )
+
     decomposer.decompose.side_effect = _decompose
 
     planner = AsyncMock()
+
     def _work_plan():
         return WorkPlan(
             plan_id=str(uuid4()),
@@ -393,7 +431,11 @@ def orchestrator_service_e2e(
                     work_type="deploy_service",
                     agent_type="infra",
                     parameters={"service": "kuma"},
-                    resource_requirements={"estimated_duration_seconds": 120, "gpu_vram_mb": 0, "cpu_cores": 2},
+                    resource_requirements={
+                        "estimated_duration_seconds": 120,
+                        "gpu_vram_mb": 0,
+                        "cpu_cores": 2,
+                    },
                 ),
                 WorkTask(
                     order=2,
@@ -401,7 +443,11 @@ def orchestrator_service_e2e(
                     work_type="run_playbook",
                     agent_type="infra",
                     parameters={"playbook_path": "kuma-config-update.yml"},
-                    resource_requirements={"estimated_duration_seconds": 60, "gpu_vram_mb": 0, "cpu_cores": 1},
+                    resource_requirements={
+                        "estimated_duration_seconds": 60,
+                        "gpu_vram_mb": 0,
+                        "cpu_cores": 1,
+                    },
                 ),
             ],
             estimated_duration_seconds=180,
@@ -410,17 +456,24 @@ def orchestrator_service_e2e(
             status="pending_approval",
             human_readable_summary="Deploy Kuma then update portals",
         )
+
     async def _generate_plan(decomposed, available_resources):
         plan = _work_plan()
         return plan
+
     planner.generate_plan.side_effect = _generate_plan
 
     router = AsyncMock()
+
     async def _route(task):
-        return SimpleNamespace(agent_id=str(uuid4()), agent_type="infra", score=0.9, selected_reason="best_fit")
+        return SimpleNamespace(
+            agent_id=str(uuid4()), agent_type="infra", score=0.9, selected_reason="best_fit"
+        )
+
     router.route_task.side_effect = _route
 
     fallback = AsyncMock()
+
     async def _should_use(plan):
         decision = FallbackDecision(
             task_id=str(plan.plan_id),
@@ -432,6 +485,7 @@ def orchestrator_service_e2e(
             model_used="ollama/neural-chat",
         )
         return decision, False
+
     fallback.should_use_external_ai.side_effect = _should_use
 
     service.initialize_components(
@@ -483,10 +537,14 @@ def dashboard_client_e2e(
 
     session_store = dashboard_api.session_store
 
-    async def _fake_orchestrator_request(method: str, path: str, json: dict | None = None, params: dict | None = None):
+    async def _fake_orchestrator_request(
+        method: str, path: str, json: dict | None = None, params: dict | None = None
+    ):
         payload = json or {}
         if method == "POST" and path == "/api/v1/request":
-            return await orchestrator_service_e2e.submit_request(payload["request"], payload["user_id"])
+            return await orchestrator_service_e2e.submit_request(
+                payload["request"], payload["user_id"]
+            )
 
         if method == "GET" and path.startswith("/api/v1/plan/") and "/status" not in path:
             request_id = path.rsplit("/", 1)[-1]
@@ -498,7 +556,9 @@ def dashboard_client_e2e(
 
         if method == "POST" and path.endswith("/approve"):
             plan_id = path.split("/api/v1/plan/")[1].split("/")[0]
-            return await orchestrator_service_e2e.approve_plan(plan_id, payload.get("approved", True))
+            return await orchestrator_service_e2e.approve_plan(
+                plan_id, payload.get("approved", True)
+            )
 
         raise ValueError(f"Unsupported orchestrator path: {path}")
 
@@ -507,8 +567,11 @@ def dashboard_client_e2e(
 
     audit_service = AuditService(e2e_test_db)
 
-    route_exists = any(route.path == "/api/dashboard/audit/task/{task_id}" for route in dashboard_app.routes)
+    route_exists = any(
+        route.path == "/api/dashboard/audit/task/{task_id}" for route in dashboard_app.routes
+    )
     if not route_exists:
+
         @dashboard_app.get("/api/dashboard/audit/task/{task_id}")
         async def _audit_task(task_id: str):
             task_uuid = UUID(task_id)

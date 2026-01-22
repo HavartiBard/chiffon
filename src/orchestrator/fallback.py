@@ -44,9 +44,7 @@ class ExternalAIFallback:
         self.claude_timeout_seconds = 30
         self.ollama_timeout_seconds = 15
 
-    async def should_use_external_ai(
-        self, plan: WorkPlan
-    ) -> Tuple[FallbackDecision, bool]:
+    async def should_use_external_ai(self, plan: WorkPlan) -> Tuple[FallbackDecision, bool]:
         """Determine if external AI (Claude) should be used for a plan.
 
         Decision logic:
@@ -69,8 +67,7 @@ class ExternalAIFallback:
 
             if remaining_quota < (self.quota_threshold_percent / 100.0):
                 self.logger.warning(
-                    f"Quota critical: {quota_percent:.1f}% remaining, "
-                    "using Claude"
+                    f"Quota critical: {quota_percent:.1f}% remaining, " "using Claude"
                 )
                 decision = FallbackDecision(
                     task_id=str(plan.plan_id),
@@ -85,9 +82,7 @@ class ExternalAIFallback:
 
             # Step 2: Check complexity
             if plan.complexity_level == "complex":
-                self.logger.info(
-                    f"Complex plan detected, using Claude for better reasoning"
-                )
+                self.logger.info(f"Complex plan detected, using Claude for better reasoning")
                 decision = FallbackDecision(
                     task_id=str(plan.plan_id),
                     decision="use_claude",
@@ -100,9 +95,7 @@ class ExternalAIFallback:
                 return decision, True
 
             # Default: use Ollama (local, cost-effective)
-            self.logger.debug(
-                f"Using Ollama for {plan.complexity_level} complexity plan"
-            )
+            self.logger.debug(f"Using Ollama for {plan.complexity_level} complexity plan")
             decision = FallbackDecision(
                 task_id=str(plan.plan_id),
                 decision="use_ollama",
@@ -129,9 +122,7 @@ class ExternalAIFallback:
             )
             return decision, False
 
-    async def call_external_ai_with_fallback(
-        self, prompt: str, task_context: dict
-    ) -> dict:
+    async def call_external_ai_with_fallback(self, prompt: str, task_context: dict) -> dict:
         """Call external AI with three-tier fallback (Claude → Ollama → exception).
 
         Tries Claude first (if should_use_external_ai=True), then falls back
@@ -157,9 +148,7 @@ class ExternalAIFallback:
             complexity = plan_dict.get("complexity_level", "medium")
 
             # For testing/fallback logic, allow override
-            should_use_claude = task_context.get(
-                "should_use_claude", complexity == "complex"
-            )
+            should_use_claude = task_context.get("should_use_claude", complexity == "complex")
 
             messages = [{"role": "user", "content": prompt}]
 
@@ -191,13 +180,11 @@ class ExternalAIFallback:
                 except Exception as e:
                     if "rate" in str(e).lower():
                         self.logger.warning(
-                            f"Claude rate limited for {task_name}, "
-                            f"falling back to Ollama"
+                            f"Claude rate limited for {task_name}, " f"falling back to Ollama"
                         )
                     else:
                         self.logger.warning(
-                            f"Claude failed for {task_name}: {e}, "
-                            f"falling back to Ollama"
+                            f"Claude failed for {task_name}: {e}, " f"falling back to Ollama"
                         )
 
             # Tier 2: Try Ollama (fallback)
@@ -217,9 +204,7 @@ class ExternalAIFallback:
                 return response
 
             except Exception as e:
-                self.logger.error(
-                    f"Ollama fallback failed for {task_name}: {e}"
-                )
+                self.logger.error(f"Ollama fallback failed for {task_name}: {e}")
 
             # Tier 3: Both failed - raise exception
             raise Exception(
@@ -254,14 +239,10 @@ class ExternalAIFallback:
             return remaining
 
         except Exception as e:
-            self.logger.warning(
-                f"Could not check quota: {e}; defaulting to Ollama (safe)"
-            )
+            self.logger.warning(f"Could not check quota: {e}; defaulting to Ollama (safe)")
             return 1.0  # Assume unlimited, use Ollama
 
-    def _log_fallback_decision(
-        self, decision: FallbackDecision, task_id: UUID
-    ) -> None:
+    def _log_fallback_decision(self, decision: FallbackDecision, task_id: UUID) -> None:
         """Log fallback decision to audit trail.
 
         In production, would insert to database. For now, logs to application logger.
@@ -292,6 +273,5 @@ class ExternalAIFallback:
         task_id = task_context.get("plan_id", "unknown")
         task_name = task_context.get("name", "unknown")
         self.logger.info(
-            f"Used {model} for {task_name} ({task_id}): "
-            f"{tokens} tokens, ${cost:.4f}"
+            f"Used {model} for {task_name} ({task_id}): " f"{tokens} tokens, ${cost:.4f}"
         )

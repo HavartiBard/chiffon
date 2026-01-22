@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # Try importing pynvml for GPU tracking
 try:
     import pynvml
+
     pynvml.nvmlInit()
     HAS_GPU = True
     logger.info("pynvml initialized successfully - GPU tracking enabled")
@@ -31,6 +32,7 @@ except Exception as e:
 @dataclass
 class ResourceSnapshot:
     """Snapshot of resource state at a point in time."""
+
     cpu_user_seconds: float
     cpu_system_seconds: float
     memory_rss_bytes: int
@@ -41,8 +43,7 @@ class ResourceSnapshot:
 
 
 def capture_resource_snapshot(
-    process: Optional[psutil.Process] = None,
-    gpu_index: int = 0
+    process: Optional[psutil.Process] = None, gpu_index: int = 0
 ) -> ResourceSnapshot:
     """Capture current resource metrics for a process.
 
@@ -83,16 +84,14 @@ def capture_resource_snapshot(
 @dataclass
 class ResourceUsage:
     """Calculated resource usage between two snapshots."""
+
     cpu_time_seconds: float
     wall_clock_seconds: float
     peak_memory_bytes: int
     gpu_vram_used_bytes: int
 
 
-def calculate_resource_usage(
-    start: ResourceSnapshot,
-    end: ResourceSnapshot
-) -> ResourceUsage:
+def calculate_resource_usage(start: ResourceSnapshot, end: ResourceSnapshot) -> ResourceUsage:
     """Calculate resource delta between start and end snapshots.
 
     Args:
@@ -102,9 +101,8 @@ def calculate_resource_usage(
     Returns:
         ResourceUsage with calculated deltas.
     """
-    cpu_time = (
-        (end.cpu_user_seconds - start.cpu_user_seconds) +
-        (end.cpu_system_seconds - start.cpu_system_seconds)
+    cpu_time = (end.cpu_user_seconds - start.cpu_user_seconds) + (
+        end.cpu_system_seconds - start.cpu_system_seconds
     )
 
     wall_clock = end.wall_clock_time - start.wall_clock_time

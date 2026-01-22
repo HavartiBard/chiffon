@@ -24,10 +24,14 @@ def client() -> TestClient:
 
 
 @pytest.fixture
-def orchestrator_calls(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, dict | None, dict | None]]:
+def orchestrator_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list[tuple[str, str, dict | None, dict | None]]:
     calls: list[tuple[str, str, dict | None, dict | None]] = []
 
-    async def fake_request(method: str, path: str, json: dict | None = None, params: dict | None = None) -> dict:
+    async def fake_request(
+        method: str, path: str, json: dict | None = None, params: dict | None = None
+    ) -> dict:
         calls.append((method, path, json, params))
         if path == "/api/v1/request":
             return {"request_id": "req-321", "status": "parsing_complete"}
@@ -59,19 +63,27 @@ def orchestrator_calls(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, 
 
 class TestDashboardOrchestratorProxy:
     def test_chat_proxies_request(self, client: TestClient, orchestrator_calls: list) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test"}).json()["session_id"]
-        client.post("/api/dashboard/chat", json={"session_id": session_id, "message": "Deploy Kuma"})
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test"}).json()[
+            "session_id"
+        ]
+        client.post(
+            "/api/dashboard/chat", json={"session_id": session_id, "message": "Deploy Kuma"}
+        )
         paths = [call[1] for call in orchestrator_calls]
         assert "/api/v1/request" in paths
         assert any(path.startswith("/api/v1/plan/req-321") for path in paths)
 
     def test_plan_approval_proxies(self, client: TestClient, orchestrator_calls: list) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test"}).json()["session_id"]
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test"}).json()[
+            "session_id"
+        ]
         client.post("/api/dashboard/plan/plan-321/approve", json={"session_id": session_id})
         assert any("/api/v1/plan/plan-321/approve" in call[1] for call in orchestrator_calls)
 
     def test_plan_rejection_proxies(self, client: TestClient, orchestrator_calls: list) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test"}).json()["session_id"]
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test"}).json()[
+            "session_id"
+        ]
         client.post("/api/dashboard/plan/plan-321/reject", json={"session_id": session_id})
         assert any("/api/v1/plan/plan-321/approve" in call[1] for call in orchestrator_calls)
 
@@ -121,16 +133,24 @@ class TestPlanFormatting:
 
 
 class TestErrorHandling:
-    def test_orchestrator_timeout(self, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_orchestrator_timeout(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         async def failing_request(*args, **kwargs):
             raise asyncio.TimeoutError()
 
         monkeypatch.setattr("src.dashboard.api._orchestrator_request", failing_request)
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test"}).json()["session_id"]
-        response = client.post("/api/dashboard/chat", json={"session_id": session_id, "message": "Deploy"})
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test"}).json()[
+            "session_id"
+        ]
+        response = client.post(
+            "/api/dashboard/chat", json={"session_id": session_id, "message": "Deploy"}
+        )
         assert response.status_code == 502
 
-    def test_orchestrator_error_response(self, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_orchestrator_error_response(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         async def error_request(*args, **kwargs):
             raise HTTPException(status_code=404, detail="Plan missing")
 
@@ -144,7 +164,9 @@ class TestWebSocketIntegration:
     async def test_websocket_ping(self) -> None:
         async with TestClient(app) as test_client:
             sio = socketio.AsyncClient()
-            await sio.connect(test_client.base_url, socketio_path="/ws/socket.io", transports=["websocket"])
+            await sio.connect(
+                test_client.base_url, socketio_path="/ws/socket.io", transports=["websocket"]
+            )
             pong = asyncio.Event()
 
             @sio.on("pong")
@@ -159,7 +181,9 @@ class TestWebSocketIntegration:
     async def test_websocket_subscribe_unsubscribe(self) -> None:
         async with TestClient(app) as test_client:
             sio = socketio.AsyncClient()
-            await sio.connect(test_client.base_url, socketio_path="/ws/socket.io", transports=["websocket"])
+            await sio.connect(
+                test_client.base_url, socketio_path="/ws/socket.io", transports=["websocket"]
+            )
             ack = asyncio.Event()
 
             @sio.on("subscription_ack")

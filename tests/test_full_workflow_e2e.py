@@ -93,7 +93,9 @@ class TestFullUserRequestFlow:
     @pytest.mark.asyncio
     @pytest.mark.e2e_01
     async def test_orchestrator_parses_intent(self, orchestrator_service_e2e):
-        result = await orchestrator_service_e2e.submit_request("Deploy Kuma and sync portals", "user-1")
+        result = await orchestrator_service_e2e.submit_request(
+            "Deploy Kuma and sync portals", "user-1"
+        )
         request_id = result["request_id"]
         decomposition = orchestrator_service_e2e._decomposed_requests.get(request_id)
         assert decomposition is not None
@@ -104,7 +106,9 @@ class TestFullUserRequestFlow:
     @pytest.mark.asyncio
     @pytest.mark.e2e_01
     async def test_orchestrator_generates_multi_step_plan(self, orchestrator_service_e2e):
-        submission = await orchestrator_service_e2e.submit_request("Deploy Kuma and portals", "user-2")
+        submission = await orchestrator_service_e2e.submit_request(
+            "Deploy Kuma and portals", "user-2"
+        )
         plan = await orchestrator_service_e2e.generate_plan(submission["request_id"])
         assert plan["status"] == "pending_approval"
         assert len(plan["tasks"]) == 2
@@ -113,7 +117,9 @@ class TestFullUserRequestFlow:
     @pytest.mark.asyncio
     @pytest.mark.e2e_01
     async def test_plan_requires_user_approval(self, orchestrator_service_e2e):
-        submission = await orchestrator_service_e2e.submit_request("Deploy Kuma and portals", "user-3")
+        submission = await orchestrator_service_e2e.submit_request(
+            "Deploy Kuma and portals", "user-3"
+        )
         plan = await orchestrator_service_e2e.generate_plan(submission["request_id"])
         assert plan["status"] == "pending_approval"
         stored_plan = orchestrator_service_e2e._request_plans[submission["request_id"]]
@@ -186,7 +192,9 @@ class TestConfigDiscovery:
         for entry in entries:
             e2e_test_db.add(entry)
         e2e_test_db.commit()
-        cached = e2e_test_db.query(PlaybookCache).filter(PlaybookCache.service_name == "portal").all()
+        cached = (
+            e2e_test_db.query(PlaybookCache).filter(PlaybookCache.service_name == "portal").all()
+        )
         assert len(cached) >= 1
 
 
@@ -195,7 +203,9 @@ class TestDeploymentExecution:
 
     @pytest.mark.asyncio
     @pytest.mark.e2e_03
-    async def test_user_approves_then_execution_starts(self, orchestrator_service_e2e, mock_rabbitmq):
+    async def test_user_approves_then_execution_starts(
+        self, orchestrator_service_e2e, mock_rabbitmq
+    ):
         submission = await orchestrator_service_e2e.submit_request("Deploy Kuma", "user-4")
         plan = await orchestrator_service_e2e.generate_plan(submission["request_id"])
         approval = await orchestrator_service_e2e.approve_plan(plan["plan_id"], True)
@@ -204,10 +214,20 @@ class TestDeploymentExecution:
 
     @pytest.mark.asyncio
     @pytest.mark.e2e_03
-    async def test_infra_agent_executes_playbooks_in_sequence(self, infra_agent_e2e, mock_ansible_runner):
+    async def test_infra_agent_executes_playbooks_in_sequence(
+        self, infra_agent_e2e, mock_ansible_runner
+    ):
         requests = [
-            WorkRequest(task_id=uuid4(), work_type="run_playbook", parameters={"playbook_path": "kuma-deploy.yml"}),
-            WorkRequest(task_id=uuid4(), work_type="run_playbook", parameters={"playbook_path": "kuma-config-update.yml"}),
+            WorkRequest(
+                task_id=uuid4(),
+                work_type="run_playbook",
+                parameters={"playbook_path": "kuma-deploy.yml"},
+            ),
+            WorkRequest(
+                task_id=uuid4(),
+                work_type="run_playbook",
+                parameters={"playbook_path": "kuma-config-update.yml"},
+            ),
         ]
         mock_ansible_runner.queue_response()
         mock_ansible_runner.queue_response()
@@ -228,7 +248,9 @@ class TestDeploymentExecution:
 
     @pytest.mark.asyncio
     @pytest.mark.e2e_03
-    async def test_all_steps_logged_to_postgresql(self, orchestrator_service_e2e, e2e_test_db: Session):
+    async def test_all_steps_logged_to_postgresql(
+        self, orchestrator_service_e2e, e2e_test_db: Session
+    ):
         task = Task(task_id=uuid4(), request_text="deploy", status="pending")
         e2e_test_db.add(task)
         e2e_test_db.commit()
@@ -239,11 +261,15 @@ class TestDeploymentExecution:
 
     @pytest.mark.asyncio
     @pytest.mark.e2e_03
-    async def test_execution_handles_failures_gracefully(self, orchestrator_service_e2e, e2e_test_db: Session):
+    async def test_execution_handles_failures_gracefully(
+        self, orchestrator_service_e2e, e2e_test_db: Session
+    ):
         task = Task(task_id=uuid4(), request_text="fail", status="pending")
         e2e_test_db.add(task)
         e2e_test_db.commit()
-        await orchestrator_service_e2e.handle_work_result(_build_work_result(task.task_id, status="failed", exit_code=1), uuid4())
+        await orchestrator_service_e2e.handle_work_result(
+            _build_work_result(task.task_id, status="failed", exit_code=1), uuid4()
+        )
         record = e2e_test_db.query(Task).filter(Task.task_id == task.task_id).first()
         assert record.status == "failed"
         assert record.error_message
@@ -254,9 +280,17 @@ class TestPlaybookSuggestions:
 
     @pytest.mark.asyncio
     @pytest.mark.e2e_04
-    async def test_analyzer_runs_after_failure(self, infra_agent_e2e, e2e_test_db: Session, mock_ansible_runner):
-        mock_ansible_runner.queue_response(rc=1, events=[{"event": "runner_on_failed", "event_data": {"task": "fail"}}])
-        req = WorkRequest(task_id=uuid4(), work_type="run_playbook", parameters={"playbook_path": "kuma-deploy.yml"})
+    async def test_analyzer_runs_after_failure(
+        self, infra_agent_e2e, e2e_test_db: Session, mock_ansible_runner
+    ):
+        mock_ansible_runner.queue_response(
+            rc=1, events=[{"event": "runner_on_failed", "event_data": {"task": "fail"}}]
+        )
+        req = WorkRequest(
+            task_id=uuid4(),
+            work_type="run_playbook",
+            parameters={"playbook_path": "kuma-deploy.yml"},
+        )
         response = await infra_agent_e2e.execute_work(req)
         assert response.status == "failed"
         suggestions = e2e_test_db.query(PlaybookSuggestion).all()
@@ -266,8 +300,12 @@ class TestPlaybookSuggestions:
     @pytest.mark.e2e_04
     async def test_suggestions_categorized(self, e2e_test_db: Session):
         entry = PlaybookSuggestion(
-            playbook_path="", category="idempotency", rule_id="no-changed-when",
-            message="Use changed_when", reasoning="Reason", severity="error"
+            playbook_path="",
+            category="idempotency",
+            rule_id="no-changed-when",
+            message="Use changed_when",
+            reasoning="Reason",
+            severity="error",
         )
         e2e_test_db.add(entry)
         e2e_test_db.commit()
@@ -313,7 +351,13 @@ class TestPlaybookSuggestions:
         workfile.write_text("improvement")
         subprocess.run(["git", "add", str(workfile)], cwd=temp_git_repo, check=True)
         subprocess.run(["git", "commit", "-m", "docs: improvement"], cwd=temp_git_repo, check=True)
-        log = subprocess.run(["git", "log", "-1", "--pretty=%B"], cwd=temp_git_repo, check=True, capture_output=True, text=True)
+        log = subprocess.run(
+            ["git", "log", "-1", "--pretty=%B"],
+            cwd=temp_git_repo,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
         assert "improvement" in log.stdout
 
 
@@ -322,7 +366,9 @@ class TestAuditTrailComplete:
 
     @pytest.mark.asyncio
     @pytest.mark.e2e_04
-    async def test_git_repo_contains_commit(self, orchestrator_service_e2e, e2e_test_db: Session, temp_git_repo: str):
+    async def test_git_repo_contains_commit(
+        self, orchestrator_service_e2e, e2e_test_db: Session, temp_git_repo: str
+    ):
         task = Task(task_id=uuid4(), request_text="audit", status="pending")
         e2e_test_db.add(task)
         e2e_test_db.commit()
@@ -332,18 +378,24 @@ class TestAuditTrailComplete:
 
     @pytest.mark.asyncio
     @pytest.mark.e2e_04
-    async def test_commit_includes_task_details(self, orchestrator_service_e2e, e2e_test_db: Session, temp_git_repo: str):
+    async def test_commit_includes_task_details(
+        self, orchestrator_service_e2e, e2e_test_db: Session, temp_git_repo: str
+    ):
         task = Task(task_id=uuid4(), request_text="audit", status="pending")
         e2e_test_db.add(task)
         e2e_test_db.commit()
         await orchestrator_service_e2e.handle_work_result(_build_work_result(task.task_id), uuid4())
-        payload = json.loads((Path(temp_git_repo) / ".audit" / "tasks" / f"{task.task_id}.json").read_text())
+        payload = json.loads(
+            (Path(temp_git_repo) / ".audit" / "tasks" / f"{task.task_id}.json").read_text()
+        )
         assert payload.get("execution_result")
         assert payload["status"] == "completed"
 
     @pytest.mark.asyncio
     @pytest.mark.e2e_04
-    async def test_postgresql_records_task_state(self, orchestrator_service_e2e, e2e_test_db: Session):
+    async def test_postgresql_records_task_state(
+        self, orchestrator_service_e2e, e2e_test_db: Session
+    ):
         task = Task(task_id=uuid4(), request_text="audit", status="pending")
         e2e_test_db.add(task)
         e2e_test_db.commit()
@@ -382,29 +434,40 @@ class TestFullWorkflowIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.e2e_01
-    async def test_complete_kuma_deployment_workflow(self, dashboard_client_e2e: TestClient, orchestrator_service_e2e, e2e_test_db: Session):
+    async def test_complete_kuma_deployment_workflow(
+        self, dashboard_client_e2e: TestClient, orchestrator_service_e2e, e2e_test_db: Session
+    ):
         session = _create_session(dashboard_client_e2e)
         chat = dashboard_client_e2e.post(
             "/api/dashboard/chat",
             json={"session_id": session["session_id"], "message": "Deploy Kuma and portals"},
         )
         plan = chat.json()["plan"]
-        dashboard_client_e2e.post(f"/api/dashboard/plan/{plan['plan_id']}/approve", json={"session_id": session["session_id"]})
+        dashboard_client_e2e.post(
+            f"/api/dashboard/plan/{plan['plan_id']}/approve",
+            json={"session_id": session["session_id"]},
+        )
         dispatched = orchestrator_service_e2e._request_plans[plan["request_id"]].tasks
         for task in dispatched:
             task_record = Task(task_id=uuid4(), request_text=task.name, status="pending")
             e2e_test_db.add(task_record)
             e2e_test_db.commit()
-            await orchestrator_service_e2e.handle_work_result(_build_work_result(task_record.task_id), uuid4())
+            await orchestrator_service_e2e.handle_work_result(
+                _build_work_result(task_record.task_id), uuid4()
+            )
         assert orchestrator_service_e2e.ws_manager.broadcast.call_count >= 0
 
     @pytest.mark.asyncio
     @pytest.mark.e2e_03
-    async def test_workflow_with_resource_constraints(self, orchestrator_service_e2e, e2e_test_db: Session):
+    async def test_workflow_with_resource_constraints(
+        self, orchestrator_service_e2e, e2e_test_db: Session
+    ):
         agent = e2e_test_db.query(AgentRegistry).first()
         agent.resource_metrics = {"gpu_vram_available_gb": 0.0, "cpu_cores_available": 0}
         e2e_test_db.commit()
-        submission = await orchestrator_service_e2e.submit_request("Deploy Kuma", "user-constrained")
+        submission = await orchestrator_service_e2e.submit_request(
+            "Deploy Kuma", "user-constrained"
+        )
         plan = await orchestrator_service_e2e.generate_plan(submission["request_id"])
         result = await orchestrator_service_e2e.dispatch_plan(plan["plan_id"])
         assert result.get("status") == "paused"
@@ -424,16 +487,20 @@ class TestFullWorkflowIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.e2e_03
-    async def test_multiple_agents_tracked_independently(self, orchestrator_service_e2e, e2e_test_db: Session):
+    async def test_multiple_agents_tracked_independently(
+        self, orchestrator_service_e2e, e2e_test_db: Session
+    ):
         for _ in range(3):
-            e2e_test_db.add(AgentRegistry(
-                agent_id=uuid4(),
-                agent_type="infra",
-                pool_name="infra_pool",
-                capabilities={"run_playbook": True},
-                status="online",
-                resource_metrics={"gpu_vram_available_gb": 8.0, "cpu_cores_available": 4},
-            ))
+            e2e_test_db.add(
+                AgentRegistry(
+                    agent_id=uuid4(),
+                    agent_type="infra",
+                    pool_name="infra_pool",
+                    capabilities={"run_playbook": True},
+                    status="online",
+                    resource_metrics={"gpu_vram_available_gb": 8.0, "cpu_cores_available": 4},
+                )
+            )
         e2e_test_db.commit()
         submission = await orchestrator_service_e2e.submit_request("Deploy Kuma", "user-tracked")
         plan = await orchestrator_service_e2e.generate_plan(submission["request_id"])
@@ -443,7 +510,11 @@ class TestFullWorkflowIntegration:
 
 def validate_requirement_coverage() -> dict[str, int]:
     e2e_01 = len([name for name in dir() if name.startswith("test_") and "plan" in name.lower()])
-    e2e_02 = len([name for name in dir() if name.startswith("test_") and "discovery" in name.lower()])
-    e2e_03 = len([name for name in dir() if name.startswith("test_") and "execution" in name.lower()])
+    e2e_02 = len(
+        [name for name in dir() if name.startswith("test_") and "discovery" in name.lower()]
+    )
+    e2e_03 = len(
+        [name for name in dir() if name.startswith("test_") and "execution" in name.lower()]
+    )
     e2e_04 = len([name for name in dir() if name.startswith("test_") and "audit" in name.lower()])
     return {"E2E-01": e2e_01, "E2E-02": e2e_02, "E2E-03": e2e_03, "E2E-04": e2e_04}

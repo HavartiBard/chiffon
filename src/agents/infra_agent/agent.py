@@ -64,12 +64,10 @@ class InfraAgent(BaseAgent):
         self.template_generator = TemplateGenerator()
         self.executor = PlaybookExecutor(str(self.repo_path))
         # Get database session from config if available
-        db_session = getattr(config, 'db_session', None)
+        db_session = getattr(config, "db_session", None)
         self.analyzer = PlaybookAnalyzer(db_session=db_session)
 
-        self.logger.info(
-            f"InfraAgent initialized: agent_id={agent_id}, repo_path={self.repo_path}"
-        )
+        self.logger.info(f"InfraAgent initialized: agent_id={agent_id}, repo_path={self.repo_path}")
 
     def get_agent_capabilities(self) -> dict[str, Any]:
         """Report agent capabilities to orchestrator.
@@ -526,7 +524,9 @@ class InfraAgent(BaseAgent):
                 timeout_seconds=timeout_seconds,
             )
 
-            return await self._summary_to_result(work_request.task_id, summary, mapping_result.playbook_path)
+            return await self._summary_to_result(
+                work_request.task_id, summary, mapping_result.playbook_path
+            )
 
         except (PlaybookNotFoundError, ExecutionTimeoutError, AnsibleRunnerError) as e:
             from uuid import uuid4
@@ -644,9 +644,7 @@ class InfraAgent(BaseAgent):
                 )
 
                 # Add analysis summary to output
-                output_lines.append(
-                    f"\nAnalysis: {analysis.total_issues} improvement suggestions"
-                )
+                output_lines.append(f"\nAnalysis: {analysis.total_issues} improvement suggestions")
                 if analysis.by_category:
                     output_lines.append(
                         f"Categories: {', '.join(f'{k}: {v}' for k, v in analysis.by_category.items())}"

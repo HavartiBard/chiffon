@@ -186,7 +186,9 @@ class TestSingleAgentLifecycle:
         """Verify agent is marked offline after exceeding heartbeat threshold."""
         # Setup: create agent registry entry with old heartbeat
         agent_entry = AgentRegistry(
-            agent_id=UUID(test_agent.agent_id) if isinstance(test_agent.agent_id, str) else test_agent.agent_id,
+            agent_id=UUID(test_agent.agent_id)
+            if isinstance(test_agent.agent_id, str)
+            else test_agent.agent_id,
             agent_type="desktop",
             pool_name="desktop_pool_1",
             capabilities=[],
@@ -253,9 +255,9 @@ class TestMultiAgentStartup:
         test_db.commit()
 
         # Verify all agents are in database
-        stored_agents = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id.in_(agent_ids)
-        ).all()
+        stored_agents = (
+            test_db.query(AgentRegistry).filter(AgentRegistry.agent_id.in_(agent_ids)).all()
+        )
 
         assert len(stored_agents) == 3
         stored_ids = [a.agent_id for a in stored_agents]
@@ -399,9 +401,9 @@ class TestMetricsCollectionAndReporting:
         test_db.commit()
 
         # Retrieve and verify
-        stored_agent = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored_agent = (
+            test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
+        )
 
         assert stored_agent is not None
         assert stored_agent.resource_metrics["gpu_vram_available_gb"] == 6.0
@@ -465,9 +467,9 @@ class TestCapacityQueryIntegration:
         test_db.commit()
 
         # Query
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent.agent_id
-        ).first()
+        stored = (
+            test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent.agent_id).first()
+        )
 
         # Verify
         assert stored.resource_metrics["gpu_vram_available_gb"] == 4.5
@@ -494,9 +496,7 @@ class TestCapacityQueryIntegration:
         test_db.commit()
 
         # Query all
-        agents = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_type == "desktop"
-        ).all()
+        agents = test_db.query(AgentRegistry).filter(AgentRegistry.agent_type == "desktop").all()
 
         # Verify
         assert len(agents) == 3
@@ -530,9 +530,9 @@ class TestCapacityQueryIntegration:
         test_db.commit()
 
         # Query
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent.agent_id
-        ).first()
+        stored = (
+            test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent.agent_id).first()
+        )
 
         # Verify metrics match
         assert stored.resource_metrics == agent_metrics

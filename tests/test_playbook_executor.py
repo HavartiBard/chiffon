@@ -43,7 +43,8 @@ def temp_repo_path(tmp_path):
 
     # Create sample playbook
     playbook = repo / "test.yml"
-    playbook.write_text("""
+    playbook.write_text(
+        """
 ---
 - name: Test playbook
   hosts: all
@@ -51,7 +52,8 @@ def temp_repo_path(tmp_path):
     - name: Test task
       debug:
         msg: "Hello"
-""")
+"""
+    )
 
     return repo
 
@@ -63,29 +65,13 @@ def mock_ansible_runner_success():
     runner.rc = 0
     runner.status = "successful"
     runner.events = [
+        {"event": "runner_on_ok", "event_data": {"task": "Test task", "res": {"changed": True}}},
         {
             "event": "runner_on_ok",
-            "event_data": {
-                "task": "Test task",
-                "res": {"changed": True}
-            }
+            "event_data": {"task": "Another task", "res": {"changed": False}},
         },
-        {
-            "event": "runner_on_ok",
-            "event_data": {
-                "task": "Another task",
-                "res": {"changed": False}
-            }
-        }
     ]
-    runner.stats = {
-        "localhost": {
-            "ok": 2,
-            "changed": 1,
-            "failures": 0,
-            "skipped": 0
-        }
-    }
+    runner.stats = {"localhost": {"ok": 2, "changed": 1, "failures": 0, "skipped": 0}}
     return runner
 
 
@@ -96,32 +82,16 @@ def mock_ansible_runner_failure():
     runner.rc = 2
     runner.status = "failed"
     runner.events = [
-        {
-            "event": "runner_on_ok",
-            "event_data": {
-                "task": "Setup task",
-                "res": {"changed": False}
-            }
-        },
+        {"event": "runner_on_ok", "event_data": {"task": "Setup task", "res": {"changed": False}}},
         {
             "event": "runner_on_failed",
             "event_data": {
                 "task": "Failed task",
-                "res": {
-                    "msg": "Command execution failed",
-                    "stderr": "Permission denied"
-                }
-            }
-        }
+                "res": {"msg": "Command execution failed", "stderr": "Permission denied"},
+            },
+        },
     ]
-    runner.stats = {
-        "localhost": {
-            "ok": 1,
-            "changed": 0,
-            "failures": 1,
-            "skipped": 0
-        }
-    }
+    runner.stats = {"localhost": {"ok": 1, "changed": 0, "failures": 1, "skipped": 0}}
     return runner
 
 
@@ -138,7 +108,7 @@ class TestExecutionSummary:
             changed_count=2,
             ok_count=5,
             failed_count=0,
-            skipped_count=1
+            skipped_count=1,
         )
 
         assert summary.status == "successful"
@@ -150,12 +120,7 @@ class TestExecutionSummary:
         """Test key_errors limited to max 5 entries."""
         # Pydantic validates max_length, so we can only pass up to 5 errors
         errors = [f"Error {i}" for i in range(5)]
-        summary = ExecutionSummary(
-            status="failed",
-            exit_code=1,
-            duration_ms=500,
-            key_errors=errors
-        )
+        summary = ExecutionSummary(status="failed", exit_code=1, duration_ms=500, key_errors=errors)
 
         assert len(summary.key_errors) == 5
 
@@ -165,16 +130,12 @@ class TestExecutionSummary:
                 status="failed",
                 exit_code=1,
                 duration_ms=500,
-                key_errors=[f"Error {i}" for i in range(10)]
+                key_errors=[f"Error {i}" for i in range(10)],
             )
 
     def test_default_values(self):
         """Test default values for optional fields."""
-        summary = ExecutionSummary(
-            status="successful",
-            exit_code=0,
-            duration_ms=1000
-        )
+        summary = ExecutionSummary(status="successful", exit_code=0, duration_ms=1000)
 
         assert summary.changed_count == 0
         assert summary.ok_count == 0
@@ -294,6 +255,7 @@ class TestPlaybookExecutorExecution:
         # Mock _run_ansible_sync to sleep longer than timeout
         def slow_run(cfg):
             import time
+
             time.sleep(2)
             return MagicMock(rc=0, status="successful", events=[], stats={})
 
@@ -416,10 +378,7 @@ class TestEventProcessing:
         runner.events = [
             {
                 "event": "runner_on_failed",
-                "event_data": {
-                    "task": f"Failed task {i}",
-                    "res": {"msg": f"Error {i}"}
-                }
+                "event_data": {"task": f"Failed task {i}", "res": {"msg": f"Error {i}"}},
             }
             for i in range(10)
         ]
@@ -515,9 +474,7 @@ class TestInfraAgentExecution:
         agent = InfraAgent("test-agent", config, repo_path=str(temp_repo_path))
 
         work_request = WorkRequest(
-            task_id=uuid4(),
-            work_type="run_playbook",
-            parameters={"playbook_path": "test.yml"}
+            task_id=uuid4(), work_type="run_playbook", parameters={"playbook_path": "test.yml"}
         )
 
         with patch("ansible_runner.run", return_value=mock_ansible_runner_success):
@@ -536,7 +493,7 @@ class TestInfraAgentExecution:
         work_request = WorkRequest(
             task_id=uuid4(),
             work_type="deploy_service",
-            parameters={"task_intent": "deploy test service"}
+            parameters={"task_intent": "deploy test service"},
         )
 
         # This will fail due to no matching playbook, which is expected
@@ -553,9 +510,7 @@ class TestInfraAgentExecution:
         agent = InfraAgent("test-agent", config, repo_path=str(temp_repo_path))
 
         work_request = WorkRequest(
-            task_id=uuid4(),
-            work_type="discover_playbooks",
-            parameters={"force_refresh": False}
+            task_id=uuid4(), work_type="discover_playbooks", parameters={"force_refresh": False}
         )
 
         result = await agent.execute_work(work_request)
@@ -577,11 +532,7 @@ class TestInfraAgentExecution:
         config = Config()
         agent = InfraAgent("test-agent", config, repo_path=str(temp_repo_path))
 
-        work_request = WorkRequest(
-            task_id=uuid4(),
-            work_type="invalid_work_type",
-            parameters={}
-        )
+        work_request = WorkRequest(task_id=uuid4(), work_type="invalid_work_type", parameters={})
 
         result = await agent.execute_work(work_request)
 
@@ -597,7 +548,7 @@ class TestInfraAgentExecution:
         work_request = WorkRequest(
             task_id=uuid4(),
             work_type="run_playbook",
-            parameters={"playbook_path": "nonexistent.yml"}
+            parameters={"playbook_path": "nonexistent.yml"},
         )
 
         result = await agent.execute_work(work_request)
@@ -615,14 +566,12 @@ class TestInfraAgentExecution:
         work_request = WorkRequest(
             task_id=uuid4(),
             work_type="run_playbook",
-            parameters={
-                "playbook_path": "test.yml",
-                "timeout_seconds": 0.1
-            }
+            parameters={"playbook_path": "test.yml", "timeout_seconds": 0.1},
         )
 
         def slow_run(cfg):
             import time
+
             time.sleep(2)
             return MagicMock(rc=0, status="successful", events=[], stats={})
 

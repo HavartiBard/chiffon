@@ -40,7 +40,7 @@ class MessageEnvelope(BaseModel):
         default=3,
         ge=1,
         le=5,
-        description="Priority level 1-5 for RabbitMQ queue (1=critical, 5=background)"
+        description="Priority level 1-5 for RabbitMQ queue (1=critical, 5=background)",
     )
     payload: dict[str, Any] = Field(description="Message payload (type-specific)")
     x_custom_fields: dict[str, Any] = Field(
@@ -162,15 +162,18 @@ class WorkResult(BaseModel):
     error_message: Optional[str] = Field(default=None, description="Error if status=failed")
     duration_ms: int = Field(description="Total work duration in milliseconds")
     agent_id: UUID = Field(description="Agent that executed the work")
-    trace_id: Optional[UUID] = Field(default=None, description="Trace ID for debugging (set by agent)")
-    request_id: Optional[UUID] = Field(default=None, description="Request ID for idempotency (set by agent)")
+    trace_id: Optional[UUID] = Field(
+        default=None, description="Trace ID for debugging (set by agent)"
+    )
+    request_id: Optional[UUID] = Field(
+        default=None, description="Request ID for idempotency (set by agent)"
+    )
     resources_used: dict[str, Any] = Field(
         default_factory=dict,
-        description="Resource consumption: {cpu_time_ms, memory_peak_mb, gpu_memory_used_mb}"
+        description="Resource consumption: {cpu_time_ms, memory_peak_mb, gpu_memory_used_mb}",
     )
     analysis_result: Optional[dict[str, Any]] = Field(
-        default=None,
-        description="Playbook analysis result from PlaybookAnalyzer (if applicable)"
+        default=None, description="Playbook analysis result from PlaybookAnalyzer (if applicable)"
     )
 
     @model_validator(mode="after")
@@ -193,10 +196,12 @@ class StatusUpdate(BaseModel):
     agent_id: UUID = Field(description="Unique agent identifier")
     agent_type: str = Field(pattern="^(orchestrator|infra|desktop|code|research)$")
     status: str = Field(pattern="^(online|offline|busy)$")
-    current_task_id: Optional[UUID] = Field(default=None, description="Task currently being processed")
+    current_task_id: Optional[UUID] = Field(
+        default=None, description="Task currently being processed"
+    )
     resources: dict[str, Any] = Field(
         default_factory=dict,
-        description="Resource metrics: cpu_percent, memory_percent, gpu_vram_available_gb, gpu_vram_total_gb"
+        description="Resource metrics: cpu_percent, memory_percent, gpu_vram_available_gb, gpu_vram_total_gb",
     )
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
@@ -214,7 +219,7 @@ class ErrorMessage(BaseModel):
     error_message: str = Field(description="Human-readable error description")
     context: dict[str, Any] = Field(
         default_factory=dict,
-        description="Additional debugging context (original_message_id, affected_queue, etc)"
+        description="Additional debugging context (original_message_id, affected_queue, etc)",
     )
 
     @field_validator("error_code")

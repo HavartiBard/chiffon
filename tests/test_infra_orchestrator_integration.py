@@ -423,7 +423,8 @@ class TestRequirementVerification:
         """INFRA-01: Verify 'Deploy Kuma' maps to kuma-deploy.yml using hybrid strategy."""
         # Create kuma-deploy.yml in temp repo
         kuma_playbook = tmp_path / "kuma-deploy.yml"
-        kuma_playbook.write_text("""---
+        kuma_playbook.write_text(
+            """---
 # chiffon:service=kuma
 # chiffon:description=Deploy Kuma service mesh
 - name: Deploy Kuma Service Mesh
@@ -432,7 +433,8 @@ class TestRequirementVerification:
     - name: Install Kuma
       debug:
         msg: "Installing Kuma"
-""")
+"""
+        )
 
         # Create InfraAgent with temp repo
         agent = InfraAgent("test-infra-01", mock_config, repo_path=str(tmp_path))
@@ -465,14 +467,16 @@ class TestRequirementVerification:
         """INFRA-02: Execute playbook and verify structured summary (not streaming)."""
         # Create test playbook
         test_playbook = tmp_path / "test-playbook.yml"
-        test_playbook.write_text("""---
+        test_playbook.write_text(
+            """---
 - name: Test Playbook
   hosts: localhost
   tasks:
     - name: Test task
       debug:
         msg: "Test"
-""")
+"""
+        )
 
         # Mock successful execution
         mock_summary = ExecutionSummary(
@@ -512,14 +516,16 @@ class TestRequirementVerification:
         """INFRA-03: Verify failure triggers analysis with categorized suggestions."""
         # Create test playbook
         test_playbook = tmp_path / "test-playbook.yml"
-        test_playbook.write_text("""---
+        test_playbook.write_text(
+            """---
 - name: Test Playbook
   hosts: localhost
   tasks:
     - name: Failing task
       fail:
         msg: "Intentional failure"
-""")
+"""
+        )
 
         # Mock failed execution
         mock_summary = ExecutionSummary(

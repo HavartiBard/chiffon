@@ -86,9 +86,7 @@ async def in_memory_db_session():
         await conn.run_sync(Base.metadata.create_all)
 
     # Create session factory
-    async_session = sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    )
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     # Yield session
     async with async_session() as session:
@@ -110,9 +108,7 @@ class TestMappingResult:
             playbook_path="/ansible/kuma-deploy.yml",
             confidence=0.95,
             method="semantic",
-            alternatives=[
-                {"playbook_path": "/ansible/portainer-deploy.yml", "score": 0.82}
-            ],
+            alternatives=[{"playbook_path": "/ansible/portainer-deploy.yml", "score": 0.82}],
         )
         assert result.playbook_path == "/ansible/kuma-deploy.yml"
         assert result.confidence == 0.95
@@ -145,16 +141,12 @@ class TestMappingResult:
     def test_confidence_bounds(self):
         """Test confidence is bounded between 0.0 and 1.0."""
         # Valid confidence
-        result = MappingResult(
-            playbook_path="/test.yml", confidence=0.85, method="semantic"
-        )
+        result = MappingResult(playbook_path="/test.yml", confidence=0.85, method="semantic")
         assert result.confidence == 0.85
 
         # Invalid confidence should raise validation error
         with pytest.raises(ValueError):
-            MappingResult(
-                playbook_path="/test.yml", confidence=1.5, method="semantic"
-            )
+            MappingResult(playbook_path="/test.yml", confidence=1.5, method="semantic")
 
 
 # --- Test CacheManager ---
@@ -274,9 +266,7 @@ class TestTaskMapperExactMatch:
     """Tests for TaskMapper exact matching."""
 
     @pytest.mark.asyncio
-    async def test_exact_match_service_in_intent(
-        self, mock_cache_manager, sample_playbook_catalog
-    ):
+    async def test_exact_match_service_in_intent(self, mock_cache_manager, sample_playbook_catalog):
         """Test exact match when service name appears in intent."""
         mapper = TaskMapper(mock_cache_manager, sample_playbook_catalog)
 
@@ -286,9 +276,7 @@ class TestTaskMapperExactMatch:
         assert result.method == "exact"
 
     @pytest.mark.asyncio
-    async def test_exact_match_case_insensitive(
-        self, mock_cache_manager, sample_playbook_catalog
-    ):
+    async def test_exact_match_case_insensitive(self, mock_cache_manager, sample_playbook_catalog):
         """Test exact match is case-insensitive."""
         mapper = TaskMapper(mock_cache_manager, sample_playbook_catalog)
 
@@ -315,9 +303,7 @@ class TestTaskMapperExactMatch:
         assert result.method != "exact"
 
     @pytest.mark.asyncio
-    async def test_exact_match_multiple_services(
-        self, mock_cache_manager, sample_playbook_catalog
-    ):
+    async def test_exact_match_multiple_services(self, mock_cache_manager, sample_playbook_catalog):
         """Test returns first match when multiple services could match."""
         mapper = TaskMapper(mock_cache_manager, sample_playbook_catalog)
 
@@ -334,9 +320,7 @@ class TestTaskMapperCachedMatch:
     """Tests for TaskMapper cached matching."""
 
     @pytest.mark.asyncio
-    async def test_cached_match_returns_stored(
-        self, mock_cache_manager, sample_playbook_catalog
-    ):
+    async def test_cached_match_returns_stored(self, mock_cache_manager, sample_playbook_catalog):
         """Test cached match returns previously stored mapping."""
         # Setup mock to return cached mapping
         cached_mapping = PlaybookMapping(
@@ -404,21 +388,15 @@ class TestTaskMapperSemanticMatch:
     """Tests for TaskMapper semantic matching with FAISS."""
 
     @pytest.mark.asyncio
-    async def test_semantic_match_similar_intent(
-        self, mock_cache_manager, sample_playbook_catalog
-    ):
+    async def test_semantic_match_similar_intent(self, mock_cache_manager, sample_playbook_catalog):
         """Test semantic match finds similar intent."""
         mapper = TaskMapper(mock_cache_manager, sample_playbook_catalog)
 
         # Mock sentence-transformers and FAISS
-        with patch(
-            "src.agents.infra_agent.task_mapper.SentenceTransformer"
-        ) as mock_st:
+        with patch("src.agents.infra_agent.task_mapper.SentenceTransformer") as mock_st:
             mock_embedder = Mock()
             # Return fixed embeddings
-            mock_embedder.encode.return_value = np.array(
-                [[0.1, 0.2, 0.3, 0.4] * 96]  # 384 dims
-            )
+            mock_embedder.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4] * 96])  # 384 dims
             mock_st.return_value = mock_embedder
 
             with patch("faiss.IndexFlatIP") as mock_faiss:
@@ -430,9 +408,7 @@ class TestTaskMapperSemanticMatch:
                 )
                 mock_faiss.return_value = mock_index
 
-                result = await mapper.map_task_to_playbook(
-                    "Install Kuma service mesh"
-                )
+                result = await mapper.map_task_to_playbook("Install Kuma service mesh")
 
                 assert result.playbook_path == "/ansible/kuma-deploy.yml"
                 assert result.confidence >= 0.85
@@ -446,13 +422,9 @@ class TestTaskMapperSemanticMatch:
         """Test semantic matches below 0.85 threshold return no match."""
         mapper = TaskMapper(mock_cache_manager, sample_playbook_catalog)
 
-        with patch(
-            "src.agents.infra_agent.task_mapper.SentenceTransformer"
-        ) as mock_st:
+        with patch("src.agents.infra_agent.task_mapper.SentenceTransformer") as mock_st:
             mock_embedder = Mock()
-            mock_embedder.encode.return_value = np.array(
-                [[0.1, 0.2, 0.3, 0.4] * 96]
-            )
+            mock_embedder.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4] * 96])
             mock_st.return_value = mock_embedder
 
             with patch("faiss.IndexFlatIP") as mock_faiss:
@@ -471,19 +443,13 @@ class TestTaskMapperSemanticMatch:
                 assert result.suggestion is not None
 
     @pytest.mark.asyncio
-    async def test_semantic_match_caches_result(
-        self, mock_cache_manager, sample_playbook_catalog
-    ):
+    async def test_semantic_match_caches_result(self, mock_cache_manager, sample_playbook_catalog):
         """Test semantic matches are cached for future use."""
         mapper = TaskMapper(mock_cache_manager, sample_playbook_catalog)
 
-        with patch(
-            "src.agents.infra_agent.task_mapper.SentenceTransformer"
-        ) as mock_st:
+        with patch("src.agents.infra_agent.task_mapper.SentenceTransformer") as mock_st:
             mock_embedder = Mock()
-            mock_embedder.encode.return_value = np.array(
-                [[0.1, 0.2, 0.3, 0.4] * 96]
-            )
+            mock_embedder.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4] * 96])
             mock_st.return_value = mock_embedder
 
             with patch("faiss.IndexFlatIP") as mock_faiss:
@@ -509,13 +475,9 @@ class TestTaskMapperSemanticMatch:
         """Test semantic match returns top 3 alternatives."""
         mapper = TaskMapper(mock_cache_manager, sample_playbook_catalog)
 
-        with patch(
-            "src.agents.infra_agent.task_mapper.SentenceTransformer"
-        ) as mock_st:
+        with patch("src.agents.infra_agent.task_mapper.SentenceTransformer") as mock_st:
             mock_embedder = Mock()
-            mock_embedder.encode.return_value = np.array(
-                [[0.1, 0.2, 0.3, 0.4] * 96]
-            )
+            mock_embedder.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4] * 96])
             mock_st.return_value = mock_embedder
 
             with patch("faiss.IndexFlatIP") as mock_faiss:
@@ -573,9 +535,7 @@ class TestTaskMapperIntegration:
     """Integration tests for TaskMapper full workflow."""
 
     @pytest.mark.asyncio
-    async def test_hybrid_priority(
-        self, in_memory_db_session, sample_playbook_catalog
-    ):
+    async def test_hybrid_priority(self, in_memory_db_session, sample_playbook_catalog):
         """Test matching priority: exact > cached > semantic."""
         cache_manager = CacheManager(in_memory_db_session)
         mapper = TaskMapper(cache_manager, sample_playbook_catalog)
@@ -597,21 +557,15 @@ class TestTaskMapperIntegration:
         assert result2.method == "cached"
 
     @pytest.mark.asyncio
-    async def test_full_workflow(
-        self, in_memory_db_session, sample_playbook_catalog
-    ):
+    async def test_full_workflow(self, in_memory_db_session, sample_playbook_catalog):
         """Test full workflow: semantic match -> cache -> second call uses cache."""
         cache_manager = CacheManager(in_memory_db_session)
         mapper = TaskMapper(cache_manager, sample_playbook_catalog)
 
         # Mock semantic search to return high-confidence match
-        with patch(
-            "src.agents.infra_agent.task_mapper.SentenceTransformer"
-        ) as mock_st:
+        with patch("src.agents.infra_agent.task_mapper.SentenceTransformer") as mock_st:
             mock_embedder = Mock()
-            mock_embedder.encode.return_value = np.array(
-                [[0.1, 0.2, 0.3, 0.4] * 96]
-            )
+            mock_embedder.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4] * 96])
             mock_st.return_value = mock_embedder
 
             with patch("faiss.IndexFlatIP") as mock_faiss:
@@ -623,9 +577,7 @@ class TestTaskMapperIntegration:
                 mock_faiss.return_value = mock_index
 
                 # First call: semantic match
-                result1 = await mapper.map_task_to_playbook(
-                    "Setup Kuma networking"
-                )
+                result1 = await mapper.map_task_to_playbook("Setup Kuma networking")
                 assert result1.method == "semantic"
                 assert result1.confidence == 0.91
 

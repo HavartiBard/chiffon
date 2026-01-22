@@ -62,9 +62,7 @@ class TestAgentRegistration:
         test_db.commit()
 
         # Verify agent was registered
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         assert stored is not None
         assert stored.status == "online"
@@ -89,9 +87,7 @@ class TestAgentRegistration:
         test_db.commit()
 
         # Verify all fields present
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         assert stored.agent_id == agent_id
         assert stored.agent_type == "desktop"
@@ -147,9 +143,7 @@ class TestAgentRegistration:
         test_db.commit()
 
         # Verify pool name
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         assert stored.pool_name == "desktop_pool_1"
 
@@ -171,9 +165,7 @@ class TestAgentRegistration:
         test_db.commit()
 
         # Verify status
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         assert stored.status == "online"
 
@@ -206,9 +198,7 @@ class TestMetricPersistence:
         test_db.commit()
 
         # Verify metrics persisted
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         assert stored.resource_metrics == metrics
 
@@ -237,9 +227,7 @@ class TestMetricPersistence:
         test_db.commit()
 
         # Verify
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         assert "cpu_load_1min" in stored.resource_metrics
         assert "cpu_cores_available" in stored.resource_metrics
@@ -268,9 +256,7 @@ class TestMetricPersistence:
         test_db.commit()
 
         # Verify
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         assert "gpu_vram_available_gb" in stored.resource_metrics
         assert "gpu_type" in stored.resource_metrics
@@ -298,9 +284,7 @@ class TestMetricPersistence:
         test_db.commit()
 
         # Verify metrics updated
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         assert stored.resource_metrics["cpu_percent"] == 60.0
         assert stored.resource_metrics["gpu_vram_available_gb"] == 4.0
@@ -323,9 +307,7 @@ class TestMetricPersistence:
         test_db.commit()
 
         # Verify empty dict is valid
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         assert isinstance(stored.resource_metrics, dict)
         assert len(stored.resource_metrics) == 0
@@ -358,9 +340,7 @@ class TestHeartbeatHandling:
         test_db.commit()
 
         # Verify timestamp updated
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         assert stored.last_heartbeat_at > old_time
 
@@ -386,9 +366,7 @@ class TestHeartbeatHandling:
         test_db.commit()
 
         # Verify status changed
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         assert stored.status == "online"
 
@@ -426,13 +404,9 @@ class TestHeartbeatHandling:
         test_db.commit()
 
         # Verify agent2 unchanged
-        stored1 = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent1_id
-        ).first()
+        stored1 = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent1_id).first()
 
-        stored2 = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent2_id
-        ).first()
+        stored2 = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent2_id).first()
 
         assert stored1.status == "online"
         assert stored2.status == "offline"
@@ -489,9 +463,7 @@ class TestOfflineDetection:
         test_db.commit()
 
         # Check if offline
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         time_since = (datetime.utcnow() - stored.last_heartbeat_at).total_seconds()
         is_offline = time_since > 90
@@ -560,9 +532,7 @@ class TestOfflineDetection:
         test_db.commit()
 
         # Query only online agents
-        online_agents = test_db.query(AgentRegistry).filter(
-            AgentRegistry.status == "online"
-        ).all()
+        online_agents = test_db.query(AgentRegistry).filter(AgentRegistry.status == "online").all()
 
         # Verify only online agent returned
         assert len(online_agents) == 1
@@ -591,9 +561,7 @@ class TestOfflineDetection:
         test_db.commit()
 
         # Verify status changed
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         assert stored.status == "online"
 
@@ -618,9 +586,7 @@ class TestOfflineDetection:
         test_db.commit()
 
         # Verify transition recorded
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent_id
-        ).first()
+        stored = test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent_id).first()
 
         assert stored.status == "offline"
 
@@ -658,9 +624,7 @@ class TestCapacityQueryIntegration:
         test_db.commit()
 
         # Query online only
-        result = test_db.query(AgentRegistry).filter(
-            AgentRegistry.status == "online"
-        ).all()
+        result = test_db.query(AgentRegistry).filter(AgentRegistry.status == "online").all()
 
         # Verify
         assert len(result) == 2
@@ -692,17 +656,17 @@ class TestCapacityQueryIntegration:
         test_db.commit()
 
         # Query: min_gpu_vram=4.0
-        result = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_type == "desktop",
-            AgentRegistry.status == "online",
-        ).all()
+        result = (
+            test_db.query(AgentRegistry)
+            .filter(
+                AgentRegistry.agent_type == "desktop",
+                AgentRegistry.status == "online",
+            )
+            .all()
+        )
 
         # Filter in Python for min_gpu_vram >= 4.0
-        filtered = [
-            a
-            for a in result
-            if a.resource_metrics.get("gpu_vram_available_gb", 0) >= 4.0
-        ]
+        filtered = [a for a in result if a.resource_metrics.get("gpu_vram_available_gb", 0) >= 4.0]
 
         # Verify
         assert len(filtered) == 2
@@ -731,15 +695,17 @@ class TestCapacityQueryIntegration:
         test_db.commit()
 
         # Query: min_cpu_cores=8
-        result = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_type == "desktop",
-            AgentRegistry.status == "online",
-        ).all()
+        result = (
+            test_db.query(AgentRegistry)
+            .filter(
+                AgentRegistry.agent_type == "desktop",
+                AgentRegistry.status == "online",
+            )
+            .all()
+        )
 
         # Filter in Python for min_cpu_cores >= 8
-        filtered = [
-            a for a in result if a.resource_metrics.get("cpu_cores_available", 0) >= 8
-        ]
+        filtered = [a for a in result if a.resource_metrics.get("cpu_cores_available", 0) >= 8]
 
         # Verify
         assert len(filtered) == 2
@@ -768,9 +734,9 @@ class TestCapacityQueryIntegration:
         test_db.commit()
 
         # Query
-        stored = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_id == agent.agent_id
-        ).first()
+        stored = (
+            test_db.query(AgentRegistry).filter(AgentRegistry.agent_id == agent.agent_id).first()
+        )
 
         # Verify all metrics present
         assert "gpu_vram_available_gb" in stored.resource_metrics
@@ -804,9 +770,9 @@ class TestMultiAgentScenarios:
         test_db.commit()
 
         # Verify all 3 in database
-        all_agents = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_type == "desktop"
-        ).all()
+        all_agents = (
+            test_db.query(AgentRegistry).filter(AgentRegistry.agent_type == "desktop").all()
+        )
 
         assert len(all_agents) == 3
         assert all(a.status == "online" for a in all_agents)
@@ -838,21 +804,25 @@ class TestMultiAgentScenarios:
         test_db.commit()
 
         # Query 1: agents with GPU capacity
-        gpu_agents = test_db.query(AgentRegistry).filter(
-            AgentRegistry.agent_type == "desktop",
-            AgentRegistry.status == "online",
-        ).all()
+        gpu_agents = (
+            test_db.query(AgentRegistry)
+            .filter(
+                AgentRegistry.agent_type == "desktop",
+                AgentRegistry.status == "online",
+            )
+            .all()
+        )
 
         gpu_capable = [
-            a
-            for a in gpu_agents
-            if a.resource_metrics.get("gpu_vram_available_gb", 0) > 0
+            a for a in gpu_agents if a.resource_metrics.get("gpu_vram_available_gb", 0) > 0
         ]
 
         # Verify
         assert len(gpu_capable) == 2
 
         # Query 2: agents with CPU capacity
-        cpu_agents = [a for a in gpu_agents if a.resource_metrics.get("cpu_cores_available", 0) >= 4]
+        cpu_agents = [
+            a for a in gpu_agents if a.resource_metrics.get("cpu_cores_available", 0) >= 4
+        ]
 
         assert len(cpu_agents) == 3

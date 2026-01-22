@@ -27,9 +27,7 @@ from src.common.models import PlaybookSuggestion, Task
 from src.common.protocol import WorkRequest
 from src.orchestrator.audit import AuditService
 
-KUMA_REQUEST_TEXT = (
-    "Deploy Kuma Uptime to homelab and add our existing portals to the config"
-)
+KUMA_REQUEST_TEXT = "Deploy Kuma Uptime to homelab and add our existing portals to the config"
 PORTAL_CONFIGS = [
     {"name": "portal-1", "url": "https://portal1.example.com", "interval": 60},
     {"name": "portal-2", "url": "https://portal2.example.com", "interval": 120},
@@ -125,8 +123,7 @@ class TestKumaPlaybookDiscovery:
         discovery = PlaybookDiscovery(str(repo))
         catalog = await discovery.discover_playbooks(force_refresh=True)
         assert any(
-            entry.filename == "kuma-deploy.yml" and entry.service == "kuma"
-            for entry in catalog
+            entry.filename == "kuma-deploy.yml" and entry.service == "kuma" for entry in catalog
         )
 
     @pytest.mark.asyncio
@@ -150,9 +147,15 @@ class TestKumaPlaybookDiscovery:
         create_realistic_kuma_playbook(repo / "kuma-deploy.yml", "deploy")
         discovery = PlaybookDiscovery(str(repo))
         catalog = await discovery.discover_playbooks(force_refresh=True)
-        deploy_meta = next((entry for entry in catalog if entry.filename == "kuma-deploy.yml"), None)
+        deploy_meta = next(
+            (entry for entry in catalog if entry.filename == "kuma-deploy.yml"), None
+        )
         assert deploy_meta
-        assert set(deploy_meta.required_vars) >= {"kuma_version", "kuma_port", "kuma_container_name"}
+        assert set(deploy_meta.required_vars) >= {
+            "kuma_version",
+            "kuma_port",
+            "kuma_container_name",
+        }
 
     @pytest.mark.asyncio
     async def test_cache_ttl_honored(self, tmp_path: Path):
@@ -304,7 +307,10 @@ class TestKumaExecutionSequence:
         repo = Path(mock_playbook_repo)
         create_realistic_kuma_playbook(repo / "kuma-deploy.yml", "deploy")
         executor = PlaybookExecutor(str(repo))
-        mock_ansible_runner.queue_response(events=[{"event": "runner_on_ok", "event_data": {"res": {"changed": True}}}], stats={"localhost": {"ok": 1, "changed": 1, "failures": 0, "skipped": 0}})
+        mock_ansible_runner.queue_response(
+            events=[{"event": "runner_on_ok", "event_data": {"res": {"changed": True}}}],
+            stats={"localhost": {"ok": 1, "changed": 1, "failures": 0, "skipped": 0}},
+        )
         summary = await executor.execute_playbook("kuma-deploy.yml")
         assert summary.status == "successful"
         assert summary.changed_count >= 0
@@ -316,7 +322,10 @@ class TestKumaExecutionSequence:
         executor = PlaybookExecutor(str(repo))
         mock_ansible_runner.queue_response(
             events=[
-                {"event": "runner_on_ok", "event_data": {"task": "pull", "res": {"changed": False}}},
+                {
+                    "event": "runner_on_ok",
+                    "event_data": {"task": "pull", "res": {"changed": False}},
+                },
                 {"event": "runner_on_ok", "event_data": {"task": "run", "res": {"changed": True}}},
             ],
             stats={"localhost": {"ok": 2, "changed": 1, "failures": 0, "skipped": 0}},
@@ -328,7 +337,9 @@ class TestKumaExecutionSequence:
         assert summary.duration_ms >= 0
 
     @pytest.mark.asyncio
-    async def test_config_update_receives_portal_vars(self, mock_playbook_repo: str, mock_ansible_runner):
+    async def test_config_update_receives_portal_vars(
+        self, mock_playbook_repo: str, mock_ansible_runner
+    ):
         repo = Path(mock_playbook_repo)
         create_realistic_kuma_playbook(repo / "kuma-config-update.yml", "config")
         executor = PlaybookExecutor(str(repo))
@@ -340,8 +351,20 @@ class TestKumaExecutionSequence:
 
     @pytest.mark.asyncio
     async def test_execution_failure_triggers_analyzer(self, infra_agent_e2e, mock_ansible_runner):
-        mock_ansible_runner.queue_response(rc=1, events=[{"event": "runner_on_failed", "event_data": {"task": "deploy", "res": {"msg": "timeout"}}}])
-        request = WorkRequest(task_id=uuid4(), work_type="run_playbook", parameters={"playbook_path": "kuma-deploy.yml"})
+        mock_ansible_runner.queue_response(
+            rc=1,
+            events=[
+                {
+                    "event": "runner_on_failed",
+                    "event_data": {"task": "deploy", "res": {"msg": "timeout"}},
+                }
+            ],
+        )
+        request = WorkRequest(
+            task_id=uuid4(),
+            work_type="run_playbook",
+            parameters={"playbook_path": "kuma-deploy.yml"},
+        )
         response = await infra_agent_e2e.execute_work(request)
         assert response.status == "failed"
         assert response.analysis_result
@@ -408,12 +431,21 @@ class TestKumaSuggestionGeneration:
     @pytest.mark.asyncio
     async def test_suggestions_categorized_correctly(self, tmp_path: Path):
         playbook = tmp_path / "multi-rule.yml"
-        playbook.write_text("""---\n- name: multi check\n  hosts: all\n"""
-        )
+        playbook.write_text("""---\n- name: multi check\n  hosts: all\n""")
         analyzer = PlaybookAnalyzer()
         analyzer._run_ansible_lint = lambda path: [
-            {"rule": {"id": "no-changed-when"}, "level": "error", "message": "changed_when missing", "location": {"lines": {"begin": 5}}},
-            {"rule": {"id": "name"}, "level": "warning", "message": "Add task names", "location": {"lines": {"begin": 8}}},
+            {
+                "rule": {"id": "no-changed-when"},
+                "level": "error",
+                "message": "changed_when missing",
+                "location": {"lines": {"begin": 5}},
+            },
+            {
+                "rule": {"id": "name"},
+                "level": "warning",
+                "message": "Add task names",
+                "location": {"lines": {"begin": 8}},
+            },
         ]
         result = await analyzer.analyze_playbook(str(playbook))
         assert result.by_category["idempotency"] == 1
@@ -422,11 +454,15 @@ class TestKumaSuggestionGeneration:
     @pytest.mark.asyncio
     async def test_suggestions_include_reasoning(self, tmp_path: Path):
         playbook = tmp_path / "reasoning.yml"
-        playbook.write_text("""---\n- name: reason\n  hosts: all\n"""
-        )
+        playbook.write_text("""---\n- name: reason\n  hosts: all\n""")
         analyzer = PlaybookAnalyzer()
         analyzer._run_ansible_lint = lambda path: [
-            {"rule": {"id": "no-changed-when"}, "level": "error", "message": "missing changed_when", "location": {"lines": {"begin": 4}}},
+            {
+                "rule": {"id": "no-changed-when"},
+                "level": "error",
+                "message": "missing changed_when",
+                "location": {"lines": {"begin": 4}},
+            },
         ]
         result = await analyzer.analyze_playbook(str(playbook))
         suggestion = result.suggestions[0]
@@ -457,8 +493,16 @@ class TestKumaAuditTrail:
         data = {"task_id": str(task_id), "executed_playbook": "kuma-deploy.yml"}
         audit_path.write_text(json.dumps(data))
         subprocess.run(["git", "add", str(audit_path)], cwd=temp_git_repo, check=True)
-        subprocess.run(["git", "commit", "-m", "audit: kuma deployment"], cwd=temp_git_repo, check=True)
-        log = subprocess.run(["git", "log", "-1", "--pretty=%B"], cwd=temp_git_repo, check=True, capture_output=True, text=True)
+        subprocess.run(
+            ["git", "commit", "-m", "audit: kuma deployment"], cwd=temp_git_repo, check=True
+        )
+        log = subprocess.run(
+            ["git", "log", "-1", "--pretty=%B"],
+            cwd=temp_git_repo,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
         assert "kuma deployment" in log.stdout
 
     def test_audit_entry_includes_playbook_path(self, temp_git_repo: str):
@@ -497,7 +541,11 @@ class TestKumaAuditTrail:
         e2e_test_db.add(task)
         e2e_test_db.add(suggestion)
         e2e_test_db.commit()
-        stored = e2e_test_db.query(PlaybookSuggestion).filter(PlaybookSuggestion.task_id == task_id).all()
+        stored = (
+            e2e_test_db.query(PlaybookSuggestion)
+            .filter(PlaybookSuggestion.task_id == task_id)
+            .all()
+        )
         assert stored
 
 
@@ -520,26 +568,42 @@ class TestKumaFullWorkflow:
         create_realistic_kuma_playbook(repo / "kuma-config-update.yml", "config")
         mock_ansible_runner.queue_response()
         mock_ansible_runner.queue_response()
-        session = dashboard_client_e2e.post("/api/dashboard/session", json={"user_id": "e2e-user"}).json()
-        chat = dashboard_client_e2e.post("/api/dashboard/chat", json={"session_id": session["session_id"], "message": KUMA_REQUEST_TEXT})
+        session = dashboard_client_e2e.post(
+            "/api/dashboard/session", json={"user_id": "e2e-user"}
+        ).json()
+        chat = dashboard_client_e2e.post(
+            "/api/dashboard/chat",
+            json={"session_id": session["session_id"], "message": KUMA_REQUEST_TEXT},
+        )
         assert chat.status_code == 200
         plan = chat.json()["plan"]
         assert KUMA_REQUEST_TEXT in plan["summary"]
-        dashboard_client_e2e.post(f"/api/dashboard/plan/{plan['plan_id']}/approve", json={"session_id": session["session_id"]})
+        dashboard_client_e2e.post(
+            f"/api/dashboard/plan/{plan['plan_id']}/approve",
+            json={"session_id": session["session_id"]},
+        )
 
         deploy_request = WorkRequest(
             task_id=uuid4(),
             work_type="deploy_service",
-            parameters={"task_intent": "Deploy Kuma Uptime to homelab", "extravars": {"kuma_version": "2.5.0"}},
+            parameters={
+                "task_intent": "Deploy Kuma Uptime to homelab",
+                "extravars": {"kuma_version": "2.5.0"},
+            },
         )
         config_request = WorkRequest(
             task_id=uuid4(),
             work_type="run_playbook",
-            parameters={"playbook_path": "kuma-config-update.yml", "extravars": {"portal_configs": PORTAL_CONFIGS}},
+            parameters={
+                "playbook_path": "kuma-config-update.yml",
+                "extravars": {"portal_configs": PORTAL_CONFIGS},
+            },
         )
 
         for req in (deploy_request, config_request):
-            e2e_test_db.add(Task(task_id=req.task_id, request_text=req.work_type, status="approved"))
+            e2e_test_db.add(
+                Task(task_id=req.task_id, request_text=req.work_type, status="approved")
+            )
         e2e_test_db.commit()
 
         deploy_result = await infra_agent_e2e.execute_work(deploy_request)
@@ -571,15 +635,34 @@ class TestKumaFullWorkflow:
     ):
         repo = Path(mock_playbook_repo)
         create_realistic_kuma_playbook(repo / "kuma-deploy.yml", "deploy")
-        mock_ansible_runner.queue_response(rc=1, events=[{"event": "runner_on_failed", "event_data": {"task": "deploy", "res": {"stderr": "failure"}}}])
-        session = dashboard_client_e2e.post("/api/dashboard/session", json={"user_id": "e2e-user"}).json()
-        _ = dashboard_client_e2e.post("/api/dashboard/chat", json={"session_id": session["session_id"], "message": KUMA_REQUEST_TEXT})
+        mock_ansible_runner.queue_response(
+            rc=1,
+            events=[
+                {
+                    "event": "runner_on_failed",
+                    "event_data": {"task": "deploy", "res": {"stderr": "failure"}},
+                }
+            ],
+        )
+        session = dashboard_client_e2e.post(
+            "/api/dashboard/session", json={"user_id": "e2e-user"}
+        ).json()
+        _ = dashboard_client_e2e.post(
+            "/api/dashboard/chat",
+            json={"session_id": session["session_id"], "message": KUMA_REQUEST_TEXT},
+        )
         deploy_request = WorkRequest(
             task_id=uuid4(),
             work_type="deploy_service",
             parameters={"task_intent": "Deploy Kuma Uptime to homelab"},
         )
-        e2e_test_db.add(Task(task_id=deploy_request.task_id, request_text=deploy_request.work_type, status="approved"))
+        e2e_test_db.add(
+            Task(
+                task_id=deploy_request.task_id,
+                request_text=deploy_request.work_type,
+                status="approved",
+            )
+        )
         e2e_test_db.commit()
 
         result = await infra_agent_e2e.execute_work(deploy_request)
@@ -587,10 +670,16 @@ class TestKumaFullWorkflow:
         assert result.analysis_result
         await orchestrator_service_e2e.handle_work_result(result, uuid4())
 
-        audit_response = dashboard_client_e2e.get(f"/api/dashboard/audit/task/{deploy_request.task_id}")
+        audit_response = dashboard_client_e2e.get(
+            f"/api/dashboard/audit/task/{deploy_request.task_id}"
+        )
         assert audit_response.status_code == 200
         payload = audit_response.json()
         assert payload["task"]["task_id"] == str(deploy_request.task_id)
         assert payload["suggestions"]
-        stored = e2e_test_db.query(PlaybookSuggestion).filter(PlaybookSuggestion.task_id == deploy_request.task_id).all()
+        stored = (
+            e2e_test_db.query(PlaybookSuggestion)
+            .filter(PlaybookSuggestion.task_id == deploy_request.task_id)
+            .all()
+        )
         assert stored

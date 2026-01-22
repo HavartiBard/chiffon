@@ -28,7 +28,9 @@ from src.common.config import Config
 logger = logging.getLogger(__name__)
 
 
-async def declare_queues(channel: aio_pika.Channel) -> Dict[str, aio_pika.Queue | aio_pika.Exchange]:
+async def declare_queues(
+    channel: aio_pika.Channel,
+) -> Dict[str, aio_pika.Queue | aio_pika.Exchange]:
     """Declare all required queues and exchanges for the Chiffon message bus.
 
     This function declares the complete queue topology that agents use for communication.

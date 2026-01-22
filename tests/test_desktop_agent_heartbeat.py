@@ -175,7 +175,9 @@ class TestResourceMetricsContent:
         """Verify metrics collection error doesn't break agent."""
         agent = DesktopAgent("test-agent", "desktop", Config())
         # Mock psutil to raise exception
-        with patch("src.agents.desktop_agent.psutil.getloadavg", side_effect=Exception("Mocked error")):
+        with patch(
+            "src.agents.desktop_agent.psutil.getloadavg", side_effect=Exception("Mocked error")
+        ):
             # Should return safe defaults, not raise
             metrics = agent._get_resource_metrics()
 
@@ -710,12 +712,8 @@ class TestMultiAgentScenarios:
 
         # Query all online agents
         agents = db.query.return_value.filter.return_value.all()
-        total_gpu_vram = sum(
-            a.resource_metrics.get("gpu_vram_available_gb", 0) for a in agents
-        )
-        total_cpu_cores = sum(
-            a.resource_metrics.get("cpu_cores_available", 0) for a in agents
-        )
+        total_gpu_vram = sum(a.resource_metrics.get("gpu_vram_available_gb", 0) for a in agents)
+        total_cpu_cores = sum(a.resource_metrics.get("cpu_cores_available", 0) for a in agents)
 
         assert total_gpu_vram == 16.0
         assert total_cpu_cores == 12

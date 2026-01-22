@@ -227,14 +227,16 @@ class TestAnsibleLintExecution:
         """Test successful ansible-lint execution."""
         mock_run.return_value = MagicMock(
             returncode=2,  # ansible-lint returns 2 when issues found
-            stdout=json.dumps([
-                {
-                    "rule": {"id": "no-changed-when"},
-                    "message": "Commands should have changed_when",
-                    "level": "warning",
-                    "location": {"path": "tasks/main.yml", "lines": {"begin": 10}},
-                }
-            ]),
+            stdout=json.dumps(
+                [
+                    {
+                        "rule": {"id": "no-changed-when"},
+                        "message": "Commands should have changed_when",
+                        "level": "warning",
+                        "location": {"path": "tasks/main.yml", "lines": {"begin": 10}},
+                    }
+                ]
+            ),
             stderr="",
         )
 
@@ -287,6 +289,7 @@ class TestAnsibleLintExecution:
     def test_ansible_lint_timeout(self, mock_run):
         """Test ansible-lint timeout."""
         import subprocess
+
         mock_run.side_effect = subprocess.TimeoutExpired("ansible-lint", 60)
 
         analyzer = PlaybookAnalyzer()
@@ -304,32 +307,36 @@ class TestPlaybookAnalyzerIntegration:
         """Test full analysis workflow from playbook to result."""
         # Create temporary playbook
         playbook_path = tmp_path / "test.yml"
-        playbook_path.write_text("""
+        playbook_path.write_text(
+            """
 ---
 - name: Test playbook
   hosts: all
   tasks:
     - name: Run command
       command: echo hello
-""")
+"""
+        )
 
         # Mock ansible-lint output
         mock_run.return_value = MagicMock(
             returncode=2,
-            stdout=json.dumps([
-                {
-                    "rule": {"id": "no-changed-when"},
-                    "message": "Commands should have changed_when",
-                    "level": "warning",
-                    "location": {"path": str(playbook_path), "lines": {"begin": 6}},
-                },
-                {
-                    "rule": {"id": "command-instead-of-module"},
-                    "message": "Use shell module instead",
-                    "level": "warning",
-                    "location": {"path": str(playbook_path), "lines": {"begin": 6}},
-                },
-            ]),
+            stdout=json.dumps(
+                [
+                    {
+                        "rule": {"id": "no-changed-when"},
+                        "message": "Commands should have changed_when",
+                        "level": "warning",
+                        "location": {"path": str(playbook_path), "lines": {"begin": 6}},
+                    },
+                    {
+                        "rule": {"id": "command-instead-of-module"},
+                        "message": "Use shell module instead",
+                        "level": "warning",
+                        "location": {"path": str(playbook_path), "lines": {"begin": 6}},
+                    },
+                ]
+            ),
             stderr="",
         )
 
@@ -358,6 +365,7 @@ class TestPlaybookAnalyzerIntegration:
 
         # Create temporary playbook
         import tempfile
+
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
             f.write("---\n- hosts: all\n  tasks: []\n")
             playbook_path = f.name
@@ -417,14 +425,16 @@ class TestDatabasePersistence:
         # Mock ansible-lint output
         mock_run.return_value = MagicMock(
             returncode=2,
-            stdout=json.dumps([
-                {
-                    "rule": {"id": "no-changed-when"},
-                    "message": "Commands should have changed_when",
-                    "level": "warning",
-                    "location": {"path": str(playbook_path), "lines": {"begin": 6}},
-                }
-            ]),
+            stdout=json.dumps(
+                [
+                    {
+                        "rule": {"id": "no-changed-when"},
+                        "message": "Commands should have changed_when",
+                        "level": "warning",
+                        "location": {"path": str(playbook_path), "lines": {"begin": 6}},
+                    }
+                ]
+            ),
             stderr="",
         )
 
@@ -434,9 +444,7 @@ class TestDatabasePersistence:
         mock_session.commit = MagicMock()
 
         analyzer = PlaybookAnalyzer(db_session=mock_session)
-        result = await analyzer.analyze_playbook(
-            str(playbook_path), task_id="test-task-id"
-        )
+        result = await analyzer.analyze_playbook(str(playbook_path), task_id="test-task-id")
 
         # Verify session.add was called
         assert mock_session.add.call_count == 1
@@ -482,14 +490,16 @@ class TestInfraAgentAnalyzerIntegration:
         # Mock ansible-lint output
         mock_run.return_value = MagicMock(
             returncode=2,
-            stdout=json.dumps([
-                {
-                    "rule": {"id": "yaml"},
-                    "message": "YAML syntax issue",
-                    "level": "error",
-                    "location": {"path": str(playbook_path), "lines": {"begin": 1}},
-                }
-            ]),
+            stdout=json.dumps(
+                [
+                    {
+                        "rule": {"id": "yaml"},
+                        "message": "YAML syntax issue",
+                        "level": "error",
+                        "location": {"path": str(playbook_path), "lines": {"begin": 1}},
+                    }
+                ]
+            ),
             stderr="",
         )
 
@@ -540,7 +550,9 @@ class TestInfraAgentAnalyzerIntegration:
     @pytest.mark.asyncio
     @patch("src.agents.infra_agent.executor.PlaybookExecutor.execute_playbook")
     @patch("src.agents.infra_agent.analyzer.subprocess.run")
-    async def test_run_playbook_triggers_analyzer_on_failure(self, mock_lint, mock_executor, tmp_path):
+    async def test_run_playbook_triggers_analyzer_on_failure(
+        self, mock_lint, mock_executor, tmp_path
+    ):
         """Test that run_playbook triggers analyzer when execution fails."""
         from src.agents.infra_agent.agent import InfraAgent
         from src.agents.infra_agent.executor import ExecutionSummary
@@ -569,14 +581,16 @@ class TestInfraAgentAnalyzerIntegration:
         # Mock ansible-lint output
         mock_lint.return_value = MagicMock(
             returncode=2,
-            stdout=json.dumps([
-                {
-                    "rule": {"id": "no-changed-when"},
-                    "message": "Test",
-                    "level": "warning",
-                    "location": {"path": str(playbook_path), "lines": {"begin": 1}},
-                }
-            ]),
+            stdout=json.dumps(
+                [
+                    {
+                        "rule": {"id": "no-changed-when"},
+                        "message": "Test",
+                        "level": "warning",
+                        "location": {"path": str(playbook_path), "lines": {"begin": 1}},
+                    }
+                ]
+            ),
             stderr="",
         )
 
@@ -602,7 +616,9 @@ class TestInfraAgentAnalyzerIntegration:
     @patch("src.agents.infra_agent.executor.PlaybookExecutor.execute_playbook")
     @patch("src.agents.infra_agent.analyzer.subprocess.run")
     @patch("src.agents.infra_agent.task_mapper.TaskMapper.map_task_to_playbook")
-    async def test_deploy_service_triggers_analyzer_on_failure(self, mock_mapper, mock_lint, mock_executor, tmp_path):
+    async def test_deploy_service_triggers_analyzer_on_failure(
+        self, mock_mapper, mock_lint, mock_executor, tmp_path
+    ):
         """Test that deploy_service triggers analyzer when execution fails."""
         from src.agents.infra_agent.agent import InfraAgent
         from src.agents.infra_agent.executor import ExecutionSummary
@@ -641,14 +657,16 @@ class TestInfraAgentAnalyzerIntegration:
         # Mock ansible-lint output
         mock_lint.return_value = MagicMock(
             returncode=2,
-            stdout=json.dumps([
-                {
-                    "rule": {"id": "yaml"},
-                    "message": "YAML issue",
-                    "level": "error",
-                    "location": {"path": str(playbook_path), "lines": {"begin": 1}},
-                }
-            ]),
+            stdout=json.dumps(
+                [
+                    {
+                        "rule": {"id": "yaml"},
+                        "message": "YAML issue",
+                        "level": "error",
+                        "location": {"path": str(playbook_path), "lines": {"begin": 1}},
+                    }
+                ]
+            ),
             stderr="",
         )
 

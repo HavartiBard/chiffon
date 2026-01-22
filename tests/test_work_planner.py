@@ -113,7 +113,9 @@ class TestPlanGeneration:
     """Test basic plan generation from decomposed requests."""
 
     @pytest.mark.asyncio
-    async def test_generate_plan_simple_request(self, planner, simple_decomposed_request, available_resources_full):
+    async def test_generate_plan_simple_request(
+        self, planner, simple_decomposed_request, available_resources_full
+    ):
         """Test generating plan from simple single-task request."""
         plan = await planner.generate_plan(simple_decomposed_request, available_resources_full)
 
@@ -124,7 +126,9 @@ class TestPlanGeneration:
         assert plan.complexity_level == "simple"
 
     @pytest.mark.asyncio
-    async def test_generate_plan_complex_request(self, planner, complex_decomposed_request, available_resources_full):
+    async def test_generate_plan_complex_request(
+        self, planner, complex_decomposed_request, available_resources_full
+    ):
         """Test generating plan from complex multi-task request."""
         plan = await planner.generate_plan(complex_decomposed_request, available_resources_full)
 
@@ -135,7 +139,9 @@ class TestPlanGeneration:
         assert plan.tasks[2].name == "Research integration points"
 
     @pytest.mark.asyncio
-    async def test_plan_status_pending_approval(self, planner, simple_decomposed_request, available_resources_full):
+    async def test_plan_status_pending_approval(
+        self, planner, simple_decomposed_request, available_resources_full
+    ):
         """Test that new plans have status='pending_approval'."""
         plan = await planner.generate_plan(simple_decomposed_request, available_resources_full)
 
@@ -143,7 +149,9 @@ class TestPlanGeneration:
         assert plan.approved_at is None
 
     @pytest.mark.asyncio
-    async def test_plan_includes_human_summary(self, planner, simple_decomposed_request, available_resources_full):
+    async def test_plan_includes_human_summary(
+        self, planner, simple_decomposed_request, available_resources_full
+    ):
         """Test that plan includes readable human_readable_summary."""
         plan = await planner.generate_plan(simple_decomposed_request, available_resources_full)
 
@@ -153,7 +161,9 @@ class TestPlanGeneration:
         assert "Total estimated time" in plan.human_readable_summary
 
     @pytest.mark.asyncio
-    async def test_estimated_duration_correct(self, planner, simple_decomposed_request, available_resources_full):
+    async def test_estimated_duration_correct(
+        self, planner, simple_decomposed_request, available_resources_full
+    ):
         """Test that total duration = sum of task durations."""
         plan = await planner.generate_plan(simple_decomposed_request, available_resources_full)
 
@@ -161,7 +171,9 @@ class TestPlanGeneration:
         assert plan.estimated_duration_seconds == 180
 
     @pytest.mark.asyncio
-    async def test_estimated_duration_multi_task(self, planner, complex_decomposed_request, available_resources_full):
+    async def test_estimated_duration_multi_task(
+        self, planner, complex_decomposed_request, available_resources_full
+    ):
         """Test duration calculation for multi-task plan."""
         plan = await planner.generate_plan(complex_decomposed_request, available_resources_full)
 
@@ -318,7 +330,9 @@ class TestComplexityAssessment:
         assert plan.complexity_level == "medium"
 
     @pytest.mark.asyncio
-    async def test_complex_plan_with_research(self, planner, complex_decomposed_request, available_resources_full):
+    async def test_complex_plan_with_research(
+        self, planner, complex_decomposed_request, available_resources_full
+    ):
         """Test that research tasks = 'complex' complexity."""
         plan = await planner.generate_plan(complex_decomposed_request, available_resources_full)
 
@@ -344,7 +358,9 @@ class TestComplexityAssessment:
         assert plan.complexity_level == "complex"
 
     @pytest.mark.asyncio
-    async def test_will_use_external_ai_flag(self, planner, complex_decomposed_request, available_resources_full):
+    async def test_will_use_external_ai_flag(
+        self, planner, complex_decomposed_request, available_resources_full
+    ):
         """Test that complex plans have will_use_external_ai=True."""
         plan = await planner.generate_plan(complex_decomposed_request, available_resources_full)
 
@@ -352,7 +368,9 @@ class TestComplexityAssessment:
         assert plan.will_use_external_ai is True
 
     @pytest.mark.asyncio
-    async def test_simple_plan_no_external_ai(self, planner, simple_decomposed_request, available_resources_full):
+    async def test_simple_plan_no_external_ai(
+        self, planner, simple_decomposed_request, available_resources_full
+    ):
         """Test that simple plans have will_use_external_ai=False."""
         plan = await planner.generate_plan(simple_decomposed_request, available_resources_full)
 
@@ -368,7 +386,9 @@ class TestIntentMapping:
     """Test intent to work type mapping."""
 
     @pytest.mark.asyncio
-    async def test_deploy_kuma_maps_to_infra(self, planner, simple_decomposed_request, available_resources_full):
+    async def test_deploy_kuma_maps_to_infra(
+        self, planner, simple_decomposed_request, available_resources_full
+    ):
         """Test that 'deploy_kuma' intent maps to infra agent with deploy_service work type."""
         plan = await planner.generate_plan(simple_decomposed_request, available_resources_full)
 
@@ -490,7 +510,9 @@ class TestPlanValidation:
     """Test plan validation and structure."""
 
     @pytest.mark.asyncio
-    async def test_plan_has_valid_uuid(self, planner, simple_decomposed_request, available_resources_full):
+    async def test_plan_has_valid_uuid(
+        self, planner, simple_decomposed_request, available_resources_full
+    ):
         """Test that plan_id and request_id are valid UUIDs."""
         plan = await planner.generate_plan(simple_decomposed_request, available_resources_full)
 
@@ -499,7 +521,9 @@ class TestPlanValidation:
         assert "-" in plan.plan_id
 
     @pytest.mark.asyncio
-    async def test_all_tasks_have_resources(self, planner, complex_decomposed_request, available_resources_full):
+    async def test_all_tasks_have_resources(
+        self, planner, complex_decomposed_request, available_resources_full
+    ):
         """Test that every task has resource_requirements with required keys."""
         plan = await planner.generate_plan(complex_decomposed_request, available_resources_full)
 
@@ -510,7 +534,9 @@ class TestPlanValidation:
             assert "cpu_cores" in task.resource_requirements
 
     @pytest.mark.asyncio
-    async def test_task_orders_sequential(self, planner, complex_decomposed_request, available_resources_full):
+    async def test_task_orders_sequential(
+        self, planner, complex_decomposed_request, available_resources_full
+    ):
         """Test that task orders are 1, 2, 3, ... with no gaps."""
         plan = await planner.generate_plan(complex_decomposed_request, available_resources_full)
 
@@ -520,7 +546,9 @@ class TestPlanValidation:
         assert orders == expected
 
     @pytest.mark.asyncio
-    async def test_task_orders_positive(self, planner, complex_decomposed_request, available_resources_full):
+    async def test_task_orders_positive(
+        self, planner, complex_decomposed_request, available_resources_full
+    ):
         """Test that all task orders are positive integers."""
         plan = await planner.generate_plan(complex_decomposed_request, available_resources_full)
 
@@ -600,7 +628,9 @@ class TestErrorHandling:
         assert len(plan.tasks) > 0
 
     @pytest.mark.asyncio
-    async def test_external_ai_calls_tracked(self, planner, complex_decomposed_request, available_resources_full):
+    async def test_external_ai_calls_tracked(
+        self, planner, complex_decomposed_request, available_resources_full
+    ):
         """Test that estimated_external_ai_calls is tracked in tasks."""
         plan = await planner.generate_plan(complex_decomposed_request, available_resources_full)
 
@@ -662,7 +692,9 @@ class TestIntegration:
         assert "Total estimated time" in plan.human_readable_summary
 
     @pytest.mark.asyncio
-    async def test_plan_summary_is_readable(self, planner, complex_decomposed_request, available_resources_full):
+    async def test_plan_summary_is_readable(
+        self, planner, complex_decomposed_request, available_resources_full
+    ):
         """Test that plan summary is human-readable and <1 minute to understand."""
         plan = await planner.generate_plan(complex_decomposed_request, available_resources_full)
 

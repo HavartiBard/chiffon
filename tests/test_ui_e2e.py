@@ -26,7 +26,9 @@ class OrchestratorStub:
                 "tasks": payload.get("tasks", []),
             }
 
-    async def __call__(self, method: str, path: str, json: dict | None = None, params: dict | None = None) -> dict:
+    async def __call__(
+        self, method: str, path: str, json: dict | None = None, params: dict | None = None
+    ) -> dict:
         self.calls.append((method, path, json, params))
         if path == "/api/v1/request":
             self.request_counter += 1
@@ -118,8 +120,12 @@ class TestChatWorkflow:
         assert "session_id" in payload
         assert payload["status"] == "idle"
 
-    def test_send_deployment_request(self, client: TestClient, orchestrator_stub: OrchestratorStub) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()["session_id"]
+    def test_send_deployment_request(
+        self, client: TestClient, orchestrator_stub: OrchestratorStub
+    ) -> None:
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()[
+            "session_id"
+        ]
         response = client.post(
             "/api/dashboard/chat",
             json={"session_id": session_id, "message": "Deploy Kuma to homelab"},
@@ -129,8 +135,12 @@ class TestChatWorkflow:
         assert len(data["messages"]) >= 2
         assert data["plan"]["plan_id"] == "plan-123"
 
-    def test_chat_handles_modification_request(self, client: TestClient, orchestrator_stub: OrchestratorStub) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()["session_id"]
+    def test_chat_handles_modification_request(
+        self, client: TestClient, orchestrator_stub: OrchestratorStub
+    ) -> None:
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()[
+            "session_id"
+        ]
         orchestrator_stub.register_plan(
             "req-124",
             {
@@ -143,7 +153,9 @@ class TestChatWorkflow:
             },
         )
 
-        client.post("/api/dashboard/chat", json={"session_id": session_id, "message": "Deploy Kuma"})
+        client.post(
+            "/api/dashboard/chat", json={"session_id": session_id, "message": "Deploy Kuma"}
+        )
         response = client.post(
             "/api/dashboard/chat",
             json={"session_id": session_id, "message": "Use staging environment"},
@@ -153,8 +165,12 @@ class TestChatWorkflow:
 
 
 class TestPlanReviewWorkflow:
-    def test_get_plan_formatted_for_ui(self, client: TestClient, orchestrator_stub: OrchestratorStub) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()["session_id"]
+    def test_get_plan_formatted_for_ui(
+        self, client: TestClient, orchestrator_stub: OrchestratorStub
+    ) -> None:
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()[
+            "session_id"
+        ]
         chat_response = client.post(
             "/api/dashboard/chat",
             json={"session_id": session_id, "message": "Deploy Kuma"},
@@ -168,21 +184,39 @@ class TestPlanReviewWorkflow:
         assert "estimated_duration" in data
         assert "risk_level" in data
 
-    def test_approve_plan_triggers_execution(self, client: TestClient, orchestrator_stub: OrchestratorStub) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()["session_id"]
-        client.post("/api/dashboard/chat", json={"session_id": session_id, "message": "Deploy Kuma"})
-        response = client.post("/api/dashboard/plan/plan-123/approve", json={"session_id": session_id})
+    def test_approve_plan_triggers_execution(
+        self, client: TestClient, orchestrator_stub: OrchestratorStub
+    ) -> None:
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()[
+            "session_id"
+        ]
+        client.post(
+            "/api/dashboard/chat", json={"session_id": session_id, "message": "Deploy Kuma"}
+        )
+        response = client.post(
+            "/api/dashboard/plan/plan-123/approve", json={"session_id": session_id}
+        )
         assert response.status_code == 200
         assert response.json()["status"] == "approved"
 
-    def test_reject_plan_cancels(self, client: TestClient, orchestrator_stub: OrchestratorStub) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()["session_id"]
-        response = client.post("/api/dashboard/plan/plan-123/reject", json={"session_id": session_id})
+    def test_reject_plan_cancels(
+        self, client: TestClient, orchestrator_stub: OrchestratorStub
+    ) -> None:
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()[
+            "session_id"
+        ]
+        response = client.post(
+            "/api/dashboard/plan/plan-123/reject", json={"session_id": session_id}
+        )
         assert response.status_code == 200
         assert response.json()["status"] == "rejected"
 
-    def test_modify_plan_returns_new_plan(self, client: TestClient, orchestrator_stub: OrchestratorStub) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()["session_id"]
+    def test_modify_plan_returns_new_plan(
+        self, client: TestClient, orchestrator_stub: OrchestratorStub
+    ) -> None:
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()[
+            "session_id"
+        ]
         response = client.post(
             "/api/dashboard/plan/plan-123/modify",
             json={
@@ -196,25 +230,39 @@ class TestPlanReviewWorkflow:
 
 
 class TestExecutionMonitoring:
-    def test_get_execution_status(self, client: TestClient, orchestrator_stub: OrchestratorStub) -> None:
+    def test_get_execution_status(
+        self, client: TestClient, orchestrator_stub: OrchestratorStub
+    ) -> None:
         response = client.get("/api/dashboard/plan/plan-123/poll")
         assert response.status_code == 200
         data = response.json()
         assert "steps" in data
 
-    def test_abort_cancels_execution(self, client: TestClient, orchestrator_stub: OrchestratorStub) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()["session_id"]
-        client.post("/api/dashboard/chat", json={"session_id": session_id, "message": "Deploy Kuma"})
+    def test_abort_cancels_execution(
+        self, client: TestClient, orchestrator_stub: OrchestratorStub
+    ) -> None:
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()[
+            "session_id"
+        ]
+        client.post(
+            "/api/dashboard/chat", json={"session_id": session_id, "message": "Deploy Kuma"}
+        )
         client.post("/api/dashboard/plan/plan-123/approve", json={"session_id": session_id})
-        response = client.post("/api/dashboard/plan/plan-123/abort", json={"session_id": session_id})
+        response = client.post(
+            "/api/dashboard/plan/plan-123/abort", json={"session_id": session_id}
+        )
         assert response.status_code == 200
         assert response.json()["status"] == "aborted"
 
 
 class TestRequirementVerification:
     @pytest.mark.ui_requirement("UI-01")
-    def test_ui_01_chat_interface_accepts_requests(self, client: TestClient, orchestrator_stub: OrchestratorStub) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()["session_id"]
+    def test_ui_01_chat_interface_accepts_requests(
+        self, client: TestClient, orchestrator_stub: OrchestratorStub
+    ) -> None:
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()[
+            "session_id"
+        ]
         response = client.post(
             "/api/dashboard/chat",
             json={
@@ -225,8 +273,12 @@ class TestRequirementVerification:
         assert response.status_code == 200
 
     @pytest.mark.ui_requirement("UI-02")
-    def test_ui_02_plan_presentation(self, client: TestClient, orchestrator_stub: OrchestratorStub) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()["session_id"]
+    def test_ui_02_plan_presentation(
+        self, client: TestClient, orchestrator_stub: OrchestratorStub
+    ) -> None:
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()[
+            "session_id"
+        ]
         chat_response = client.post(
             "/api/dashboard/chat",
             json={"session_id": session_id, "message": "Deploy Kuma"},
@@ -237,9 +289,15 @@ class TestRequirementVerification:
         assert "summary" in response.json()
 
     @pytest.mark.ui_requirement("UI-03")
-    def test_ui_03_approval_workflow(self, client: TestClient, orchestrator_stub: OrchestratorStub) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()["session_id"]
-        approve = client.post("/api/dashboard/plan/plan-123/approve", json={"session_id": session_id})
+    def test_ui_03_approval_workflow(
+        self, client: TestClient, orchestrator_stub: OrchestratorStub
+    ) -> None:
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()[
+            "session_id"
+        ]
+        approve = client.post(
+            "/api/dashboard/plan/plan-123/approve", json={"session_id": session_id}
+        )
         assert approve.status_code == 200
         reject = client.post("/api/dashboard/plan/plan-123/reject", json={"session_id": session_id})
         assert reject.status_code == 200
@@ -254,22 +312,33 @@ class TestRequirementVerification:
         assert modify.status_code == 200
 
     @pytest.mark.ui_requirement("UI-04")
-    def test_ui_04_execution_log_transparency(self, client: TestClient, orchestrator_stub: OrchestratorStub) -> None:
+    def test_ui_04_execution_log_transparency(
+        self, client: TestClient, orchestrator_stub: OrchestratorStub
+    ) -> None:
         response = client.get("/api/dashboard/plan/plan-123/poll")
         assert response.status_code == 200
         assert "steps" in response.json()
 
 
 class TestFullWorkflow:
-    def test_complete_workflow(self, client: TestClient, orchestrator_stub: OrchestratorStub) -> None:
-        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()["session_id"]
+    def test_complete_workflow(
+        self, client: TestClient, orchestrator_stub: OrchestratorStub
+    ) -> None:
+        session_id = client.post("/api/dashboard/session", json={"user_id": "test-user"}).json()[
+            "session_id"
+        ]
         chat_response = client.post(
             "/api/dashboard/chat",
             json={"session_id": session_id, "message": "Deploy Kuma monitoring"},
         )
         plan_id = chat_response.json()["plan"]["plan_id"]
         assert client.get(f"/api/dashboard/plan/{plan_id}").status_code == 200
-        assert client.post(f"/api/dashboard/plan/{plan_id}/approve", json={"session_id": session_id}).status_code == 200
+        assert (
+            client.post(
+                f"/api/dashboard/plan/{plan_id}/approve", json={"session_id": session_id}
+            ).status_code
+            == 200
+        )
         status = client.get(f"/api/dashboard/plan/{plan_id}/poll")
         assert status.status_code == 200
         assert status.json()["overall_status"] in {"executing", "pending_approval", "completed"}

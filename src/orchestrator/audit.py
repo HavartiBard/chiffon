@@ -60,16 +60,9 @@ class AuditService:
             # Use GIN index with contains() operator
             query = query.filter(Task.services_touched.contains([service]))
 
-        self.logger.info(
-            f"Querying failures: days={days}, service={service}, limit={limit}"
-        )
+        self.logger.info(f"Querying failures: days={days}, service={service}, limit={limit}")
 
-        return (
-            query.order_by(desc(Task.created_at))
-            .offset(offset)
-            .limit(limit)
-            .all()
-        )
+        return query.order_by(desc(Task.created_at)).offset(offset).limit(limit).all()
 
     def get_by_service(
         self,
@@ -94,9 +87,7 @@ class AuditService:
             List of Task records touching this service, newest first
         """
         # Use GIN index with contains() operator - NOT any()
-        query = self.db.query(Task).filter(
-            Task.services_touched.contains([service_name])
-        )
+        query = self.db.query(Task).filter(Task.services_touched.contains([service_name]))
 
         if status:
             query = query.filter(Task.status == status)
@@ -109,12 +100,7 @@ class AuditService:
             f"Querying by service: service={service_name}, status={status}, days={days}"
         )
 
-        return (
-            query.order_by(desc(Task.created_at))
-            .offset(offset)
-            .limit(limit)
-            .all()
-        )
+        return query.order_by(desc(Task.created_at)).offset(offset).limit(limit).all()
 
     def audit_query(
         self,
@@ -155,20 +141,13 @@ class AuditService:
 
         if intent:
             # Infer intent from outcome JSON using JSONB path
-            query = query.filter(
-                Task.outcome["action_type"].astext == intent
-            )
+            query = query.filter(Task.outcome["action_type"].astext == intent)
 
         self.logger.info(
             f"Audit query: status={status}, service={service}, intent={intent}, days={days}"
         )
 
-        return (
-            query.order_by(desc(Task.created_at))
-            .offset(offset)
-            .limit(limit)
-            .all()
-        )
+        return query.order_by(desc(Task.created_at)).offset(offset).limit(limit).all()
 
     def get_task_count(
         self,

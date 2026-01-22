@@ -123,7 +123,9 @@ class Config(BaseSettings):
                         self.heartbeat_timeout_seconds = file_config["heartbeat_timeout_seconds"]
 
                     if "gpu_detection_timeout_seconds" in file_config:
-                        self.gpu_detection_timeout_seconds = file_config["gpu_detection_timeout_seconds"]
+                        self.gpu_detection_timeout_seconds = file_config[
+                            "gpu_detection_timeout_seconds"
+                        ]
 
                     if "agent_id" in file_config and file_config["agent_id"]:
                         self.agent_id = file_config["agent_id"]
@@ -147,13 +149,17 @@ class Config(BaseSettings):
             try:
                 self.heartbeat_timeout_seconds = int(os.getenv("CHIFFON_HEARTBEAT_TIMEOUT"))
             except ValueError:
-                logger.warning(f"Invalid CHIFFON_HEARTBEAT_TIMEOUT value: {os.getenv('CHIFFON_HEARTBEAT_TIMEOUT')}")
+                logger.warning(
+                    f"Invalid CHIFFON_HEARTBEAT_TIMEOUT value: {os.getenv('CHIFFON_HEARTBEAT_TIMEOUT')}"
+                )
 
         if os.getenv("CHIFFON_GPU_TIMEOUT"):
             try:
                 self.gpu_detection_timeout_seconds = int(os.getenv("CHIFFON_GPU_TIMEOUT"))
             except ValueError:
-                logger.warning(f"Invalid CHIFFON_GPU_TIMEOUT value: {os.getenv('CHIFFON_GPU_TIMEOUT')}")
+                logger.warning(
+                    f"Invalid CHIFFON_GPU_TIMEOUT value: {os.getenv('CHIFFON_GPU_TIMEOUT')}"
+                )
 
         if os.getenv("CHIFFON_AGENT_ID"):
             self.agent_id = os.getenv("CHIFFON_AGENT_ID")

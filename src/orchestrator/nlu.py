@@ -146,9 +146,7 @@ class RequestDecomposer:
                 f"LLM response may not be valid JSON."
             )
         except Exception as e:
-            self.logger.error(
-                f"Error decomposing request {request_id}: {e}", exc_info=True
-            )
+            self.logger.error(f"Error decomposing request {request_id}: {e}", exc_info=True)
             raise
 
     def _build_decomposition_prompt(self, request: str) -> str:

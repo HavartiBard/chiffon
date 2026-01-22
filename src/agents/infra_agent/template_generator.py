@@ -81,9 +81,7 @@ class TemplateGenerator:
         self.templates_dir = templates_dir or Path(__file__).parent / "templates"
 
         if not self.templates_dir.exists():
-            raise FileNotFoundError(
-                f"Templates directory not found: {self.templates_dir}"
-            )
+            raise FileNotFoundError(f"Templates directory not found: {self.templates_dir}")
 
         self.env = Environment(
             loader=FileSystemLoader(str(self.templates_dir)),
@@ -146,17 +144,11 @@ class TemplateGenerator:
             template = self.env.get_template(template_name)
             return template.render(**context)
         except TemplateNotFound as e:
-            raise TemplateRenderError(
-                f"Template not found: {template_name}"
-            ) from e
+            raise TemplateRenderError(f"Template not found: {template_name}") from e
         except Exception as e:
-            raise TemplateRenderError(
-                f"Failed to render template {template_name}: {e}"
-            ) from e
+            raise TemplateRenderError(f"Failed to render template {template_name}: {e}") from e
 
-    def _build_role_structure(
-        self, service_name: str, context: dict[str, Any]
-    ) -> dict[str, str]:
+    def _build_role_structure(self, service_name: str, context: dict[str, Any]) -> dict[str, str]:
         """Build Galaxy-compliant role directory structure.
 
         Args:
@@ -169,18 +161,14 @@ class TemplateGenerator:
         role_base = f"roles/{service_name}"
 
         structure = {
-            f"{role_base}/tasks/main.yml": self._render_template(
-                "role_tasks_main.yml.j2", context
-            ),
+            f"{role_base}/tasks/main.yml": self._render_template("role_tasks_main.yml.j2", context),
             f"{role_base}/handlers/main.yml": self._render_template(
                 "role_handlers_main.yml.j2", context
             ),
             f"{role_base}/defaults/main.yml": self._render_template(
                 "role_defaults_main.yml.j2", context
             ),
-            f"{role_base}/meta/main.yml": self._render_template(
-                "role_meta_main.yml.j2", context
-            ),
+            f"{role_base}/meta/main.yml": self._render_template("role_meta_main.yml.j2", context),
             # Placeholder directories (empty but documented)
             f"{role_base}/templates/.gitkeep": "# Placeholder for service config templates\n",
             f"{role_base}/files/.gitkeep": "# Placeholder for static files\n",

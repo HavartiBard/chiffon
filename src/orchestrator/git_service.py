@@ -86,9 +86,7 @@ class GitService:
             # Check if .git directory exists
             git_dir = self.repo_path / ".git"
             if not git_dir.exists():
-                logger.warning(
-                    f"Not in git repository (no .git directory at {self.repo_path})"
-                )
+                logger.warning(f"Not in git repository (no .git directory at {self.repo_path})")
                 return False
 
             # Build audit entry filename and path
@@ -96,9 +94,7 @@ class GitService:
 
             # Idempotency check: if file already exists, skip commit
             if audit_file_path.exists():
-                logger.info(
-                    f"Audit entry already exists for task {task.task_id}, skipping commit"
-                )
+                logger.info(f"Audit entry already exists for task {task.task_id}, skipping commit")
                 return False
 
             # Build audit entry JSON
@@ -141,9 +137,7 @@ class GitService:
                     timeout=10,
                 )
                 if result.returncode != 0:
-                    raise GitServiceError(
-                        f"git add failed: {result.stderr or result.stdout}"
-                    )
+                    raise GitServiceError(f"git add failed: {result.stderr or result.stdout}")
                 logger.debug(f"Staged audit entry with git add: {audit_file_path}")
             except subprocess.TimeoutExpired:
                 raise GitServiceError("git add command timed out")
@@ -161,12 +155,8 @@ class GitService:
                     timeout=10,
                 )
                 if result.returncode != 0:
-                    raise GitServiceError(
-                        f"git commit failed: {result.stderr or result.stdout}"
-                    )
-                logger.info(
-                    f"Committed audit entry for task {task.task_id}: {commit_message}"
-                )
+                    raise GitServiceError(f"git commit failed: {result.stderr or result.stdout}")
+                logger.info(f"Committed audit entry for task {task.task_id}: {commit_message}")
             except subprocess.TimeoutExpired:
                 raise GitServiceError("git commit command timed out")
             except Exception as e:

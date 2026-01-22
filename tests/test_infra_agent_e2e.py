@@ -40,7 +40,8 @@ def temp_playbook_repo():
 
         # Create 3 valid playbooks for discovery tests
         kuma_playbook = tmpdir_path / "kuma-deploy.yml"
-        kuma_playbook.write_text("""---
+        kuma_playbook.write_text(
+            """---
 # chiffon:service=kuma
 # chiffon:description=Deploy Kuma service mesh
 - name: Deploy Kuma Service Mesh
@@ -55,10 +56,12 @@ def temp_playbook_repo():
     - name: Install Kuma
       debug:
         msg: "Installing Kuma {{ kuma_version }}"
-""")
+"""
+        )
 
         monitoring_playbook = tmpdir_path / "monitoring-deploy.yml"
-        monitoring_playbook.write_text("""---
+        monitoring_playbook.write_text(
+            """---
 # chiffon:service=monitoring
 # chiffon:description=Deploy monitoring stack
 - name: Deploy Monitoring Stack
@@ -76,10 +79,12 @@ def temp_playbook_repo():
     - name: Install Grafana
       debug:
         msg: "Installing Grafana"
-""")
+"""
+        )
 
         postgres_playbook = tmpdir_path / "postgres-setup.yaml"
-        postgres_playbook.write_text("""---
+        postgres_playbook.write_text(
+            """---
 # chiffon:service=postgres
 # chiffon:description=Setup PostgreSQL database
 - name: Setup PostgreSQL Database
@@ -92,7 +97,8 @@ def temp_playbook_repo():
     - name: Install PostgreSQL
       debug:
         msg: "Installing PostgreSQL"
-""")
+"""
+        )
 
         yield tmpdir_path
 
@@ -160,7 +166,8 @@ class TestE2EPlaybookDiscovery:
 
         # Add a new playbook
         new_playbook = temp_playbook_repo / "nginx-deploy.yml"
-        new_playbook.write_text("""---
+        new_playbook.write_text(
+            """---
 # chiffon:service=nginx
 # chiffon:description=Deploy Nginx web server
 - name: Deploy Nginx
@@ -169,7 +176,8 @@ class TestE2EPlaybookDiscovery:
     - name: Install Nginx
       debug:
         msg: "Installing Nginx"
-""")
+"""
+        )
 
         # Force refresh should discover new playbook
         playbooks2 = await infra_agent.discover_playbooks(force_refresh=True)
@@ -282,7 +290,9 @@ class TestE2ETaskMapping:
         assert result2.confidence == result1.confidence
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Semantic search may find low-confidence matches for any query - behavior varies")
+    @pytest.mark.skip(
+        reason="Semantic search may find low-confidence matches for any query - behavior varies"
+    )
     async def test_no_match_workflow(self, infra_agent, mock_config):
         """Test task mapper handles unrelated intents gracefully."""
         # NOTE: Skipped because semantic search with embeddings may find
@@ -295,7 +305,8 @@ class TestE2ETaskMapping:
         """Test multiple alternatives returned when multiple playbooks match."""
         # Add another monitoring-related playbook
         metrics_playbook = temp_playbook_repo / "metrics-stack.yml"
-        metrics_playbook.write_text("""---
+        metrics_playbook.write_text(
+            """---
 # chiffon:service=metrics
 # chiffon:description=Deploy metrics collection stack
 - name: Deploy Metrics Stack
@@ -307,7 +318,8 @@ class TestE2ETaskMapping:
     - name: Install metrics collector
       debug:
         msg: "Installing metrics"
-""")
+"""
+        )
 
         # Discover playbooks
         await infra_agent.discover_playbooks(force_refresh=True)

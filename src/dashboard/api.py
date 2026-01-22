@@ -57,7 +57,9 @@ async def _orchestrator_request(
     last_error: Optional[Exception] = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            async with httpx.AsyncClient(base_url=ORCHESTRATOR_URL, timeout=TIMEOUT_SECONDS) as client:
+            async with httpx.AsyncClient(
+                base_url=ORCHESTRATOR_URL, timeout=TIMEOUT_SECONDS
+            ) as client:
                 response = await client.request(method, path, json=json, params=params)
             response.raise_for_status()
             return response.json()
@@ -184,20 +186,14 @@ def _create_chat_message(
 async def _prepare_plan_for_session(
     session: ChatSession, message: str, modification: bool = False
 ) -> DashboardPlanView:
-    prompt = (
-        f"[Modify plan {session.current_plan_id}] {message}"
-        if modification
-        else message
-    )
+    prompt = f"[Modify plan {session.current_plan_id}] {message}" if modification else message
     request_payload = {
         "request": prompt,
         "user_id": session.user_id,
     }
 
     request_result = await _orchestrator_request("POST", "/api/v1/request", json=request_payload)
-    plan_data = await _orchestrator_request(
-        "GET", f"/api/v1/plan/{request_result['request_id']}"
-    )
+    plan_data = await _orchestrator_request("GET", f"/api/v1/plan/{request_result['request_id']}")
 
     plan_view = _format_plan_for_dashboard(plan_data)
     session.current_request_id = request_result.get("request_id")
@@ -239,7 +235,9 @@ async def chat(payload: ChatRequest) -> Dict[str, Any]:
     session_store.update_session_status(session.session_id, "awaiting_plan")
 
     is_modification = bool(session.current_plan_id)
-    plan_view = await _prepare_plan_for_session(session, payload.message, modification=is_modification)
+    plan_view = await _prepare_plan_for_session(
+        session, payload.message, modification=is_modification
+    )
 
     assistant_message = _create_chat_message(
         session.session_id,
@@ -271,12 +269,16 @@ async def approve_plan(plan_id: str, payload: PlanActionRequest) -> Dict[str, An
         raise HTTPException(status_code=404, detail="Session not found")
 
     approval_payload = {"approved": True, "user_id": session.user_id}
-    result = await _orchestrator_request("POST", f"/api/v1/plan/{plan_id}/approve", json=approval_payload)
+    result = await _orchestrator_request(
+        "POST", f"/api/v1/plan/{plan_id}/approve", json=approval_payload
+    )
     session_store.update_session_status(session.session_id, "executing")
     session.current_plan_id = plan_id
 
     dispatch_result = result.get("dispatch_result", {})
-    dispatched_tasks = dispatch_result.get("dispatched_tasks", []) if isinstance(dispatch_result, dict) else []
+    dispatched_tasks = (
+        dispatch_result.get("dispatched_tasks", []) if isinstance(dispatch_result, dict) else []
+    )
     session.active_task_ids = [task["task_id"] for task in dispatched_tasks if task.get("task_id")]
 
     return {
@@ -292,7 +294,9 @@ async def reject_plan(plan_id: str, payload: PlanActionRequest) -> Dict[str, Any
         raise HTTPException(status_code=404, detail="Session not found")
 
     rejection_payload = {"approved": False, "user_id": session.user_id}
-    result = await _orchestrator_request("POST", f"/api/v1/plan/{plan_id}/approve", json=rejection_payload)
+    result = await _orchestrator_request(
+        "POST", f"/api/v1/plan/{plan_id}/approve", json=rejection_payload
+    )
     session_store.update_session_status(session.session_id, "idle")
     session.current_plan_id = None
 
@@ -350,8 +354,7 @@ async def plan_status(plan_id: str) -> Dict[str, Any]:
                 status=task.get("status", "pending"),
                 output=task.get("output"),
                 error=task.get("error"),
-            )
-            .model_dump()
+            ).model_dump()
         )
 
     return {

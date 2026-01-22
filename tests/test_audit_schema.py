@@ -79,10 +79,11 @@ class TestServicesTouchedColumn:
         assert "services_touched" in columns
 
     def test_services_touched_column_type(self):
-        """Verify services_touched column is ARRAY type."""
-        from sqlalchemy.dialects.postgresql import ARRAY
+        """Verify services_touched column is JSON type (for SQLite/PostgreSQL compatibility)."""
+        from sqlalchemy import JSON
+
         column = Task.__table__.columns["services_touched"]
-        assert isinstance(column.type, ARRAY)
+        assert isinstance(column.type, JSON)
 
     def test_services_touched_is_nullable(self):
         """Verify services_touched column allows null values."""
@@ -295,7 +296,15 @@ class TestPauseQueueCreation:
     def test_pause_queue_entry_columns(self):
         """Verify PauseQueueEntry has required columns."""
         columns = [c.name for c in PauseQueueEntry.__table__.columns]
-        required_columns = ["id", "task_id", "work_plan_json", "reason", "paused_at", "resume_after", "priority"]
+        required_columns = [
+            "id",
+            "task_id",
+            "work_plan_json",
+            "reason",
+            "paused_at",
+            "resume_after",
+            "priority",
+        ]
         for col in required_columns:
             assert col in columns, f"Missing column: {col}"
 
@@ -503,10 +512,11 @@ class TestOutcomeColumn:
         assert "outcome" in columns
 
     def test_outcome_column_type(self):
-        """Verify outcome column is JSONB type."""
-        from sqlalchemy.dialects.postgresql import JSONB
+        """Verify outcome column is JSON type (for SQLite/PostgreSQL compatibility)."""
+        from sqlalchemy import JSON
+
         column = Task.__table__.columns["outcome"]
-        assert isinstance(column.type, JSONB)
+        assert isinstance(column.type, JSON)
 
     def test_outcome_is_nullable(self):
         """Verify outcome column allows null values."""
@@ -551,10 +561,11 @@ class TestSuggestionsColumn:
         assert "suggestions" in columns
 
     def test_suggestions_column_type(self):
-        """Verify suggestions column is JSONB type."""
-        from sqlalchemy.dialects.postgresql import JSONB
+        """Verify suggestions column is JSON type (for SQLite/PostgreSQL compatibility)."""
+        from sqlalchemy import JSON
+
         column = Task.__table__.columns["suggestions"]
-        assert isinstance(column.type, JSONB)
+        assert isinstance(column.type, JSON)
 
     def test_suggestions_is_nullable(self):
         """Verify suggestions column allows null values."""

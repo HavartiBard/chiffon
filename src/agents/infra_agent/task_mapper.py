@@ -30,6 +30,7 @@ class PlaybookMetadata(BaseModel):
         required_vars: List of required variables
         tags: List of playbook tags
     """
+
     path: str = Field(..., description="Full path to playbook file")
     filename: str = Field(..., description="Playbook filename")
     service: Optional[str] = Field(default=None, description="Service name")
@@ -48,21 +49,16 @@ class MappingResult(BaseModel):
         alternatives: Other matches with scores (max 3)
         suggestion: Suggestion if no match found
     """
+
     playbook_path: Optional[str] = Field(default=None, description="Matched playbook path")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Match confidence")
     method: str = Field(
-        ...,
-        pattern="^(exact|cached|semantic|none)$",
-        description="Match method used"
+        ..., pattern="^(exact|cached|semantic|none)$", description="Match method used"
     )
     alternatives: list[dict] = Field(
-        default_factory=list,
-        description="Alternative matches with playbook_path and score"
+        default_factory=list, description="Alternative matches with playbook_path and score"
     )
-    suggestion: Optional[str] = Field(
-        default=None,
-        description="Suggestion if no match found"
-    )
+    suggestion: Optional[str] = Field(default=None, description="Suggestion if no match found")
 
 
 class TaskMapper:
@@ -78,11 +74,7 @@ class TaskMapper:
 
     CONFIDENCE_THRESHOLD = 0.85
 
-    def __init__(
-        self,
-        cache_manager: CacheManager,
-        playbook_catalog: list[PlaybookMetadata]
-    ):
+    def __init__(self, cache_manager: CacheManager, playbook_catalog: list[PlaybookMetadata]):
         """Initialize TaskMapper with cache and playbook catalog.
 
         Args:
@@ -98,11 +90,7 @@ class TaskMapper:
         self._catalog_embeddings: Optional[np.ndarray] = None
         self._catalog_index_map: Optional[list[int]] = None  # Maps FAISS index -> catalog index
 
-    async def map_task_to_playbook(
-        self,
-        task_intent: str,
-        top_k: int = 3
-    ) -> MappingResult:
+    async def map_task_to_playbook(self, task_intent: str, top_k: int = 3) -> MappingResult:
         """Map task intent to playbook using hybrid strategy.
 
         Args:
@@ -117,10 +105,7 @@ class TaskMapper:
         if exact_path:
             logger.info(f"Exact match found for intent: {task_intent[:50]}...")
             return MappingResult(
-                playbook_path=exact_path,
-                confidence=1.0,
-                method="exact",
-                alternatives=[]
+                playbook_path=exact_path, confidence=1.0, method="exact", alternatives=[]
             )
 
         # Step 2: Try cached mapping
@@ -166,16 +151,12 @@ class TaskMapper:
                 playbook_path=cached.playbook_path,
                 confidence=cached.confidence,
                 method="cached",
-                alternatives=[]
+                alternatives=[],
             )
 
         return None
 
-    async def _semantic_match(
-        self,
-        task_intent: str,
-        top_k: int
-    ) -> MappingResult:
+    async def _semantic_match(self, task_intent: str, top_k: int) -> MappingResult:
         """Perform semantic similarity search using FAISS.
 
         Args:
@@ -211,7 +192,7 @@ class TaskMapper:
             # Search FAISS index
             scores, indices = self.index.search(
                 np.array([query_embedding], dtype=np.float32),
-                min(top_k, len(self.playbook_catalog))
+                min(top_k, len(self.playbook_catalog)),
             )
 
             # Convert results to alternatives list
@@ -220,11 +201,13 @@ class TaskMapper:
                 if idx < len(self._catalog_index_map):
                     catalog_idx = self._catalog_index_map[idx]
                     playbook = self.playbook_catalog[catalog_idx]
-                    alternatives.append({
-                        "playbook_path": playbook.path,
-                        "score": float(score),
-                        "service": playbook.service
-                    })
+                    alternatives.append(
+                        {
+                            "playbook_path": playbook.path,
+                            "score": float(score),
+                            "service": playbook.service,
+                        }
+                    )
 
             # Check if best match meets confidence threshold
             if alternatives and alternatives[0]["score"] >= self.CONFIDENCE_THRESHOLD:
@@ -236,7 +219,7 @@ class TaskMapper:
                     playbook_path=best_match["playbook_path"],
                     confidence=best_match["score"],
                     method="semantic",
-                    embedding=query_embedding.tolist()
+                    embedding=query_embedding.tolist(),
                 )
 
                 logger.info(
@@ -248,7 +231,7 @@ class TaskMapper:
                     playbook_path=best_match["playbook_path"],
                     confidence=best_match["score"],
                     method="semantic",
-                    alternatives=alternatives[1:3]  # Return next 2 alternatives
+                    alternatives=alternatives[1:3],  # Return next 2 alternatives
                 )
 
             # No match above threshold
@@ -268,7 +251,7 @@ class TaskMapper:
             from sentence_transformers import SentenceTransformer
 
             logger.info("Loading sentence-transformers model: all-MiniLM-L6-v2")
-            self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
+            self.embedder = SentenceTransformer("all-MiniLM-L6-v2")
             logger.info("Embedding model loaded successfully")
 
         except ImportError:
@@ -286,10 +269,7 @@ class TaskMapper:
         try:
             import faiss
         except ImportError:
-            logger.error(
-                "faiss not installed. "
-                "Install with: pip install faiss-cpu"
-            )
+            logger.error("faiss not installed. " "Install with: pip install faiss-cpu")
             raise
 
         # Generate descriptions for each playbook
@@ -327,9 +307,7 @@ class TaskMapper:
         logger.info(f"FAISS index built with {self.index.ntotal} entries")
 
     def _no_match_result(
-        self,
-        task_intent: str,
-        alternatives: Optional[list[dict]] = None
+        self, task_intent: str, alternatives: Optional[list[dict]] = None
     ) -> MappingResult:
         """Generate no-match result with helpful suggestion.
 
@@ -347,7 +325,7 @@ class TaskMapper:
             confidence=0.0,
             method="none",
             alternatives=alternatives or [],
-            suggestion=suggestion
+            suggestion=suggestion,
         )
 
     def _generate_no_match_suggestion(self, task_intent: str) -> str:

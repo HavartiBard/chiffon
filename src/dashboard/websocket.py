@@ -43,7 +43,9 @@ class WebSocketManager:
 
     async def handle_connect(self, sid: str, environ: Dict[str, Any]) -> None:
         self.logger.info("Socket connected: %s", sid)
-        self.sid_metadata.setdefault(sid, {"subscriptions": set(), "connected_at": datetime.utcnow()})
+        self.sid_metadata.setdefault(
+            sid, {"subscriptions": set(), "connected_at": datetime.utcnow()}
+        )
 
     async def handle_disconnect(self, sid: str) -> None:
         self.logger.info("Socket disconnect: %s", sid)
@@ -68,7 +70,9 @@ class WebSocketManager:
 
         self.plan_subscriptions.setdefault(plan_id, {})[subscription_id] = metadata
         self.subscription_to_plan[subscription_id] = plan_id
-        self.sid_metadata.setdefault(sid, {"subscriptions": set()})["subscriptions"].add(subscription_id)
+        self.sid_metadata.setdefault(sid, {"subscriptions": set()})["subscriptions"].add(
+            subscription_id
+        )
 
         await self.server.emit(
             "subscription_ack",

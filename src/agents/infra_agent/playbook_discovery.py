@@ -88,9 +88,7 @@ class PlaybookDiscovery:
         age = datetime.utcnow() - self._cache_time
         return age < self.cache_ttl
 
-    async def discover_playbooks(
-        self, force_refresh: bool = False
-    ) -> list[PlaybookMetadata]:
+    async def discover_playbooks(self, force_refresh: bool = False) -> list[PlaybookMetadata]:
         """Discover playbooks from repository.
 
         Scans recursively for *.yml and *.yaml files, extracts metadata,
@@ -105,9 +103,7 @@ class PlaybookDiscovery:
         """
         # Check cache validity
         if not force_refresh and self.is_cache_valid():
-            logger.info(
-                f"Cache valid, returning {len(self._cache)} cached playbooks"
-            )
+            logger.info(f"Cache valid, returning {len(self._cache)} cached playbooks")
             return list(self._cache.values())
 
         # Scan repository
@@ -118,9 +114,7 @@ class PlaybookDiscovery:
             return []
 
         catalog: list[PlaybookMetadata] = []
-        playbook_files = list(self.repo_path.rglob("*.yml")) + list(
-            self.repo_path.rglob("*.yaml")
-        )
+        playbook_files = list(self.repo_path.rglob("*.yml")) + list(self.repo_path.rglob("*.yaml"))
 
         logger.info(f"Found {len(playbook_files)} YAML files to scan")
 
@@ -133,17 +127,13 @@ class PlaybookDiscovery:
                         f"Extracted metadata: {playbook_path.name} -> service={metadata.service}"
                     )
             except Exception as e:
-                logger.warning(
-                    f"Skipping invalid playbook {playbook_path}: {e}", exc_info=False
-                )
+                logger.warning(f"Skipping invalid playbook {playbook_path}: {e}", exc_info=False)
 
         # Update cache
         self._cache = {pb.path: pb for pb in catalog}
         self._cache_time = datetime.utcnow()
 
-        logger.info(
-            f"Discovery complete: {len(catalog)} playbooks indexed, cache updated"
-        )
+        logger.info(f"Discovery complete: {len(catalog)} playbooks indexed, cache updated")
         return catalog
 
     def get_cached_catalog(self) -> list[PlaybookMetadata]:
@@ -156,9 +146,7 @@ class PlaybookDiscovery:
             return list(self._cache.values())
         return []
 
-    async def _extract_metadata(
-        self, playbook_path: Path
-    ) -> Optional[PlaybookMetadata]:
+    async def _extract_metadata(self, playbook_path: Path) -> Optional[PlaybookMetadata]:
         """Extract metadata from a playbook file.
 
         Metadata extraction strategy:

@@ -115,9 +115,7 @@ async def test_complex_plan_triggers_claude(fallback_service, complex_plan):
 async def test_low_quota_triggers_claude(fallback_service, simple_plan):
     """Quota <20% should trigger Claude regardless of complexity."""
     # Mock the quota to return 15% remaining
-    with patch.object(
-        fallback_service, "_get_remaining_quota", return_value=0.15
-    ):
+    with patch.object(fallback_service, "_get_remaining_quota", return_value=0.15):
         decision, use_claude = await fallback_service.should_use_external_ai(simple_plan)
 
         assert decision.decision == "use_claude"
@@ -129,9 +127,7 @@ async def test_low_quota_triggers_claude(fallback_service, simple_plan):
 @pytest.mark.asyncio
 async def test_high_quota_simple_plan(fallback_service, simple_plan):
     """Quota >20% + simple complexity should use Ollama."""
-    with patch.object(
-        fallback_service, "_get_remaining_quota", return_value=0.80
-    ):
+    with patch.object(fallback_service, "_get_remaining_quota", return_value=0.80):
         decision, use_claude = await fallback_service.should_use_external_ai(simple_plan)
 
         assert decision.decision == "use_ollama"
@@ -142,9 +138,7 @@ async def test_high_quota_simple_plan(fallback_service, simple_plan):
 @pytest.mark.asyncio
 async def test_quota_exactly_20_percent(fallback_service, simple_plan):
     """Edge case: quota=20% exactly should trigger Claude."""
-    with patch.object(
-        fallback_service, "_get_remaining_quota", return_value=0.20
-    ):
+    with patch.object(fallback_service, "_get_remaining_quota", return_value=0.20):
         decision, use_claude = await fallback_service.should_use_external_ai(simple_plan)
 
         # At exactly 20%, it should NOT trigger (<20% required)
@@ -154,9 +148,7 @@ async def test_quota_exactly_20_percent(fallback_service, simple_plan):
 @pytest.mark.asyncio
 async def test_quota_19_percent(fallback_service, simple_plan):
     """Quota=19% should trigger Claude."""
-    with patch.object(
-        fallback_service, "_get_remaining_quota", return_value=0.19
-    ):
+    with patch.object(fallback_service, "_get_remaining_quota", return_value=0.19):
         decision, use_claude = await fallback_service.should_use_external_ai(simple_plan)
 
         assert decision.decision == "use_claude"
@@ -207,9 +199,7 @@ async def test_quota_percentage_calculated(fallback_service):
 @pytest.mark.asyncio
 async def test_quota_zero_remaining(fallback_service, simple_plan):
     """Zero quota remaining should use Claude."""
-    with patch.object(
-        fallback_service, "_get_remaining_quota", return_value=0.0
-    ):
+    with patch.object(fallback_service, "_get_remaining_quota", return_value=0.0):
         decision, use_claude = await fallback_service.should_use_external_ai(simple_plan)
         assert decision.decision == "use_claude"
         assert decision.reason == "quota_critical"
@@ -218,9 +208,7 @@ async def test_quota_zero_remaining(fallback_service, simple_plan):
 @pytest.mark.asyncio
 async def test_quota_negative_handled(fallback_service, simple_plan):
     """Negative quota (overage) should be clamped to 0% and use Claude."""
-    with patch.object(
-        fallback_service, "_get_remaining_quota", return_value=0.0
-    ):
+    with patch.object(fallback_service, "_get_remaining_quota", return_value=0.0):
         decision, use_claude = await fallback_service.should_use_external_ai(simple_plan)
         assert decision.quota_remaining_percent == 0.0
         assert decision.decision == "use_claude"
@@ -229,9 +217,7 @@ async def test_quota_negative_handled(fallback_service, simple_plan):
 @pytest.mark.asyncio
 async def test_quota_check_logged(fallback_service, simple_plan):
     """Quota check should be recorded in FallbackDecision."""
-    with patch.object(
-        fallback_service, "_get_remaining_quota", return_value=0.65
-    ):
+    with patch.object(fallback_service, "_get_remaining_quota", return_value=0.65):
         decision, _ = await fallback_service.should_use_external_ai(simple_plan)
         assert decision.quota_remaining_percent == 0.65
 
@@ -254,9 +240,7 @@ async def test_claude_success(fallback_service):
         "usage": {"total_tokens": 100},
     }
 
-    with patch.object(
-        fallback_service.llm, "call_llm", return_value=mock_response
-    ):
+    with patch.object(fallback_service.llm, "call_llm", return_value=mock_response):
         response = await fallback_service.call_external_ai_with_fallback(
             "test prompt", task_context
         )
@@ -273,9 +257,7 @@ async def test_claude_timeout_falls_back(fallback_service):
         "should_use_claude": True,
     }
 
-    mock_ollama_response = {
-        "choices": [{"message": {"content": "Ollama fallback response"}}]
-    }
+    mock_ollama_response = {"choices": [{"message": {"content": "Ollama fallback response"}}]}
 
     # Mock Claude to timeout, Ollama to succeed
     call_count = 0
@@ -307,9 +289,7 @@ async def test_claude_rate_limit_falls_back(fallback_service):
         "should_use_claude": True,
     }
 
-    mock_ollama_response = {
-        "choices": [{"message": {"content": "Ollama fallback"}}]
-    }
+    mock_ollama_response = {"choices": [{"message": {"content": "Ollama fallback"}}]}
 
     def mock_call_llm(model, messages, **kwargs):
         if model == "claude-opus-4.5":
@@ -341,9 +321,7 @@ async def test_claude_invalid_response_fails(fallback_service):
 
     with patch.object(fallback_service.llm, "call_llm", side_effect=mock_call_llm):
         with pytest.raises(Exception):
-            await fallback_service.call_external_ai_with_fallback(
-                "test prompt", task_context
-            )
+            await fallback_service.call_external_ai_with_fallback("test prompt", task_context)
 
 
 @pytest.mark.asyncio
@@ -361,9 +339,7 @@ async def test_claude_usage_logged(fallback_service):
         "usage": {"total_tokens": 150},
     }
 
-    with patch.object(
-        fallback_service.llm, "call_llm", return_value=mock_response
-    ):
+    with patch.object(fallback_service.llm, "call_llm", return_value=mock_response):
         with patch.object(fallback_service, "_log_llm_usage") as mock_log:
             response = await fallback_service.call_external_ai_with_fallback(
                 "test prompt", task_context
@@ -385,13 +361,9 @@ async def test_ollama_success(fallback_service):
         "should_use_claude": False,
     }
 
-    mock_response = {
-        "choices": [{"message": {"content": "Ollama response"}}]
-    }
+    mock_response = {"choices": [{"message": {"content": "Ollama response"}}]}
 
-    with patch.object(
-        fallback_service.llm, "call_llm", return_value=mock_response
-    ):
+    with patch.object(fallback_service.llm, "call_llm", return_value=mock_response):
         response = await fallback_service.call_external_ai_with_fallback(
             "test prompt", task_context
         )
@@ -413,9 +385,7 @@ async def test_ollama_failure_raises(fallback_service):
 
     with patch.object(fallback_service.llm, "call_llm", side_effect=mock_call_llm):
         with pytest.raises(Exception) as exc_info:
-            await fallback_service.call_external_ai_with_fallback(
-                "test prompt", task_context
-            )
+            await fallback_service.call_external_ai_with_fallback("test prompt", task_context)
         assert "Both Claude and Ollama failed" in str(exc_info.value)
 
 
@@ -429,13 +399,9 @@ async def test_ollama_timeout_raises(fallback_service):
         "should_use_claude": False,
     }
 
-    with patch.object(
-        fallback_service.llm, "call_llm", side_effect=TimeoutError("Ollama timeout")
-    ):
+    with patch.object(fallback_service.llm, "call_llm", side_effect=TimeoutError("Ollama timeout")):
         with pytest.raises(Exception):
-            await fallback_service.call_external_ai_with_fallback(
-                "test prompt", task_context
-            )
+            await fallback_service.call_external_ai_with_fallback("test prompt", task_context)
 
 
 @pytest.mark.asyncio
@@ -452,9 +418,7 @@ async def test_ollama_usage_logged(fallback_service):
         "choices": [{"message": {"content": "Ollama response"}}],
     }
 
-    with patch.object(
-        fallback_service.llm, "call_llm", return_value=mock_response
-    ):
+    with patch.object(fallback_service.llm, "call_llm", return_value=mock_response):
         response = await fallback_service.call_external_ai_with_fallback(
             "test prompt", task_context
         )
@@ -479,9 +443,7 @@ async def test_both_claude_and_ollama_fail(fallback_service):
 
     with patch.object(fallback_service.llm, "call_llm", side_effect=mock_call_llm):
         with pytest.raises(Exception) as exc_info:
-            await fallback_service.call_external_ai_with_fallback(
-                "test prompt", task_context
-            )
+            await fallback_service.call_external_ai_with_fallback("test prompt", task_context)
         error_msg = str(exc_info.value)
         assert "Both Claude and Ollama failed" in error_msg
         assert "test-plan-fail" in error_msg
@@ -497,13 +459,9 @@ async def test_error_message_includes_context(fallback_service):
         "should_use_claude": True,
     }
 
-    with patch.object(
-        fallback_service.llm, "call_llm", side_effect=Exception("LLM error")
-    ):
+    with patch.object(fallback_service.llm, "call_llm", side_effect=Exception("LLM error")):
         with pytest.raises(Exception) as exc_info:
-            await fallback_service.call_external_ai_with_fallback(
-                "test prompt", task_context
-            )
+            await fallback_service.call_external_ai_with_fallback("test prompt", task_context)
         error_msg = str(exc_info.value)
         assert "ctx-test-plan" in error_msg
 
@@ -518,13 +476,9 @@ async def test_final_error_logged(fallback_service):
         "should_use_claude": True,
     }
 
-    with patch.object(
-        fallback_service.llm, "call_llm", side_effect=Exception("All failed")
-    ):
+    with patch.object(fallback_service.llm, "call_llm", side_effect=Exception("All failed")):
         with pytest.raises(Exception):
-            await fallback_service.call_external_ai_with_fallback(
-                "test prompt", task_context
-            )
+            await fallback_service.call_external_ai_with_fallback("test prompt", task_context)
 
 
 # ===== Test Class 6: Complexity Assessment =====
@@ -541,9 +495,7 @@ async def test_assess_complexity_simple(fallback_service, simple_plan):
 @pytest.mark.asyncio
 async def test_assess_complexity_medium(fallback_service, medium_plan):
     """Medium complexity (3+ tasks) may trigger fallback if high quota."""
-    with patch.object(
-        fallback_service, "_get_remaining_quota", return_value=0.90
-    ):
+    with patch.object(fallback_service, "_get_remaining_quota", return_value=0.90):
         decision, use_claude = await fallback_service.should_use_external_ai(medium_plan)
         # Medium should default to Ollama unless quota critical
         assert decision.complexity_level == "medium"
@@ -553,9 +505,7 @@ async def test_assess_complexity_medium(fallback_service, medium_plan):
 @pytest.mark.asyncio
 async def test_assess_complexity_complex(fallback_service, complex_plan):
     """Complex tasks should always use Claude."""
-    with patch.object(
-        fallback_service, "_get_remaining_quota", return_value=0.90
-    ):
+    with patch.object(fallback_service, "_get_remaining_quota", return_value=0.90):
         decision, use_claude = await fallback_service.should_use_external_ai(complex_plan)
         assert decision.complexity_level == "complex"
         assert use_claude is True
@@ -607,12 +557,8 @@ async def test_fallback_tokens_tracked(fallback_service):
         "usage": {"total_tokens": 200},
     }
 
-    with patch.object(
-        fallback_service.llm, "call_llm", return_value=mock_response
-    ):
-        response = await fallback_service.call_external_ai_with_fallback(
-            "test", task_context
-        )
+    with patch.object(fallback_service.llm, "call_llm", return_value=mock_response):
+        response = await fallback_service.call_external_ai_with_fallback("test", task_context)
         assert response is not None
 
 
@@ -664,9 +610,7 @@ async def test_fallback_flow_simple_to_complex(fallback_service, simple_plan, co
 @pytest.mark.asyncio
 async def test_fallback_with_low_quota_override(fallback_service, simple_plan):
     """Low quota should override complexity assessment."""
-    with patch.object(
-        fallback_service, "_get_remaining_quota", return_value=0.10
-    ):
+    with patch.object(fallback_service, "_get_remaining_quota", return_value=0.10):
         decision, use_claude = await fallback_service.should_use_external_ai(simple_plan)
         assert use_claude is True
         assert decision.reason == "quota_critical"
