@@ -1,0 +1,189 @@
+version: "3.9"
+
+# Production deployment for Unraid
+# Services: PostgreSQL, RabbitMQ, LiteLLM, Orchestrator, Dashboard, Frontend
+# Ollama runs separately on Windows GPU machine (spraycheese.lab.klsll.com:11434)
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: chiffon-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-agent}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-agent_deploy}
+    ports:
+      - "5432:5432"
+    volumes:
+      - /mnt/user/appdata/chiffon/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-agent} -d ${DB_NAME:-agent_deploy}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chiffon
+    labels:
+      com.example.description: "PostgreSQL database for Chiffon audit trail and state"
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: chiffon-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chiffon
+    labels:
+      com.example.description: "RabbitMQ message broker for work queue"
+
+  litellm:
+    build:
+      context: .
+      dockerfile: Dockerfile.litellm
+    image: chiffon-litellm:latest
+    container_name: chiffon-litellm
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY required}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-prod-key}
+      LOG_LEVEL: INFO
+    volumes:
+      - /mnt/user/appdata/chiffon/config/litellm-config.json:/app/config.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - chiffon
+    depends_on:
+      - ollama-check
+    labels:
+      com.example.description: "LiteLLM proxy for Claude/GPT-4 access"
+
+  # Health check for Ollama connectivity (doesn't run container, just validates connectivity)
+  ollama-check:
+    image: curlimages/curl:latest
+    container_name: chiffon-ollama-check
+    restart: on-failure
+    command: -f http://${OLLAMA_HOST:-spraycheese.lab.klsll.com}:${OLLAMA_PORT:-11434}/api/tags
+    networks:
+      - chiffon
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://${OLLAMA_HOST:-spraycheese.lab.klsll.com}:${OLLAMA_PORT:-11434}/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    labels:
+      com.example.description: "Health check for remote Ollama service"
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: chiffon-orchestrator:latest
+    container_name: chiffon-orchestrator
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-agent}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-agent_deploy}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY required}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-prod-key}
+      LITELLM_URL: http://litellm:8000
+      OLLAMA_BASE_URL: http://${OLLAMA_HOST:-spraycheese.lab.klsll.com}:${OLLAMA_PORT:-11434}
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      litellm:
+        condition: service_healthy
+    networks:
+      - chiffon
+    labels:
+      com.example.description: "Chiffon orchestrator core service"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    image: chiffon-dashboard:latest
+    container_name: chiffon-dashboard
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      ORCHESTRATOR_URL: http://orchestrator:8000
+      LOG_LEVEL: INFO
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      orchestrator:
+        condition: service_healthy
+    networks:
+      - chiffon
+    labels:
+      com.example.description: "Chiffon dashboard backend"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    image: chiffon-frontend:latest
+    container_name: chiffon-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      VITE_API_URL: http://orchestrator:8000
+    depends_on:
+      dashboard:
+        condition: service_healthy
+    networks:
+      - chiffon
+    labels:
+      com.example.description: "Chiffon web frontend (Vue.js)"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  chiffon:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16

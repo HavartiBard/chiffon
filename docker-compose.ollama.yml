@@ -1,0 +1,78 @@
+version: "3.9"
+
+# Ollama GPU inference service
+# Deploy to: spraycheese.lab.klsll.com (Windows 11 + WSL2 + Docker Desktop)
+# GPU: NVIDIA RTX 5080
+# Purpose: Runs local LLM models for fallback inference when OpenAI/Claude APIs unavailable
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: chiffon-ollama
+    restart: unless-stopped
+
+    # GPU support - required for RTX 5080
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    environment:
+      # GPU memory allocation (RTX 5080 has 16GB)
+      OLLAMA_NUM_PARALLEL: 2
+      OLLAMA_NUM_THREAD: 8
+      # Keep models in memory (faster inference)
+      OLLAMA_KEEP_ALIVE: 5m
+
+    ports:
+      # REST API accessible from entire VLAN (Unraid, other services)
+      - "11434:11434"
+
+    volumes:
+      # Persistent model storage (don't re-download on restart)
+      - ollama_data:/root/.ollama
+      # Optional: host cache dir for faster model pulls
+      # - /data/ollama_cache:/root/.ollama/models
+
+    networks:
+      - chiffon
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+    labels:
+      com.example.description: "Ollama LLM inference engine with RTX 5080"
+
+volumes:
+  ollama_data:
+    driver: local
+
+networks:
+  chiffon:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.26.0.0/16
+
+# Pre-deployment steps for Windows GPU machine:
+#
+# 1. Verify NVIDIA Docker support in WSL2:
+#    - In PowerShell: docker run --rm --runtime=nvidia nvidia/cuda:11.0-runtime nvidia-smi
+#
+# 2. Pull recommended models:
+#    docker-compose exec ollama ollama pull mistral
+#    docker-compose exec ollama ollama pull neural-chat
+#    docker-compose exec ollama ollama pull phi
+#
+# 3. Verify from Unraid:
+#    curl http://spraycheese.lab.klsll.com:11434/api/tags
+#
+# 4. Test inference:
+#    curl http://localhost:11434/api/generate -d '{"model":"mistral","prompt":"Hello world"}'
