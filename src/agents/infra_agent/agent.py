@@ -395,7 +395,10 @@ class InfraAgent(BaseAgent):
                 timeout_seconds=timeout_seconds,
             )
 
-            return await self._summary_to_result(work_request.task_id, summary, playbook_path)
+            # Resolve playbook path for analysis (relative to repo_path)
+            resolved_playbook = (self.repo_path / playbook_path).resolve()
+
+            return await self._summary_to_result(work_request.task_id, summary, str(resolved_playbook))
 
         except PlaybookNotFoundError as e:
             from uuid import uuid4

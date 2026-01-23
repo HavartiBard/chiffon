@@ -556,6 +556,7 @@ class TestIntegrationWithOrchestratorService:
         # Create work result
         work_result = WorkResult(
             task_id=mock_task.task_id,
+            agent_id=uuid4(),
             status="completed",
             error_message=None,
             duration_ms=1000,
@@ -592,6 +593,7 @@ class TestIntegrationWithOrchestratorService:
 
         work_result = WorkResult(
             task_id=mock_task.task_id,
+            agent_id=uuid4(),
             status="failed",
             error_message="Task failed",
             duration_ms=500,
@@ -629,6 +631,7 @@ class TestIntegrationWithOrchestratorService:
 
         work_result = WorkResult(
             task_id=mock_task.task_id,
+            agent_id=uuid4(),
             status="completed",
             error_message=None,
             duration_ms=1000,

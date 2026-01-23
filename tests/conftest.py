@@ -448,7 +448,7 @@ def orchestrator_service_e2e(
             complexity_level="medium",
             will_use_external_ai=False,
             status="pending_approval",
-            human_readable_summary="Deploy Kuma then update portals",
+            human_readable_summary="Deploy Kuma Uptime to homelab and add our existing portals to the config",
         )
 
     async def _generate_plan(decomposed, available_resources):

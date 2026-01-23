@@ -142,14 +142,6 @@ class PlaybookExecutor:
             },
         )
 
-        # Handle complex extravars by writing to temp file
-        extravars_file = None
-        if extravars and self._is_complex_extravars(extravars):
-            extravars_file = await self._write_extravars_file(extravars)
-            extravars_arg = f"@{extravars_file}"
-        else:
-            extravars_arg = extravars or {}
-
         # Build ansible-runner configuration
         runner_config = {
             "private_data_dir": str(self.repo_path),
@@ -160,11 +152,9 @@ class PlaybookExecutor:
         }
 
         # Add optional parameters
-        if isinstance(extravars_arg, str):
-            # File-based extravars
-            runner_config["cmdline"] = f"--extra-vars {extravars_arg}"
-        elif extravars_arg:
-            runner_config["extravars"] = extravars_arg
+        extravars_file = None  # Track for cleanup
+        if extravars:
+            runner_config["extravars"] = extravars
 
         if limit:
             runner_config["limit"] = limit

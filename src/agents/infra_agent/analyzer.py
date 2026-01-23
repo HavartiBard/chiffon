@@ -167,7 +167,7 @@ class PlaybookAnalyzer:
             message = result.get("message", "")
             severity = self._map_severity(result.get("level", "warning"))
             line_number = result.get("location", {}).get("lines", {}).get("begin", None)
-            file_path = result.get("location", {}).get("path", None)
+            file_path = result.get("location", {}).get("path") or playbook_path
 
             reasoning = self._generate_reasoning(rule_id)
 
@@ -312,10 +312,20 @@ class PlaybookAnalyzer:
             return
 
         # Bulk insert suggestions
+        from uuid import UUID as UUID_class
+
+        # Convert task_id string to UUID if needed
+        task_uuid = None
+        if task_id:
+            try:
+                task_uuid = UUID_class(task_id) if isinstance(task_id, str) else task_id
+            except (ValueError, AttributeError):
+                self.logger.warning(f"Invalid task_id format: {task_id}")
+
         for suggestion in analysis_result.suggestions:
             db_suggestion = PlaybookSuggestion(
                 playbook_path=analysis_result.playbook_path,
-                task_id=task_id,
+                task_id=task_uuid,
                 category=suggestion.category,
                 rule_id=suggestion.rule_id,
                 message=suggestion.message,

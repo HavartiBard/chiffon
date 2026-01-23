@@ -336,14 +336,20 @@ class TaskMapper:
         Returns:
             Suggestion string for user
         """
-        # Extract likely service name (simple heuristic: first word after action verbs)
+        # Extract likely service name (extract phrase after action verbs)
         words = task_intent.lower().split()
         action_verbs = ["deploy", "install", "setup", "configure", "run", "start"]
 
         service_name = None
         for i, word in enumerate(words):
             if word in action_verbs and i + 1 < len(words):
-                service_name = words[i + 1]
+                # Extract all words after verb except last if it looks like a variable
+                remaining = words[i + 1 :]
+                if remaining and len(remaining[-1]) == 1 and remaining[-1].isupper():
+                    # Last word is single uppercase letter (variable), exclude it
+                    service_name = " ".join(remaining[:-1])
+                else:
+                    service_name = " ".join(remaining)
                 break
 
         if service_name:
