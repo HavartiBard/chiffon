@@ -5,7 +5,7 @@ import asyncio
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, get_args
 from uuid import uuid4
 
 import httpx
@@ -116,7 +116,8 @@ def _build_plan_steps(tasks: List[Dict[str, Any]]) -> List[PlanStepView]:
         return []
 
     steps: List[PlanStepView] = []
-    valid_statuses = PlanStepView.__fields__["status"].type_.__args__
+    status_field = PlanStepView.model_fields["status"]
+    valid_statuses = get_args(status_field.annotation)
     for idx, task in enumerate(tasks):
         req = task.get("resource_requirements", {})
         duration_sec = req.get("estimated_duration_seconds")

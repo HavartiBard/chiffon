@@ -83,6 +83,10 @@ class Config(BaseSettings):
     APP_NAME: str = "Chiffon Agent Deploy"
     """Application name for branding."""
 
+    # Database Session (for testing and agent use)
+    db_session: object = None
+    """Database session for agent operations (used in testing)."""
+
     def __init__(self, **data) -> None:
         """Initialize config with environment and file-based overrides.
 

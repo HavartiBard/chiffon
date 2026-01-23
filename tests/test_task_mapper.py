@@ -392,7 +392,7 @@ class TestTaskMapperSemanticMatch:
         mapper = TaskMapper(mock_cache_manager, sample_playbook_catalog)
 
         # Mock sentence-transformers and FAISS
-        with patch("src.agents.infra_agent.task_mapper.SentenceTransformer") as mock_st:
+        with patch("sentence_transformers.SentenceTransformer") as mock_st:
             mock_embedder = Mock()
             # Return fixed embeddings
             mock_embedder.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4] * 96])  # 384 dims
@@ -421,7 +421,7 @@ class TestTaskMapperSemanticMatch:
         """Test semantic matches below 0.85 threshold return no match."""
         mapper = TaskMapper(mock_cache_manager, sample_playbook_catalog)
 
-        with patch("src.agents.infra_agent.task_mapper.SentenceTransformer") as mock_st:
+        with patch("sentence_transformers.SentenceTransformer") as mock_st:
             mock_embedder = Mock()
             mock_embedder.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4] * 96])
             mock_st.return_value = mock_embedder
@@ -446,7 +446,7 @@ class TestTaskMapperSemanticMatch:
         """Test semantic matches are cached for future use."""
         mapper = TaskMapper(mock_cache_manager, sample_playbook_catalog)
 
-        with patch("src.agents.infra_agent.task_mapper.SentenceTransformer") as mock_st:
+        with patch("sentence_transformers.SentenceTransformer") as mock_st:
             mock_embedder = Mock()
             mock_embedder.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4] * 96])
             mock_st.return_value = mock_embedder
@@ -474,7 +474,7 @@ class TestTaskMapperSemanticMatch:
         """Test semantic match returns top 3 alternatives."""
         mapper = TaskMapper(mock_cache_manager, sample_playbook_catalog)
 
-        with patch("src.agents.infra_agent.task_mapper.SentenceTransformer") as mock_st:
+        with patch("sentence_transformers.SentenceTransformer") as mock_st:
             mock_embedder = Mock()
             mock_embedder.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4] * 96])
             mock_st.return_value = mock_embedder
@@ -545,14 +545,14 @@ class TestTaskMapperIntegration:
 
         # 2. Cache a different intent that would semantically match "kuma-like"
         await cache_manager.cache_mapping(
-            intent="Install Kuma-like service",
+            intent="Install service mesh infrastructure",
             playbook_path="/ansible/kuma-deploy.yml",
             confidence=0.90,
             method="semantic",
         )
 
         # 3. Query with cached intent: cached match wins
-        result2 = await mapper.map_task_to_playbook("Install Kuma-like service")
+        result2 = await mapper.map_task_to_playbook("Install service mesh infrastructure")
         assert result2.method == "cached"
 
     @pytest.mark.asyncio
@@ -562,7 +562,7 @@ class TestTaskMapperIntegration:
         mapper = TaskMapper(cache_manager, sample_playbook_catalog)
 
         # Mock semantic search to return high-confidence match
-        with patch("src.agents.infra_agent.task_mapper.SentenceTransformer") as mock_st:
+        with patch("sentence_transformers.SentenceTransformer") as mock_st:
             mock_embedder = Mock()
             mock_embedder.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4] * 96])
             mock_st.return_value = mock_embedder
@@ -576,12 +576,12 @@ class TestTaskMapperIntegration:
                 mock_faiss.return_value = mock_index
 
                 # First call: semantic match
-                result1 = await mapper.map_task_to_playbook("Setup Kuma networking")
+                result1 = await mapper.map_task_to_playbook("Deploy service mesh networking")
                 assert result1.method == "semantic"
                 assert result1.confidence == 0.91
 
         # Second call: should use cached result
-        result2 = await mapper.map_task_to_playbook("Setup Kuma networking")
+        result2 = await mapper.map_task_to_playbook("Deploy service mesh networking")
         assert result2.method == "cached"
         assert result2.confidence == 0.91
         assert result2.playbook_path == result1.playbook_path

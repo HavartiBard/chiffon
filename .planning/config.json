@@ -1,10 +1,14 @@
 {
   "project_name": "agent-deploy",
   "version": "0.1.0",
+  "model_profile": "budget",
   "workflow": {
     "mode": "interactive",
     "depth": "standard",
-    "parallelization": true
+    "parallelization": true,
+    "research": true,
+    "plan_check": false,
+    "verifier": false
   },
   "tech_stack": {
     "orchestrator_runtime": "python-fastapi",
