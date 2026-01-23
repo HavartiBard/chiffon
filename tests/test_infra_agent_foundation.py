@@ -329,9 +329,9 @@ class TestPlaybookDiscovery:
 class TestInfraAgent:
     """Test InfraAgent class."""
 
-    def test_agent_capabilities(self, mock_config):
+    def test_agent_capabilities(self, mock_config, temp_playbook_dir):
         """Test agent reports correct capabilities."""
-        agent = InfraAgent("test-agent-001", mock_config)
+        agent = InfraAgent("test-agent-001", mock_config, repo_path=str(temp_playbook_dir))
         capabilities = agent.get_agent_capabilities()
 
         assert capabilities["run_playbook"] is True
@@ -339,9 +339,9 @@ class TestInfraAgent:
         assert capabilities["generate_template"] is True
         assert capabilities["analyze_playbook"] is True
 
-    def test_agent_type_is_infra(self, mock_config):
+    def test_agent_type_is_infra(self, mock_config, temp_playbook_dir):
         """Test agent type is 'infra'."""
-        agent = InfraAgent("test-agent-001", mock_config)
+        agent = InfraAgent("test-agent-001", mock_config, repo_path=str(temp_playbook_dir))
         assert agent.agent_type == "infra"
 
     def test_repo_path_expansion(self, mock_config, temp_playbook_dir):
@@ -395,14 +395,14 @@ class TestInfraAgent:
         assert len(catalog) == 2
 
     @pytest.mark.asyncio
-    async def test_execute_work_with_mock(self, mock_config):
+    async def test_execute_work_with_mock(self, mock_config, temp_playbook_dir):
         """Test execute_work with mocked executor."""
         from unittest.mock import patch
         from uuid import uuid4
 
         from src.agents.infra_agent.executor import ExecutionSummary
 
-        agent = InfraAgent("test-agent-001", mock_config)
+        agent = InfraAgent("test-agent-001", mock_config, repo_path=str(temp_playbook_dir))
 
         # Mock the executor to return success
         mock_summary = ExecutionSummary(
