@@ -1,4 +1,4 @@
-name: Publish llama.cpp image
+name: Publish llamacpp
 
 on:
   push:
