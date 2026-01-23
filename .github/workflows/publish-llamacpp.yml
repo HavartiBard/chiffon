@@ -13,6 +13,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      GHCR_OWNER: ${{ github.repository_owner | toLower }}
     steps:
       - uses: actions/checkout@v4
 
@@ -30,5 +32,5 @@ jobs:
           file: Dockerfile.llamacpp
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/chiffon-llamacpp:latest
-            ghcr.io/${{ github.repository_owner }}/chiffon-llamacpp:${{ github.sha }}
+            ghcr.io/${{ env.GHCR_OWNER }}/chiffon-llamacpp:latest
+            ghcr.io/${{ env.GHCR_OWNER }}/chiffon-llamacpp:${{ github.sha }}
