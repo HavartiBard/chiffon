@@ -503,7 +503,7 @@ class TestInfraAgentAnalyzerIntegration:
         # Create agent (mock config)
         config = MagicMock(spec=Config)
         config.db_session = None
-        agent = InfraAgent(agent_id="test-agent", config=config)
+        agent = InfraAgent(agent_id="test-agent", config=config, repo_path=str(tmp_path))
 
         # Create work request
         work_request = WorkRequest(
@@ -522,7 +522,7 @@ class TestInfraAgentAnalyzerIntegration:
         assert "best_practices" in output_data["by_category"]
 
     @pytest.mark.asyncio
-    async def test_analyze_playbook_missing_parameter(self):
+    async def test_analyze_playbook_missing_parameter(self, tmp_path):
         """Test analyze_playbook with missing playbook_path parameter."""
         from src.agents.infra_agent.agent import InfraAgent
         from src.common.config import Config
@@ -530,7 +530,7 @@ class TestInfraAgentAnalyzerIntegration:
 
         config = MagicMock(spec=Config)
         config.db_session = None
-        agent = InfraAgent(agent_id="test-agent", config=config)
+        agent = InfraAgent(agent_id="test-agent", config=config, repo_path=str(tmp_path))
 
         work_request = WorkRequest(
             task_id=uuid4(),
@@ -593,7 +593,7 @@ class TestInfraAgentAnalyzerIntegration:
 
         config = MagicMock(spec=Config)
         config.db_session = None
-        agent = InfraAgent(agent_id="test-agent", config=config)
+        agent = InfraAgent(agent_id="test-agent", config=config, repo_path=str(tmp_path))
 
         work_request = WorkRequest(
             task_id=uuid4(),
@@ -669,7 +669,7 @@ class TestInfraAgentAnalyzerIntegration:
 
         config = MagicMock(spec=Config)
         config.db_session = None
-        agent = InfraAgent(agent_id="test-agent", config=config)
+        agent = InfraAgent(agent_id="test-agent", config=config, repo_path=str(tmp_path))
 
         work_request = WorkRequest(
             task_id=uuid4(),

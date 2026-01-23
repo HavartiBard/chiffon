@@ -217,7 +217,7 @@ class TestPlaybookExecutorExecution:
     """Test playbook execution with mocked ansible-runner."""
 
     @pytest.mark.asyncio
-    async def test_execute_success(self, temp_repo_path, mock_ansible_runner_success):
+    async def test_execute_success(self, temp_repo_path, mock_ansible_runner_success, mock_ansible_runner):
         """Test successful playbook execution."""
         executor = PlaybookExecutor(str(temp_repo_path))
 
@@ -231,7 +231,7 @@ class TestPlaybookExecutorExecution:
         assert summary.failed_count == 0
 
     @pytest.mark.asyncio
-    async def test_execute_failure(self, temp_repo_path, mock_ansible_runner_failure):
+    async def test_execute_failure(self, temp_repo_path, mock_ansible_runner_failure, mock_ansible_runner):
         """Test failed playbook execution."""
         executor = PlaybookExecutor(str(temp_repo_path))
 
@@ -261,7 +261,7 @@ class TestPlaybookExecutorExecution:
                 await executor.execute_playbook("test.yml", timeout_seconds=0.1)
 
     @pytest.mark.asyncio
-    async def test_execute_with_extravars(self, temp_repo_path, mock_ansible_runner_success):
+    async def test_execute_with_extravars(self, temp_repo_path, mock_ansible_runner_success, mock_ansible_runner):
         """Test playbook execution with extravars."""
         executor = PlaybookExecutor(str(temp_repo_path))
         extravars = {"var1": "value1", "var2": "value2"}
@@ -274,7 +274,7 @@ class TestPlaybookExecutorExecution:
         assert "extravars" in call_kwargs or "cmdline" in call_kwargs
 
     @pytest.mark.asyncio
-    async def test_execute_with_inventory(self, temp_repo_path, mock_ansible_runner_success):
+    async def test_execute_with_inventory(self, temp_repo_path, mock_ansible_runner_success, mock_ansible_runner):
         """Test playbook execution with custom inventory."""
         executor = PlaybookExecutor(str(temp_repo_path))
 
@@ -285,7 +285,7 @@ class TestPlaybookExecutorExecution:
         assert call_kwargs["inventory"] == "production"
 
     @pytest.mark.asyncio
-    async def test_execute_with_tags(self, temp_repo_path, mock_ansible_runner_success):
+    async def test_execute_with_tags(self, temp_repo_path, mock_ansible_runner_success, mock_ansible_runner):
         """Test playbook execution with tags."""
         executor = PlaybookExecutor(str(temp_repo_path))
 
@@ -296,7 +296,7 @@ class TestPlaybookExecutorExecution:
         assert call_kwargs["tags"] == "deploy,config"
 
     @pytest.mark.asyncio
-    async def test_execute_with_limit(self, temp_repo_path, mock_ansible_runner_success):
+    async def test_execute_with_limit(self, temp_repo_path, mock_ansible_runner_success, mock_ansible_runner):
         """Test playbook execution with host limit."""
         executor = PlaybookExecutor(str(temp_repo_path))
 
@@ -315,7 +315,7 @@ class TestPlaybookExecutorExecution:
             await executor.execute_playbook("nonexistent.yml")
 
     @pytest.mark.asyncio
-    async def test_execute_ansible_runner_error(self, temp_repo_path):
+    async def test_execute_ansible_runner_error(self, temp_repo_path, mock_ansible_runner):
         """Test execution handles ansible-runner internal errors."""
         executor = PlaybookExecutor(str(temp_repo_path))
 
@@ -465,7 +465,7 @@ class TestInfraAgentExecution:
     """Test InfraAgent execute_work integration with PlaybookExecutor."""
 
     @pytest.mark.asyncio
-    async def test_work_type_run_playbook(self, temp_repo_path, mock_ansible_runner_success):
+    async def test_work_type_run_playbook(self, temp_repo_path, mock_ansible_runner_success, mock_ansible_runner):
         """Test InfraAgent handles run_playbook work type."""
         config = Config()
         agent = InfraAgent("test-agent", config, repo_path=str(temp_repo_path))
