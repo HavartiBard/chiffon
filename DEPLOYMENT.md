@@ -19,11 +19,11 @@ chiffon.klsll.com (NPM reverse proxy on Unraid)
 Orchestrator (Unraid:8000)
     ├── PostgreSQL (appdata/chiffon/postgres)
     ├── RabbitMQ (local)
-    ├── LiteLLM (local)
-    └── Ollama Client → http://spraycheese.lab.klsll.com:11434
+    ├── LiteLLM (local) → Routes to llama.cpp
+    └── llama.cpp Client → http://spraycheese.lab.klsll.com:8000/v1
 
-Ollama Server (spraycheese.lab.klsll.com:11434)
-    └── RTX 5080 GPU inference
+llama.cpp Server (spraycheese.lab.klsll.com:8000)
+    └── RTX 5080 GPU inference (high-performance, OpenAI-compatible API)
 ```
 
 ## Pre-Deployment Checklist
@@ -50,31 +50,44 @@ Ollama Server (spraycheese.lab.klsll.com:11434)
 
 ## Deployment Steps
 
-### Phase 1: Deploy Ollama to Windows GPU Machine
+### Phase 1: Deploy llama.cpp to Windows GPU Machine
 
 **On spraycheese.lab.klsll.com:**
 
-1. Create docker-compose for Ollama:
+1. Create docker-compose for llama.cpp:
    ```bash
    cd /path/to/workspace
-   mkdir chiffon-ollama
-   # Create docker-compose.yml (see below)
+   mkdir chiffon-llamacpp
+   # Copy docker-compose.llamacpp.yml to docker-compose.yml
    ```
 
-2. Start Ollama:
+2. Download a model (quantized GGUF format):
+   ```bash
+   # Download Mistral 7B Instruct (Q5_K_M quantization = ~5GB)
+   # From: https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF
+   # Place in models/ directory where docker-compose.yml is
+   ```
+
+3. Start llama.cpp:
    ```bash
    docker-compose up -d
    ```
 
-3. Verify health:
+4. Verify health:
    ```bash
-   curl http://localhost:11434/api/tags
-   # Should return: {"models":[]}
+   curl http://localhost:8000/health
+   # Should return: {"status":"ok"}
    ```
 
-4. Pull a model (e.g., Mistral):
+5. Test inference:
    ```bash
-   docker-compose exec ollama ollama pull mistral
+   curl http://localhost:8000/v1/completions \
+     -H "Content-Type: application/json" \
+     -d '{
+       "model": "mistral",
+       "prompt": "Hello world",
+       "max_tokens": 100
+     }'
    ```
 
 ### Phase 2: Deploy Core Services to Unraid
@@ -92,9 +105,10 @@ Ollama Server (spraycheese.lab.klsll.com:11434)
    ANTHROPIC_API_KEY=sk-ant-...
    OPENAI_API_KEY=sk-... (optional)
    LITELLM_MASTER_KEY=your-secret-key
-   OLLAMA_BASE_URL=http://spraycheese.lab.klsll.com:11434
    DATABASE_URL=postgresql://agent:password@postgres:5432/agent_deploy
    ```
+
+   Note: llama.cpp endpoint is configured in LiteLLM config (`config/litellm-config.json`)
 
 3. Start services:
    ```bash
@@ -157,19 +171,27 @@ curl http://localhost:8001/health
 
 ### docker-compose.production.yml (Unraid)
 
-[See below]
+Contains: Orchestrator, Dashboard, Frontend, PostgreSQL, RabbitMQ, LiteLLM
+See: `docker-compose.production.yml` in repository
 
-### docker-compose.yml (Windows GPU Machine - Ollama)
+### docker-compose.llamacpp.yml (Windows GPU Machine)
 
-[See below]
+Contains: llama.cpp server with RTX 5080 GPU support
+See: `docker-compose.llamacpp.yml` in repository
+
+**Key configuration:**
+- `LLAMA_ARG_N_GPU_LAYERS: "99"` - Offload all computation to GPU
+- Port `8000` - OpenAI-compatible API endpoint
+- Volume: `llamacpp_models:/models` - Persistent model storage
 
 ## Troubleshooting
 
-### Ollama Not Accessible from Unraid
+### llama.cpp Not Accessible from Unraid
 - [ ] Check firewall: `ping spraycheese.lab.klsll.com`
-- [ ] Check port: `curl http://spraycheese.lab.klsll.com:11434/api/tags`
+- [ ] Check port: `curl http://spraycheese.lab.klsll.com:8000/health`
 - [ ] Check WSL2: `docker ps` (in WSL2 terminal)
 - [ ] Check Docker Desktop: Is it running?
+- [ ] Verify model is loaded: `curl http://spraycheese.lab.klsll.com:8000/v1/completions` (should not error)
 
 ### Services Not Starting on Unraid
 - [ ] Check logs: `docker-compose logs orchestrator`

@@ -4,7 +4,7 @@
     "fallback_strategy": [
       "claude-opus-4.5",
       "gpt-4-turbo",
-      "ollama/neural-chat"
+      "local-mistral"
     ],
     "log_level": "INFO",
     "debug": false,
@@ -33,9 +33,19 @@
     "allowed_models": [
       "claude-opus-4.5",
       "gpt-4-turbo",
-      "ollama/neural-chat"
+      "local-mistral"
     ]
   },
+  "model_list": [
+    {
+      "model_name": "local-mistral",
+      "litellm_params": {
+        "model": "openai/mistral-7b-instruct",
+        "api_base": "http://spraycheese.lab.klsll.com:8000/v1",
+        "api_key": "not-used"
+      }
+    }
+  ],
   "router": {
     "strategy": "cost-based",
     "fallback_on_quota_error": true,

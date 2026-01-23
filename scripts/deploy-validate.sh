@@ -62,24 +62,23 @@ test_network() {
     fi
 }
 
-test_ollama() {
+test_llamacpp() {
     echo ""
-    echo -e "${BLUE}=== Ollama Service ===${NC}"
+    echo -e "${BLUE}=== llama.cpp Service ===${NC}"
 
     # Health check
-    if curl -s "http://${WINDOWS_HOST}:11434/api/tags" &> /dev/null; then
-        test_pass "Ollama API health check"
+    if curl -s "http://${WINDOWS_HOST}:8000/health" &> /dev/null; then
+        test_pass "llama.cpp API health check"
     else
-        test_fail "Ollama API health check"
+        test_fail "llama.cpp API health check"
         return 1
     fi
 
-    # List models
-    local models=$(curl -s "http://${WINDOWS_HOST}:11434/api/tags" | grep -o '"name":"[^"]*"' | wc -l)
-    if [ "$models" -gt 0 ]; then
-        test_pass "Ollama has $models model(s) loaded"
+    # Check if model is loaded by testing inference
+    if curl -s "http://${WINDOWS_HOST}:8000/v1/completions" -H "Content-Type: application/json" -d '{"model":"mistral","prompt":"test","max_tokens":1}' &> /dev/null; then
+        test_pass "llama.cpp model inference working"
     else
-        test_skip "Ollama has no models loaded (pull models with: docker-compose exec ollama ollama pull mistral)"
+        test_skip "llama.cpp model not loaded or inference not ready (ensure model file in /models/)"
     fi
 }
 
@@ -191,7 +190,7 @@ main() {
     echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
 
     test_network
-    test_ollama
+    test_llamacpp
     test_orchestrator
     test_database
     test_dashboard

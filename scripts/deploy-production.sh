@@ -27,7 +27,7 @@ WINDOWS_IP="192.168.20.154"
 APPDATA_PATH="/mnt/user/appdata/chiffon"
 
 # Script state
-DEPLOY_WINDOWS=${DEPLOY_WINDOWS:-false}
+DEPLOY_LLAMACPP=${DEPLOY_LLAMACPP:-false}
 DEPLOY_UNRAID=${DEPLOY_UNRAID:-false}
 DEPLOY_FULL=${DEPLOY_FULL:-false}
 
@@ -131,42 +131,43 @@ check_env_file() {
 # Deployment Functions
 # ============================================================================
 
-deploy_ollama_windows() {
-    log_info "Deploying Ollama to Windows GPU machine..."
+deploy_llamacpp_windows() {
+    log_info "Deploying llama.cpp to Windows GPU machine..."
 
     # Copy docker-compose to Windows via SSH (assumes SSH set up)
-    log_info "Copying docker-compose.ollama.yml to Windows..."
+    log_info "Copying docker-compose.llamacpp.yml to Windows..."
 
-    if scp docker-compose.ollama.yml "spraycheese@${WINDOWS_HOST}:~/chiffon/docker-compose.yml" 2>/dev/null; then
+    if scp docker-compose.llamacpp.yml "spraycheese@${WINDOWS_HOST}:~/chiffon/docker-compose.yml" 2>/dev/null; then
         log_success "docker-compose copied"
     else
         log_warning "Could not SCP file (SSH may not be configured)"
-        log_info "Manual step: Copy docker-compose.ollama.yml to Windows and run:"
-        log_info "  cd chiffon && docker-compose up -d"
+        log_info "Manual step: Copy docker-compose.llamacpp.yml to Windows and run:"
+        log_info "  1. Place quantized model in ~/chiffon/models/"
+        log_info "  2. cd ~/chiffon && docker-compose up -d"
         return 1
     fi
 
     # Start services via SSH
-    log_info "Starting Ollama service..."
+    log_info "Starting llama.cpp service..."
     if ssh "spraycheese@${WINDOWS_HOST}" "cd ~/chiffon && docker-compose up -d" 2>/dev/null; then
-        log_success "Ollama service started"
+        log_success "llama.cpp service started"
     else
         log_warning "Could not start via SSH"
         return 1
     fi
 
-    # Wait for Ollama to be ready
-    log_info "Waiting for Ollama to be ready..."
-    for i in {1..30}; do
-        if curl -s "http://${WINDOWS_HOST}:11434/api/tags" &> /dev/null; then
-            log_success "Ollama is ready"
+    # Wait for llama.cpp to be ready
+    log_info "Waiting for llama.cpp to be ready..."
+    for i in {1..60}; do
+        if curl -s "http://${WINDOWS_HOST}:8000/health" &> /dev/null; then
+            log_success "llama.cpp is ready"
             return 0
         fi
         echo -n "."
         sleep 2
     done
 
-    log_error "Ollama failed to start within 60 seconds"
+    log_error "llama.cpp failed to start within 120 seconds"
     return 1
 }
 
@@ -290,16 +291,16 @@ main() {
     # Parse arguments
     if [ $# -gt 0 ]; then
         case "$1" in
-            --windows-ollama) DEPLOY_WINDOWS=true ;;
+            --windows-llamacpp) DEPLOY_LLAMACPP=true ;;
             --unraid) DEPLOY_UNRAID=true ;;
-            --full) DEPLOY_WINDOWS=true; DEPLOY_UNRAID=true ;;
+            --full) DEPLOY_LLAMACPP=true; DEPLOY_UNRAID=true ;;
             --help)
-                echo "Usage: $0 [--windows-ollama] [--unraid] [--full]"
+                echo "Usage: $0 [--windows-llamacpp] [--unraid] [--full]"
                 echo ""
                 echo "Flags:"
-                echo "  --windows-ollama  Deploy Ollama to Windows GPU machine"
-                echo "  --unraid          Deploy core services to Unraid"
-                echo "  --full            Deploy everything"
+                echo "  --windows-llamacpp  Deploy llama.cpp to Windows GPU machine (RTX 5080)"
+                echo "  --unraid            Deploy core services to Unraid"
+                echo "  --full              Deploy everything"
                 exit 0
                 ;;
             *)
@@ -309,7 +310,7 @@ main() {
         esac
     else
         # Default: full deployment
-        DEPLOY_WINDOWS=true
+        DEPLOY_LLAMACPP=true
         DEPLOY_UNRAID=true
     fi
 
@@ -319,8 +320,8 @@ main() {
     check_env_file || exit 1
 
     # Deployment
-    if [ "$DEPLOY_WINDOWS" = true ]; then
-        deploy_ollama_windows || log_warning "Ollama deployment failed (may need manual deployment)"
+    if [ "$DEPLOY_LLAMACPP" = true ]; then
+        deploy_llamacpp_windows || log_warning "llama.cpp deployment failed (may need manual deployment)"
     fi
 
     if [ "$DEPLOY_UNRAID" = true ]; then

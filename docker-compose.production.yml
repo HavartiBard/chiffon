@@ -71,25 +71,25 @@ services:
     networks:
       - chiffon
     depends_on:
-      - ollama-check
+      - llamacpp-check
     labels:
-      com.example.description: "LiteLLM proxy for Claude/GPT-4 access"
+      com.example.description: "LiteLLM proxy for Claude/GPT-4/llama.cpp access"
 
-  # Health check for Ollama connectivity (doesn't run container, just validates connectivity)
-  ollama-check:
+  # Health check for llama.cpp connectivity (doesn't run container, just validates connectivity)
+  llamacpp-check:
     image: curlimages/curl:latest
-    container_name: chiffon-ollama-check
+    container_name: chiffon-llamacpp-check
     restart: on-failure
-    command: -f http://${OLLAMA_HOST:-spraycheese.lab.klsll.com}:${OLLAMA_PORT:-11434}/api/tags
+    command: -f http://${LLAMACPP_HOST:-spraycheese.lab.klsll.com}:${LLAMACPP_PORT:-8000}/health
     networks:
       - chiffon
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${OLLAMA_HOST:-spraycheese.lab.klsll.com}:${OLLAMA_PORT:-11434}/api/tags"]
+      test: ["CMD", "curl", "-f", "http://${LLAMACPP_HOST:-spraycheese.lab.klsll.com}:${LLAMACPP_PORT:-8000}/health"]
       interval: 30s
       timeout: 10s
       retries: 5
     labels:
-      com.example.description: "Health check for remote Ollama service"
+      com.example.description: "Health check for remote llama.cpp service"
 
   orchestrator:
     build:
@@ -110,7 +110,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-prod-key}
       LITELLM_URL: http://litellm:8000
-      OLLAMA_BASE_URL: http://${OLLAMA_HOST:-spraycheese.lab.klsll.com}:${OLLAMA_PORT:-11434}
+      # llama.cpp endpoint (configured in LiteLLM config, not used directly by orchestrator)
+      LLAMACPP_URL: http://${LLAMACPP_HOST:-spraycheese.lab.klsll.com}:${LLAMACPP_PORT:-8000}/v1
       LOG_LEVEL: INFO
     depends_on:
       postgres:
