@@ -138,7 +138,7 @@ deploy_llamacpp_windows() {
     # Copy docker-compose to Windows via SSH (assumes SSH set up)
     log_info "Copying docker-compose.llamacpp.yml to Windows..."
 
-    if scp docker-compose.llamacpp.yml "spraycheese@${WINDOWS_HOST}:~/chiffon/docker-compose.yml" 2>/dev/null; then
+    if scp -i "${SSH_KEY}" docker-compose.llamacpp.yml "james@${WINDOWS_HOST}:~/chiffon/docker-compose.yml" 2>/dev/null; then
         log_success "docker-compose copied"
     else
         log_warning "Could not SCP file (SSH may not be configured)"
@@ -150,7 +150,7 @@ deploy_llamacpp_windows() {
 
     # Start services via SSH
     log_info "Starting llama.cpp service..."
-    if ssh "spraycheese@${WINDOWS_HOST}" "cd ~/chiffon && docker-compose up -d" 2>/dev/null; then
+    if ssh -i "${SSH_KEY}" "james@${WINDOWS_HOST}" "cd ~/chiffon && docker-compose up -d" 2>/dev/null; then
         log_success "llama.cpp service started"
     else
         log_warning "Could not start via SSH"
