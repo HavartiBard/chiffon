@@ -191,36 +191,48 @@ deploy_unraid_services() {
     log_info "DEBUG: Using SSH key: ${SSH_KEY}"
     log_info "DEBUG: Target: root@${UNRAID_HOST}"
 
-    # Create directories on Unraid first
-    log_info "Creating directories on Unraid..."
-    if ! ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "mkdir -p ${APPDATA_PATH}/{postgres,config}"; then
-        log_error "Failed to create directories on Unraid"
+    # Create appdata directory on Unraid
+    log_info "Creating appdata directory on Unraid..."
+    if ! ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "mkdir -p ${APPDATA_PATH}"; then
+        log_error "Failed to create appdata directory on Unraid"
         return 1
     fi
-    log_success "Directories created on Unraid"
+    log_success "Appdata directory created"
 
-    # Copy docker-compose and .env
-    log_info "Copying files to Unraid..."
-    if ! scp -i "${SSH_KEY}" docker-compose.production.yml "root@${UNRAID_HOST}:${APPDATA_PATH}/docker-compose.yml"; then
-        log_error "Failed to copy docker-compose.production.yml"
-        return 1
+    # Clone the Chiffon repository to Unraid (or update if exists)
+    log_info "Cloning Chiffon repository to Unraid..."
+    if ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "test -d ${APPDATA_PATH}/chiffon"; then
+        log_info "Repository already exists, updating..."
+        if ! ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "cd ${APPDATA_PATH}/chiffon && git pull origin phase/01-foundation"; then
+            log_warning "Could not update repository, continuing with existing version"
+        fi
+    else
+        if ! ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "cd ${APPDATA_PATH} && git clone -b phase/01-foundation https://github.com/HavartiBard/chiffon.git"; then
+            log_error "Failed to clone Chiffon repository to Unraid"
+            return 1
+        fi
+        log_success "Chiffon repository cloned"
     fi
 
-    if ! scp -i "${SSH_KEY}" .env.production "root@${UNRAID_HOST}:${APPDATA_PATH}/.env"; then
+    # Create directories on Unraid for persistent data
+    log_info "Creating data directories on Unraid..."
+    if ! ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "mkdir -p ${APPDATA_PATH}/postgres ${APPDATA_PATH}/logs"; then
+        log_error "Failed to create data directories"
+        return 1
+    fi
+    log_success "Data directories created"
+
+    # Copy .env file
+    log_info "Copying .env.production to Unraid..."
+    if ! scp -i "${SSH_KEY}" .env.production "root@${UNRAID_HOST}:${APPDATA_PATH}/chiffon/.env"; then
         log_error "Failed to copy .env.production"
         return 1
     fi
-
-    if ! scp -i "${SSH_KEY}" config/litellm-config.json "root@${UNRAID_HOST}:${APPDATA_PATH}/config/"; then
-        log_error "Failed to copy litellm-config.json"
-        return 1
-    fi
-
-    log_success "Files copied"
+    log_success ".env file copied"
 
     # Start services via SSH
     log_info "Starting services on Unraid..."
-    ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "cd ${APPDATA_PATH} && docker-compose up -d" || {
+    ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "cd ${APPDATA_PATH}/chiffon && docker-compose -f docker-compose.production.yml up -d" || {
         log_error "Failed to start services"
         return 1
     }
@@ -233,7 +245,7 @@ deploy_unraid_services() {
     local attempt=0
 
     while [ $attempt -lt $max_attempts ]; do
-        if ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "docker-compose -f ${APPDATA_PATH}/docker-compose.yml ps" | grep -q "Up"; then
+        if ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "cd ${APPDATA_PATH}/chiffon && docker-compose -f docker-compose.production.yml ps" | grep -q "Up"; then
             log_success "Services are up"
             return 0
         fi
