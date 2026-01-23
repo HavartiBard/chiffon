@@ -11,6 +11,7 @@ from uuid import uuid4
 
 import pytest
 
+from src.common.models import AgentRegistry, PauseQueueEntry, Task
 from src.orchestrator.pause_manager import PauseManager
 
 
@@ -70,11 +71,11 @@ def mock_db_session():
     db.rollback = Mock()
 
     def _add_item(item):
-        if isinstance(item, MockAgentRegistry):
+        if isinstance(item, (MockAgentRegistry, AgentRegistry)):
             db.agents.append(item)
-        elif isinstance(item, MockPauseQueueEntry):
+        elif isinstance(item, (MockPauseQueueEntry, PauseQueueEntry)):
             db.pause_queue.append(item)
-        elif isinstance(item, MockTask):
+        elif isinstance(item, (MockTask, Task)):
             db.tasks.append(item)
 
     db._add_item = _add_item
@@ -96,24 +97,25 @@ def _create_query_mock(db, model):
 
     def filter_by(**kwargs):
         f = Mock()
-        if model == MockAgentRegistry:
+        if model == AgentRegistry or model == MockAgentRegistry:
             results = [a for a in db.agents for k, v in kwargs.items() if getattr(a, k, None) == v]
-        elif model == MockPauseQueueEntry:
+        elif model == PauseQueueEntry or model == MockPauseQueueEntry:
             results = [
                 p for p in db.pause_queue for k, v in kwargs.items() if getattr(p, k, None) == v
             ]
-        elif model == MockTask:
+        elif model == Task or model == MockTask:
             results = [t for t in db.tasks for k, v in kwargs.items() if getattr(t, k, None) == v]
         else:
             results = []
         f.first = Mock(return_value=results[0] if results else None)
+        f.all = Mock(return_value=results)
         return f
 
     def filter(*args):
         f = Mock()
-        if model == MockAgentRegistry:
+        if model == AgentRegistry or model == MockAgentRegistry:
             results = [a for a in db.agents if a.status in ["online", "busy"]]
-        elif model == MockPauseQueueEntry:
+        elif model == PauseQueueEntry or model == MockPauseQueueEntry:
             results = [
                 p
                 for p in db.pause_queue
@@ -160,7 +162,7 @@ def low_capacity_agent(mock_db_session):
         capabilities=["metrics"],
         status="online",
         resource_metrics={
-            "gpu_vram_available_gb": 0.5,  # Very low
+            "gpu_vram_available_gb": 0.3,  # Very low (18% of 0.3 / (0.3 + 2))
             "cpu_cores_available": 1,  # Very low
             "gpu_vram_total_gb": 8.0,
             "cpu_cores_total": 16,
@@ -241,7 +243,7 @@ class TestCapacityChecking:
                 capabilities=["metrics"],
                 status="online",
                 resource_metrics={
-                    "gpu_vram_available_gb": 0.5,
+                    "gpu_vram_available_gb": 0.3,
                     "cpu_cores_available": 1,
                 },
             )
