@@ -8,9 +8,12 @@ version: "3.9"
 
 services:
   llamacpp:
-    # ghcr.io/ggerganov/llama.cpp provides a server image
-    # Includes llama-server binary with built-in HTTP server
-    image: ghcr.io/ggerganov/llama.cpp:latest-server
+    # Build llama.cpp with NVIDIA CUDA support from our Dockerfile
+    # Ensures NVIDIA GPU integration for RTX 5080
+    build:
+      context: .
+      dockerfile: Dockerfile.llamacpp
+    image: chiffon-llamacpp:latest
     container_name: chiffon-llamacpp
     restart: unless-stopped
 

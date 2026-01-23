@@ -1,0 +1,38 @@
+# Build llama.cpp server with NVIDIA CUDA support
+# This ensures compatibility and gives us full control over the build
+
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    build-essential \
+    cmake \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone and build llama.cpp
+WORKDIR /app
+RUN git clone https://github.com/ggerganov/llama.cpp.git . && \
+    mkdir -p build && cd build && \
+    cmake .. -DLLAMA_CUDA=ON && \
+    cmake --build . --config Release
+
+# Create models directory
+RUN mkdir -p /models /tmp
+
+# Expose port 8000 for the API server
+EXPOSE 8000
+
+# Default command - start llama.cpp server
+# Can be overridden with docker-compose command:
+ENTRYPOINT ["/app/build/bin/llama-server"]
+
+# Default arguments (can be overridden)
+CMD ["--model", "/models/mistral-7b-instruct.gguf", \
+     "--threads", "8", \
+     "--n-gpu-layers", "99", \
+     "--ctx-size", "2048", \
+     "--parallel", "4", \
+     "--listen", "0.0.0.0", \
+     "--port", "8000"]

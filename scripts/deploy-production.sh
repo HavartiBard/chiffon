@@ -143,20 +143,24 @@ deploy_llamacpp_windows() {
     fi
     log_success "Directories created on Windows"
 
-    # Copy docker-compose to Windows via SSH (assumes SSH set up)
-    log_info "Copying docker-compose.llamacpp.yml to Windows..."
+    # Copy docker-compose and Dockerfile to Windows via SSH
+    log_info "Copying deployment files to Windows..."
     log_info "DEBUG: Using SSH key: ${SSH_KEY}"
     log_info "DEBUG: Target: james@${WINDOWS_HOST}"
 
-    if scp -i "${SSH_KEY}" docker-compose.llamacpp.yml "james@${WINDOWS_HOST}:~/chiffon/docker-compose.yml"; then
-        log_success "docker-compose copied"
-    else
-        log_warning "Could not SCP file (SSH may not be configured)"
-        log_info "Manual step: Copy docker-compose.llamacpp.yml to Windows and run:"
-        log_info "  1. Place quantized model in ~/chiffon/models/"
-        log_info "  2. cd ~/chiffon && docker-compose up -d"
+    if ! scp -i "${SSH_KEY}" docker-compose.llamacpp.yml "james@${WINDOWS_HOST}:~/chiffon/docker-compose.yml"; then
+        log_warning "Could not SCP docker-compose file"
+        log_info "Manual step: Copy files to ~/chiffon/ and run docker-compose up -d"
         return 1
     fi
+    log_success "docker-compose.yml copied"
+
+    if ! scp -i "${SSH_KEY}" Dockerfile.llamacpp "james@${WINDOWS_HOST}:~/chiffon/"; then
+        log_warning "Could not SCP Dockerfile"
+        log_info "Note: Dockerfile.llamacpp is required for building the image"
+        return 1
+    fi
+    log_success "Dockerfile.llamacpp copied"
 
     # Start services via SSH
     log_info "Starting llama.cpp service..."
