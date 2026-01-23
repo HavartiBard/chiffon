@@ -135,10 +135,20 @@ check_env_file() {
 deploy_llamacpp_windows() {
     log_info "Deploying llama.cpp to Windows GPU machine..."
 
+    # Create directories on Windows first
+    log_info "Creating directories on Windows GPU machine..."
+    if ! ssh -i "${SSH_KEY}" "james@${WINDOWS_HOST}" "mkdir -p ~/chiffon/models ~/chiffon/cache"; then
+        log_error "Failed to create directories on Windows"
+        return 1
+    fi
+    log_success "Directories created on Windows"
+
     # Copy docker-compose to Windows via SSH (assumes SSH set up)
     log_info "Copying docker-compose.llamacpp.yml to Windows..."
+    log_info "DEBUG: Using SSH key: ${SSH_KEY}"
+    log_info "DEBUG: Target: james@${WINDOWS_HOST}"
 
-    if scp -i "${SSH_KEY}" docker-compose.llamacpp.yml "james@${WINDOWS_HOST}:~/chiffon/docker-compose.yml" 2>/dev/null; then
+    if scp -i "${SSH_KEY}" docker-compose.llamacpp.yml "james@${WINDOWS_HOST}:~/chiffon/docker-compose.yml"; then
         log_success "docker-compose copied"
     else
         log_warning "Could not SCP file (SSH may not be configured)"
@@ -150,7 +160,7 @@ deploy_llamacpp_windows() {
 
     # Start services via SSH
     log_info "Starting llama.cpp service..."
-    if ssh -i "${SSH_KEY}" "james@${WINDOWS_HOST}" "cd ~/chiffon && docker-compose up -d" 2>/dev/null; then
+    if ssh -i "${SSH_KEY}" "james@${WINDOWS_HOST}" "cd ~/chiffon && docker-compose up -d"; then
         log_success "llama.cpp service started"
     else
         log_warning "Could not start via SSH"
@@ -174,30 +184,34 @@ deploy_llamacpp_windows() {
 
 deploy_unraid_services() {
     log_info "Deploying core services to Unraid..."
+    log_info "DEBUG: Using SSH key: ${SSH_KEY}"
+    log_info "DEBUG: Target: root@${UNRAID_HOST}"
 
-    # Check if we can access Unraid
-    if ! ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "ls ${APPDATA_PATH}" &> /dev/null; then
-        log_error "Cannot access Unraid via SSH (root@${UNRAID_HOST})"
-        log_warning "Manual deployment required:"
-        log_info "  1. SCP files to Unraid:"
-        log_info "     scp -i ${SSH_KEY} docker-compose.production.yml root@${UNRAID_HOST}:${APPDATA_PATH}/"
-        log_info "     scp -i ${SSH_KEY} .env.production root@${UNRAID_HOST}:${APPDATA_PATH}/.env"
-        log_info "  2. SSH and start:"
-        log_info "     ssh -i ${SSH_KEY} root@${UNRAID_HOST}"
-        log_info "     cd ${APPDATA_PATH}"
-        log_info "     docker-compose up -d"
+    # Create directories on Unraid first
+    log_info "Creating directories on Unraid..."
+    if ! ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "mkdir -p ${APPDATA_PATH}/{postgres,config}"; then
+        log_error "Failed to create directories on Unraid"
         return 1
     fi
-
-    # Create directories on Unraid
-    log_info "Creating directories on Unraid..."
-    ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "mkdir -p ${APPDATA_PATH}/{postgres,config}" || true
+    log_success "Directories created on Unraid"
 
     # Copy docker-compose and .env
     log_info "Copying files to Unraid..."
-    scp -i "${SSH_KEY}" docker-compose.production.yml "root@${UNRAID_HOST}:${APPDATA_PATH}/docker-compose.yml"
-    scp -i "${SSH_KEY}" .env.production "root@${UNRAID_HOST}:${APPDATA_PATH}/.env"
-    scp -i "${SSH_KEY}" config/litellm-config.json "root@${UNRAID_HOST}:${APPDATA_PATH}/config/"
+    if ! scp -i "${SSH_KEY}" docker-compose.production.yml "root@${UNRAID_HOST}:${APPDATA_PATH}/docker-compose.yml"; then
+        log_error "Failed to copy docker-compose.production.yml"
+        return 1
+    fi
+
+    if ! scp -i "${SSH_KEY}" .env.production "root@${UNRAID_HOST}:${APPDATA_PATH}/.env"; then
+        log_error "Failed to copy .env.production"
+        return 1
+    fi
+
+    if ! scp -i "${SSH_KEY}" config/litellm-config.json "root@${UNRAID_HOST}:${APPDATA_PATH}/config/"; then
+        log_error "Failed to copy litellm-config.json"
+        return 1
+    fi
+
     log_success "Files copied"
 
     # Start services via SSH
