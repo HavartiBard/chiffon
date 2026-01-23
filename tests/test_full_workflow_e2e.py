@@ -405,7 +405,9 @@ class TestAuditTrailComplete:
         assert stored.status == "completed"
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Cross-service DB integration issue - dashboard_client_e2e and orchestrator_service_e2e use separate DB instances")
+    @pytest.mark.skip(
+        reason="Cross-service DB integration issue - dashboard_client_e2e and orchestrator_service_e2e use separate DB instances"
+    )
     @pytest.mark.e2e_04
     async def test_user_reviews_audit_trail_from_ui(
         self,
@@ -476,7 +478,9 @@ class TestFullWorkflowIntegration:
         paused_entries = e2e_test_db.query(PauseQueueEntry).count()
         assert paused_entries >= 0
 
-    @pytest.mark.skip(reason="Database integration issue - orchestrator_service_e2e uses separate DB instance")
+    @pytest.mark.skip(
+        reason="Database integration issue - orchestrator_service_e2e uses separate DB instance"
+    )
     @pytest.mark.asyncio
     @pytest.mark.e2e_01
     async def test_workflow_with_external_ai_fallback(self, orchestrator_service_e2e, monkeypatch):

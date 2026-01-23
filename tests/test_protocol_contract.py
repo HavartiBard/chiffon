@@ -82,6 +82,7 @@ def valid_resources_used():
 def valid_work_result(sample_task_id, valid_resources_used):
     """Valid WorkResult instance."""
     from uuid import uuid4
+
     return WorkResult(
         task_id=sample_task_id,
         status="completed",
@@ -255,6 +256,7 @@ class TestWorkResult:
     def test_work_result_success(self, sample_task_id, valid_resources_used):
         """Create and serialize successful WorkResult."""
         from uuid import uuid4
+
         result = WorkResult(
             task_id=sample_task_id,
             status="completed",
@@ -278,6 +280,7 @@ class TestWorkResult:
     def test_work_result_failure(self, sample_task_id, valid_resources_used):
         """Create and serialize failed WorkResult."""
         from uuid import uuid4
+
         result = WorkResult(
             task_id=sample_task_id,
             status="failed",
@@ -295,6 +298,7 @@ class TestWorkResult:
     def test_work_result_status_values(self, sample_task_id, valid_resources_used):
         """Test all valid status values."""
         from uuid import uuid4
+
         for status_val in ["completed", "failed", "cancelled"]:
             kwargs = {
                 "task_id": sample_task_id,
@@ -619,6 +623,7 @@ class TestRoundTripSerialization:
     def test_work_result_envelope_round_trip(self, sample_task_id):
         """Test work_result message round-trip."""
         from uuid import uuid4
+
         # Create payload
         resources = ResourcesUsed(
             duration_seconds=100,

@@ -483,7 +483,9 @@ class TestAuditTrail:
         # Verify plan was stored
         assert request_id in orchestrator._request_plans
 
-    @pytest.mark.skip(reason="Database integration issue - table doesn't exist in separate DB instance")
+    @pytest.mark.skip(
+        reason="Database integration issue - table doesn't exist in separate DB instance"
+    )
     @pytest.mark.asyncio
     async def test_full_audit_trail_queryable(self, orchestrator):
         """Full workflow can be reconstructed from state."""
