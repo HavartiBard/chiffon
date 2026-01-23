@@ -413,7 +413,9 @@ def create_sample_data():
         session.commit()
 
         # Summary
-        print(f"✓ Created {len([task1, task2, task3, task4, task5, task6, task7, task8])} sample tasks")
+        print(
+            f"✓ Created {len([task1, task2, task3, task4, task5, task6, task7, task8])} sample tasks"
+        )
         print(f"✓ Created {len(all_logs)} execution log entries")
         print(f"\nSample data distribution:")
         print(f"  - Completed: 2 tasks")
