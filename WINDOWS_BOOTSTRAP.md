@@ -166,9 +166,63 @@ ssh ubuntu@spraycheese.lab.klsll.com "nvidia-smi"
 
 All three commands should succeed without password prompts.
 
-## Part 8: Deployment
+## Part 8: Install CUDA toolkit inside WSL (required for GPU builds)
+
+Because the llama.cpp image compiles inside WSL2, the CUDA toolkit (including `nvcc`) must be available in the WSL environment. You can run the following commands over SSH—just log into the WSL shell using the SSH access you already configured. No interactive Windows desktop session is required unless you still need to adjust drivers, firewall rules, or port forwarding.
+
+```bash
+# Install the CUDA 12.2 toolkit that matches the Docker image
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb
+sudo dpkg -i cuda-keyring_1.0-1_all.deb
+sudo apt update
+sudo apt install -y cuda-toolkit-12-2
+sudo ln -sf /usr/local/cuda-12.2 /usr/local/cuda
+echo 'export CUDAToolkit_ROOT=/usr/local/cuda' >> ~/.bashrc
+source ~/.bashrc
+```
+
+Verify `nvcc` is available:
+
+```bash
+nvcc --version
+# Should report CUDA 12.2 (or the matching version you installed)
+```
+
+If you prefer the distro package, you can also install `nvcc` via:
+
+```bash
+sudo apt install -y nvidia-cuda-toolkit
+```
+
+Just ensure `CUDAToolkit_ROOT` points to the CUDA installation path so CMake can find it.
+
+## Part 9: Deployment
 
 Once bootstrap is complete, you can deploy llama.cpp:
+
+### Option A: Pull pre-built image with Ansible (recommended)
+
+Keep the host inventory in your `homelab_infra` repo (e.g. `~/Projects/homelab_infra/ansible/inventory.ini`). That inventory should point to `spraycheese.lab.klsll.com` with the SSH key you already configured. Then from your dev machine run:
+
+```bash
+ansible-playbook \
+  -i ~/Projects/homelab_infra/ansible/inventory.ini \
+  ansible/deploy-llamacpp.yml \
+  -e ghcr_owner=HavartiBard \
+  -e ghcr_tag=latest
+```
+
+The playbook deploys `ghcr.io/HavartiBard/chiffon-llamacpp:latest`, recreates the compose stack, and keeps the CUDA runtime ready. If you want to pin a specific build, override `ghcr_tag` with the SHA tag that the GH Action publishes.
+
+Before running the playbook, log in to GHCR from the Windows host once so Docker can pull without prompting:
+
+```bash
+docker login ghcr.io
+# Username: your GitHub username
+# Password: Personal access token with `read:packages`
+```
+
+### Option B: Manual deployment (existing instructions)
 
 From your dev machine, in the chiffon project directory:
 

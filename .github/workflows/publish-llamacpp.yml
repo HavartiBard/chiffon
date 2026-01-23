@@ -1,0 +1,34 @@
+name: Publish llama.cpp image
+
+on:
+  push:
+    branches:
+      - main
+      - phase/01-foundation
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push llama.cpp image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: Dockerfile.llamacpp
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/chiffon-llamacpp:latest
+            ghcr.io/${{ github.repository_owner }}/chiffon-llamacpp:${{ github.sha }}

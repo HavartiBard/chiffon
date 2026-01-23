@@ -1,7 +1,6 @@
 # Build llama.cpp server with NVIDIA CUDA support
-# This ensures compatibility and gives us full control over the build
-
-FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+# Use the CUDA development image so nvcc is available during build.
+FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \

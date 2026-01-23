@@ -27,10 +27,14 @@ WINDOWS_IP="192.168.20.154"
 APPDATA_PATH="/mnt/user/appdata/chiffon"
 SSH_KEY="$HOME/.ssh/id_ed25519_homelab"
 
+# Deployment tuning
+HEALTH_RETRY_INTERVAL=2
+LLAMACPP_HEALTH_RETRIES=90
+UNRAID_HEALTH_RETRIES=90
+
 # Script state
 DEPLOY_LLAMACPP=${DEPLOY_LLAMACPP:-false}
 DEPLOY_UNRAID=${DEPLOY_UNRAID:-false}
-DEPLOY_FULL=${DEPLOY_FULL:-false}
 
 # ============================================================================
 # Helper Functions
@@ -50,6 +54,33 @@ log_warning() {
 
 log_error() {
     echo -e "${RED}[✗]${NC} $*"
+}
+
+set_deploy_targets() {
+    local target_value normalized
+    target_value="$1"
+    normalized="$(echo "${target_value}" | tr '[:upper:]' '[:lower:]')"
+
+    case "${normalized}" in
+        windows|llamacpp)
+            DEPLOY_LLAMACPP=true
+            DEPLOY_UNRAID=false
+            ;;
+        unraid)
+            DEPLOY_UNRAID=true
+            DEPLOY_LLAMACPP=false
+            ;;
+        full|all)
+            DEPLOY_LLAMACPP=true
+            DEPLOY_UNRAID=true
+            ;;
+        *)
+            log_error "Unknown target: ${target_value}"
+            return 1
+            ;;
+    esac
+
+    return 0
 }
 
 check_command() {
@@ -173,16 +204,16 @@ deploy_llamacpp_windows() {
 
     # Wait for llama.cpp to be ready
     log_info "Waiting for llama.cpp to be ready..."
-    for i in {1..60}; do
+    for ((i = 1; i <= LLAMACPP_HEALTH_RETRIES; i++)); do
         if curl -s "http://${WINDOWS_HOST}:8000/health" &> /dev/null; then
             log_success "llama.cpp is ready"
             return 0
         fi
         echo -n "."
-        sleep 2
+        sleep "${HEALTH_RETRY_INTERVAL}"
     done
 
-    log_error "llama.cpp failed to start within 120 seconds"
+    log_error "llama.cpp failed to start within $((LLAMACPP_HEALTH_RETRIES * HEALTH_RETRY_INTERVAL)) seconds"
     return 1
 }
 
@@ -241,7 +272,7 @@ deploy_unraid_services() {
 
     # Wait for services to be healthy
     log_info "Waiting for services to be healthy..."
-    local max_attempts=60
+    local max_attempts=${UNRAID_HEALTH_RETRIES}
     local attempt=0
 
     while [ $attempt -lt $max_attempts ]; do
@@ -250,11 +281,11 @@ deploy_unraid_services() {
             return 0
         fi
         echo -n "."
-        sleep 2
+        sleep "${HEALTH_RETRY_INTERVAL}"
         ((attempt++))
     done
 
-    log_error "Services failed to start within 120 seconds"
+    log_error "Services failed to start within $((max_attempts * HEALTH_RETRY_INTERVAL)) seconds"
     return 1
 }
 
@@ -267,40 +298,43 @@ validate_deployment() {
 
     local failed=0
 
-    # Check llama.cpp
-    log_info "Checking llama.cpp..."
-    if curl -s "http://${WINDOWS_HOST}:8000/health" &> /dev/null; then
-        log_success "llama.cpp API responding"
+    if [ "$DEPLOY_LLAMACPP" = true ]; then
+        log_info "Checking llama.cpp..."
+        if curl -s "http://${WINDOWS_HOST}:8000/health" &> /dev/null; then
+            log_success "llama.cpp API responding"
+        else
+            log_error "llama.cpp API not responding"
+            ((failed++))
+        fi
     else
-        log_error "llama.cpp API not responding"
-        ((failed++))
+        log_info "Skipping llama.cpp validation (not targeted)"
     fi
 
-    # Check Unraid services
-    log_info "Checking Unraid services..."
+    if [ "$DEPLOY_UNRAID" = true ]; then
+        log_info "Checking Unraid services..."
 
-    # Orchestrator health
-    if curl -s "http://${UNRAID_HOST}:8000/health" &> /dev/null; then
-        log_success "Orchestrator API responding"
-    else
-        log_error "Orchestrator API not responding"
-        ((failed++))
-    fi
+        if curl -s "http://${UNRAID_HOST}:8000/health" &> /dev/null; then
+            log_success "Orchestrator API responding"
+        else
+            log_error "Orchestrator API not responding"
+            ((failed++))
+        fi
 
-    # Dashboard health
-    if curl -s "http://${UNRAID_HOST}:8001/health" &> /dev/null; then
-        log_success "Dashboard responding"
-    else
-        log_error "Dashboard not responding"
-        ((failed++))
-    fi
+        if curl -s "http://${UNRAID_HOST}:8001/health" &> /dev/null; then
+            log_success "Dashboard responding"
+        else
+            log_error "Dashboard not responding"
+            ((failed++))
+        fi
 
-    # Frontend health
-    if curl -s "http://${UNRAID_HOST}:3000" &> /dev/null; then
-        log_success "Frontend responding"
+        if curl -s "http://${UNRAID_HOST}:3000" &> /dev/null; then
+            log_success "Frontend responding"
+        else
+            log_error "Frontend not responding"
+            ((failed++))
+        fi
     else
-        log_error "Frontend not responding"
-        ((failed++))
+        log_info "Skipping Unraid validation (not targeted)"
     fi
 
     if [ $failed -eq 0 ]; then
@@ -320,19 +354,53 @@ main() {
     log_info "Chiffon Production Deployment"
     log_info "========================================"
 
-    # Parse arguments
-    if [ $# -gt 0 ]; then
+    local target_specified=false
+
+    while [ $# -gt 0 ]; do
         case "$1" in
-            --windows-llamacpp) DEPLOY_LLAMACPP=true ;;
-            --unraid) DEPLOY_UNRAID=true ;;
-            --full) DEPLOY_LLAMACPP=true; DEPLOY_UNRAID=true ;;
+            --windows-llamacpp)
+                DEPLOY_LLAMACPP=true
+                target_specified=true
+                shift
+                ;;
+            --unraid)
+                DEPLOY_UNRAID=true
+                target_specified=true
+                shift
+                ;;
+            --full)
+                DEPLOY_LLAMACPP=true
+                DEPLOY_UNRAID=true
+                target_specified=true
+                shift
+                ;;
+            --target=*)
+                if ! set_deploy_targets "${1#*=}"; then
+                    exit 1
+                fi
+                target_specified=true
+                shift
+                ;;
+            --target)
+                shift
+                if [ $# -eq 0 ]; then
+                    log_error "Missing argument for --target"
+                    exit 1
+                fi
+                if ! set_deploy_targets "$1"; then
+                    exit 1
+                fi
+                target_specified=true
+                shift
+                ;;
             --help)
-                echo "Usage: $0 [--windows-llamacpp] [--unraid] [--full]"
+                echo "Usage: $0 [--windows-llamacpp] [--unraid] [--full] [--target <windows|unraid|full>]"
                 echo ""
                 echo "Flags:"
-                echo "  --windows-llamacpp  Deploy llama.cpp to Windows GPU machine (RTX 5080)"
-                echo "  --unraid            Deploy core services to Unraid"
-                echo "  --full              Deploy everything"
+                echo "  --windows-llamacpp      Deploy llama.cpp to Windows GPU machine (RTX 5080)"
+                echo "  --unraid                Deploy core services to Unraid"
+                echo "  --full                  Deploy everything"
+                echo "  --target <value>        Shortcut to focus on a single deploy target (windows, unraid, full)"
                 exit 0
                 ;;
             *)
@@ -340,8 +408,9 @@ main() {
                 exit 1
                 ;;
         esac
-    else
-        # Default: full deployment
+    done
+
+    if [ "$target_specified" = false ]; then
         DEPLOY_LLAMACPP=true
         DEPLOY_UNRAID=true
     fi
