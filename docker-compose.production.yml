@@ -2,7 +2,7 @@ version: "3.9"
 
 # Production deployment for Unraid
 # Services: PostgreSQL, RabbitMQ, LiteLLM, Orchestrator, Dashboard, Frontend
-# Ollama runs separately on Windows GPU machine (spraycheese.lab.klsll.com:11434)
+# llama.cpp runs separately on Windows GPU machine (spraycheese.lab.klsll.com:8000)
 
 services:
   postgres:
