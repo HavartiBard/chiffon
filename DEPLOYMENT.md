@@ -19,7 +19,10 @@ chiffon.klsll.com (NPM reverse proxy on Unraid)
 Orchestrator (Unraid:8000)
     ├── PostgreSQL (appdata/chiffon/postgres)
     ├── RabbitMQ (local)
-    ├── LiteLLM (local) → Routes to llama.cpp
+    ├── LiteLLM (local) → Routes to:
+    │   ├── Primary: GPT-4 (OpenAI API - ChatGPT Pro/Codex)
+    │   ├── Fallback: llama.cpp (RTX 5080, local, free)
+    │   └── Optional: Claude API (if/when added)
     └── llama.cpp Client → http://spraycheese.lab.klsll.com:8000/v1
 
 llama.cpp Server (spraycheese.lab.klsll.com:8000)
@@ -45,7 +48,8 @@ llama.cpp Server (spraycheese.lab.klsll.com:8000)
 - [ ] Verify port 11434 is open/accessible from Unraid
 
 ### Secrets & Configuration
-- [ ] Anthropic API key ready
+- [ ] **OpenAI API key ready** (from ChatGPT Pro/Codex account - required)
+- [ ] Anthropic API key ready (optional for future use)
 - [ ] Create `.env` file with credentials (see template below)
 
 ## Deployment Steps
@@ -102,13 +106,15 @@ llama.cpp Server (spraycheese.lab.klsll.com:8000)
 
 2. Edit `.env` with your credentials:
    ```env
-   ANTHROPIC_API_KEY=sk-ant-...
-   OPENAI_API_KEY=sk-... (optional)
+   OPENAI_API_KEY=sk-...  (REQUIRED - from ChatGPT Pro/Codex account)
+   ANTHROPIC_API_KEY=sk-ant-... (optional - for future Claude API access)
    LITELLM_MASTER_KEY=your-secret-key
    DATABASE_URL=postgresql://agent:password@postgres:5432/agent_deploy
    ```
 
-   Note: llama.cpp endpoint is configured in LiteLLM config (`config/litellm-config.json`)
+   **Note:** Claude Pro subscription does NOT include API access. You'll need separate OpenAI billing for GPT-4 access.
+
+   **Note:** llama.cpp endpoint is configured in LiteLLM config (`config/litellm-config.json`)
 
 3. Start services:
    ```bash
