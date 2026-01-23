@@ -20,11 +20,12 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-UNRAID_HOST="unraid.klsll.com"
+UNRAID_HOST="unraid.lab.klsll.com"
 UNRAID_IP="192.168.20.14"
 WINDOWS_HOST="spraycheese.lab.klsll.com"
 WINDOWS_IP="192.168.20.154"
 APPDATA_PATH="/mnt/user/appdata/chiffon"
+SSH_KEY="$HOME/.ssh/id_ed25519_homelab"
 
 # Script state
 DEPLOY_LLAMACPP=${DEPLOY_LLAMACPP:-false}
@@ -118,8 +119,8 @@ check_env_file() {
     fi
 
     # Check for required API keys
-    if ! grep -q "ANTHROPIC_API_KEY=sk-ant" .env.production; then
-        log_error "ANTHROPIC_API_KEY not configured in .env.production"
+    if ! grep -q "OPENAI_API_KEY=sk-" .env.production; then
+        log_error "OPENAI_API_KEY not configured in .env.production"
         return 1
     fi
 
@@ -175,14 +176,14 @@ deploy_unraid_services() {
     log_info "Deploying core services to Unraid..."
 
     # Check if we can access Unraid
-    if ! ssh "root@${UNRAID_HOST}" "ls ${APPDATA_PATH}" &> /dev/null; then
+    if ! ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "ls ${APPDATA_PATH}" &> /dev/null; then
         log_error "Cannot access Unraid via SSH (root@${UNRAID_HOST})"
         log_warning "Manual deployment required:"
         log_info "  1. SCP files to Unraid:"
-        log_info "     scp docker-compose.production.yml root@${UNRAID_HOST}:${APPDATA_PATH}/"
-        log_info "     scp .env.production root@${UNRAID_HOST}:${APPDATA_PATH}/.env"
+        log_info "     scp -i ${SSH_KEY} docker-compose.production.yml root@${UNRAID_HOST}:${APPDATA_PATH}/"
+        log_info "     scp -i ${SSH_KEY} .env.production root@${UNRAID_HOST}:${APPDATA_PATH}/.env"
         log_info "  2. SSH and start:"
-        log_info "     ssh root@${UNRAID_HOST}"
+        log_info "     ssh -i ${SSH_KEY} root@${UNRAID_HOST}"
         log_info "     cd ${APPDATA_PATH}"
         log_info "     docker-compose up -d"
         return 1
@@ -190,17 +191,18 @@ deploy_unraid_services() {
 
     # Create directories on Unraid
     log_info "Creating directories on Unraid..."
-    ssh "root@${UNRAID_HOST}" "mkdir -p ${APPDATA_PATH}/{postgres,config}" || true
+    ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "mkdir -p ${APPDATA_PATH}/{postgres,config}" || true
 
     # Copy docker-compose and .env
     log_info "Copying files to Unraid..."
-    scp docker-compose.production.yml "root@${UNRAID_HOST}:${APPDATA_PATH}/docker-compose.yml"
-    scp .env.production "root@${UNRAID_HOST}:${APPDATA_PATH}/.env"
+    scp -i "${SSH_KEY}" docker-compose.production.yml "root@${UNRAID_HOST}:${APPDATA_PATH}/docker-compose.yml"
+    scp -i "${SSH_KEY}" .env.production "root@${UNRAID_HOST}:${APPDATA_PATH}/.env"
+    scp -i "${SSH_KEY}" config/litellm-config.json "root@${UNRAID_HOST}:${APPDATA_PATH}/config/"
     log_success "Files copied"
 
     # Start services via SSH
     log_info "Starting services on Unraid..."
-    ssh "root@${UNRAID_HOST}" "cd ${APPDATA_PATH} && docker-compose up -d" || {
+    ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "cd ${APPDATA_PATH} && docker-compose up -d" || {
         log_error "Failed to start services"
         return 1
     }
@@ -213,7 +215,7 @@ deploy_unraid_services() {
     local attempt=0
 
     while [ $attempt -lt $max_attempts ]; do
-        if ssh "root@${UNRAID_HOST}" "docker-compose -f ${APPDATA_PATH}/docker-compose.yml ps" | grep -q "Up"; then
+        if ssh -i "${SSH_KEY}" "root@${UNRAID_HOST}" "docker-compose -f ${APPDATA_PATH}/docker-compose.yml ps" | grep -q "Up"; then
             log_success "Services are up"
             return 0
         fi
@@ -235,12 +237,12 @@ validate_deployment() {
 
     local failed=0
 
-    # Check Ollama
-    log_info "Checking Ollama..."
-    if curl -s "http://${WINDOWS_HOST}:11434/api/tags" &> /dev/null; then
-        log_success "Ollama API responding"
+    # Check llama.cpp
+    log_info "Checking llama.cpp..."
+    if curl -s "http://${WINDOWS_HOST}:8000/health" &> /dev/null; then
+        log_success "llama.cpp API responding"
     else
-        log_error "Ollama API not responding"
+        log_error "llama.cpp API not responding"
         ((failed++))
     fi
 
@@ -336,7 +338,7 @@ main() {
     log_info ""
     log_info "Next steps:"
     log_info "1. Verify deployment: bash scripts/deploy-validate.sh"
-    log_info "2. Access dashboard: http://${UNRAID_HOST}:8001"
+    log_info "2. Access dashboard: http://chiffon.klsll.com or http://${UNRAID_HOST}:8001"
     log_info "3. Access frontend: http://${UNRAID_HOST}:3000"
     log_info ""
 }
