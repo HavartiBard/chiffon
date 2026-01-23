@@ -236,9 +236,12 @@ async def chat(payload: ChatRequest) -> Dict[str, Any]:
     session_store.update_session_status(session.session_id, "awaiting_plan")
 
     is_modification = bool(session.current_plan_id)
-    plan_view = await _prepare_plan_for_session(
-        session, payload.message, modification=is_modification
-    )
+    try:
+        plan_view = await _prepare_plan_for_session(
+            session, payload.message, modification=is_modification
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=502, detail="Orchestrator request timed out")
 
     assistant_message = _create_chat_message(
         session.session_id,

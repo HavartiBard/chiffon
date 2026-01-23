@@ -322,9 +322,11 @@ class TestTaskMapperCachedMatch:
     async def test_cached_match_returns_stored(self, mock_cache_manager, sample_playbook_catalog):
         """Test cached match returns previously stored mapping."""
         # Setup mock to return cached mapping
+        # Use an intent that won't trigger exact match (doesn't contain service names)
+        cached_intent = "Deploy mesh networking platform"
         cached_mapping = PlaybookMapping(
-            intent="Install Kuma service",
-            intent_hash=hashlib.sha256(b"install kuma service").hexdigest(),
+            intent=cached_intent,
+            intent_hash=hashlib.sha256(cached_intent.encode()).hexdigest(),
             playbook_path="/ansible/kuma-deploy.yml",
             confidence=0.90,
             match_method="semantic",
@@ -336,7 +338,7 @@ class TestTaskMapperCachedMatch:
 
         mapper = TaskMapper(mock_cache_manager, sample_playbook_catalog)
 
-        result = await mapper.map_task_to_playbook("Install Kuma service")
+        result = await mapper.map_task_to_playbook(cached_intent)
         assert result.playbook_path == "/ansible/kuma-deploy.yml"
         assert result.confidence == 0.90
         assert result.method == "cached"
@@ -407,7 +409,8 @@ class TestTaskMapperSemanticMatch:
                 )
                 mock_faiss.return_value = mock_index
 
-                result = await mapper.map_task_to_playbook("Install Kuma service mesh")
+                # Use intent that won't trigger exact match
+                result = await mapper.map_task_to_playbook("Deploy service mesh networking")
 
                 assert result.playbook_path == "/ansible/kuma-deploy.yml"
                 assert result.confidence >= 0.85

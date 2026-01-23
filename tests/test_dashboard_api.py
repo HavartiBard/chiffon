@@ -180,7 +180,7 @@ def test_reject_plan_resets_session(
     session = session_store.get_session(session_id)
     assert session.status == "idle"
     assert any(
-        msg["metadata"].get("plan_id") == orchestrator_stub["plan_payload"]["plan_id"]
+        msg.metadata.get("plan_id") == orchestrator_stub["plan_payload"]["plan_id"]
         for msg in session.messages
     )
 

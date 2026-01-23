@@ -406,6 +406,15 @@ class PlaybookMapping(Base):
         """
         return intent.lower().strip()
 
+    @property
+    def method(self) -> str:
+        """Alias for match_method for API compatibility.
+
+        Returns:
+            Match method ('exact', 'cached', 'semantic')
+        """
+        return self.match_method
+
     def __repr__(self):
         return (
             f"<PlaybookMapping(id={self.id}, intent='{self.intent[:30]}...', "
