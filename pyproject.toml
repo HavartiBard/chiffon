@@ -17,19 +17,30 @@ sqlalchemy = "^2.0.0"
 alembic = "^1.12.0"
 pydantic = "^2.0.0"
 pydantic-settings = "^2.0.0"
-pika = "^1.3.0"
+aio-pika = "^9.5"
+python-json-logger = "^2.0"
 python-dotenv = "^1.0.0"
 litellm = "^1.0.0"
 psycopg2-binary = "^2.9.0"
 pydantic-core = "^2.0.0"
+psutil = "^7.2.1"
+types-psutil = "^7.2.1.20260116"
+pynvml = "^13.0.1"
+numpy = "^1.24.0"
+faiss-cpu = "^1.8.0"
+sentence-transformers = "^2.3.0"
+"ruamel.yaml" = "^0.18.0"
+python-socketio = "^5.12.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
 pytest-asyncio = "^0.21.0"
+pytest-aio = "^0.3"
 black = "^23.0.0"
 ruff = "^0.1.0"
 mypy = "^1.5.0"
 httpx = "^0.24.0"
+aiosqlite = "^0.19.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -68,6 +79,14 @@ select = [
 ignore = [
   "E501",   # line too long (handled by black)
   "B008",   # Do not perform function calls in argument defaults
+  "F401",   # unused imports (sometimes needed for re-exports)
+  "F841",   # local variable assigned but never used (test fixtures)
+  "C901",   # function too complex (some orchestrator functions are intentionally complex)
+  "B007",   # loop control variable not used (common in parameterized tests)
+  "B017",   # pytest.raises(Exception) (acceptable for broad exception testing)
+  "B904",   # raise without from (acceptable in error handling)
+  "I001",   # isort would reorder imports (conflicts with black)
+  "F541",   # f-string without placeholders (acceptable for logging)
 ]
 exclude = [
   ".git",

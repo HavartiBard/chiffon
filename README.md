@@ -155,6 +155,26 @@ To wipe data:
 docker-compose down -v
 ```
 
+## Deploying llama.cpp via GHCR + Ansible
+
+We now build the GPU-enabled llama.cpp image ahead of time and host it on GitHub Container Registry so the Windows host only needs to pull and run it.
+
+1. **Publish the image** by pushing to `main` or `phase/01-foundation`. The [Publish llama.cpp image](.github/workflows/publish-llamacpp.yml) workflow builds `Dockerfile.llamacpp` and pushes `ghcr.io/<your-org>/chiffon-llamacpp:latest` plus a SHA-tagged image.
+2. **Keep your inventory in `homelab_infra`** (or another infra repo) so host records, SSH keys, and connection details stay separate. Point to that inventory when running Ansible, e.g.:
+
+   ```bash
+   ansible-playbook \
+     -i ~/Projects/homelab_infra/ansible/inventory.ini \
+     ansible/deploy-llamacpp.yml \
+     -e ghcr_owner=HavartiBard \
+     -e ghcr_tag=latest
+   ```
+
+   The playbook copies a GHCR-aware `docker-compose.yml`, pulls the image, and starts the GPU service; its defaults assume `ghcr_owner` = repo owner but you can override `ghcr_tag` to a release SHA.
+3. **Ensure the Windows host can reach GHCR** by logging in once inside WSL (`docker login ghcr.io`). Store the PAT that has `read:packages` so subsequent pulls run without extra steps.
+
+This approach keeps deployments repeatable, avoids compiling `llama.cpp` on the Windows machine, and lets you roll forward by tagging a new GHCR image plus rerunning the playbook.
+
 ## Environment Variables
 
 Copy `.env.example` to `.env` and configure:

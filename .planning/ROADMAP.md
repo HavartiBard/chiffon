@@ -15,13 +15,13 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 | Phase | Goal | Requirements | Plans | Success Criteria |
 |-------|------|--------------|-------|------------------|
 | 1 - Foundation | Project infrastructure, observability stack ready | STATE-01, STATE-02, MSG-04 | 5 | 5 |
-| 2 - Message Bus | RabbitMQ and agent communication protocol deployed | MSG-01, MSG-02, MSG-03, MSG-04 | (planned) | 5 |
-| 3 - Orchestrator Core | Orchestrator accepts requests, plans work, dispatches to agents | ORCH-01, ORCH-02, ORCH-05 | (planned) | 5 |
-| 4 - Desktop Agent | Agents report resource availability in real-time | DESK-01, DESK-02, DESK-03, DESK-04 | (planned) | 5 |
-| 5 - State & Audit | Execution tracked in PostgreSQL, audit trail committed to git | STATE-03, STATE-04, ORCH-03, ORCH-04 | (planned) | 5 |
-| 6 - Infrastructure Agent | Ansible integration, playbook execution, improvement suggestions | INFRA-01, INFRA-02, INFRA-03, INFRA-04 | (planned) | 5 |
-| 7 - User Interface | Chat interface, plan approval, execution transparency | UI-01, UI-02, UI-03, UI-04 | (planned) | 5 |
-| 8 - End-to-End Integration | Full Kuma deployment workflow with user → orchestrator → infra agent → git | E2E-01, E2E-02, E2E-03, E2E-04 | (planned) | 5 |
+| 2 - Message Bus | RabbitMQ and agent communication protocol deployed | MSG-01, MSG-02, MSG-03, MSG-04 | 5/5 ✓ | 5/5 ✓ |
+| 3 - Orchestrator Core | Orchestrator accepts requests, plans work, dispatches to agents | ORCH-01, ORCH-02, ORCH-05 | 5/5 ✓ | 5/5 ✓ |
+| 4 - Desktop Agent | Agents report resource availability in real-time | DESK-01, DESK-02, DESK-03, DESK-04 | 5/5 ✓ | 5/5 ✓ |
+| 5 - State & Audit | Execution tracked in PostgreSQL, audit trail committed to git | STATE-03, STATE-04, ORCH-03, ORCH-04 | 5/5 ✓ | 5/5 ✓ |
+| 6 - Infrastructure Agent | Ansible integration, playbook execution, improvement suggestions | INFRA-01, INFRA-02, INFRA-03, INFRA-04 | 6 plans | 5 |
+| 7 - User Interface | Chat interface, plan approval, execution transparency | UI-01, UI-02, UI-03, UI-04 | 6/6 ✓ | 5/5 ✓ |
+| 8 - End-to-End Integration | Full Kuma deployment workflow with user → orchestrator → infra agent → git | E2E-01, E2E-02, E2E-03, E2E-04 | 2 plans | 5 |
 
 ---
 
@@ -66,6 +66,15 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 
 **Goal:** RabbitMQ deployed, agent communication protocol implemented and tested. Agents can exchange messages with orchestrator.
 
+**Status:** ✓ COMPLETE (5/5 plans executed, goal verified)
+
+**Plans:**
+- [x] 02-01-PLAN.md — RabbitMQ deployment, queue topology, management UI verification
+- [x] 02-02-PLAN.md — Protocol completion (all message types), comprehensive tests (40+ tests)
+- [x] 02-03-PLAN.md — Agent framework base class, heartbeat loop, test agent
+- [x] 02-04-PLAN.md — Orchestrator REST API (/dispatch, /status, /agents, /cancel)
+- [x] 02-05-PLAN.md — End-to-end integration tests, error scenarios, persistence validation
+
 **Dependencies:** Phase 1 (foundation established)
 
 **Requirements Mapped:**
@@ -93,6 +102,17 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 
 **Goal:** Orchestrator service accepts natural language requests, structures them into work plans, routes to agents based on resource availability and capability. Can fall back to external AI when needed.
 
+**Status:** ✓ COMPLETE (7/7 plans executed, goal verified)
+
+**Plans:**
+- [x] 03-01-PLAN.md — Request Parser & Intent Decomposer (NLU, auto-decompose requests into subtasks)
+- [x] 03-02-PLAN.md — Work Plan Generation & Validation (sequential task lists, resource requirements, reordering)
+- [x] 03-03-PLAN.md — Agent Routing & Registry (pool-based assignment, performance tracking, scoring)
+- [x] 03-04-PLAN.md — External AI Fallback Integration (quota checks, complexity assessment, Claude fallback)
+- [x] 03-05-PLAN.md — Orchestrator Service Integration & E2E Tests (REST API, approval workflow, full workflow tests)
+- [x] 03-06-PLAN.md — Integration Completion (Gap closure: Full orchestrator integration)
+- [x] 03-07-PLAN.md — Quota Validation Field Fix (Gap closure: Fix FallbackDecision quota field)
+
 **Dependencies:** Phase 1 (state layer), Phase 2 (message bus)
 
 **Requirements Mapped:**
@@ -118,6 +138,8 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 ### Phase 4: Desktop Agent (Resource Awareness)
 
 **Goal:** Lightweight agents run on GPU desktops, report resource availability (CPU, GPU VRAM, load %), signal online/offline status. Orchestrator can query before dispatching work.
+
+**Status:** ✓ COMPLETE (5/5 plans executed, goal verified)
 
 **Dependencies:** Phase 2 (message bus)
 
@@ -146,6 +168,8 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 
 **Goal:** Execution results tracked in PostgreSQL with rich audit data. All decisions and outcomes committed to git as immutable audit trail. Audit queries support filtering by time, service, status.
 
+**Status:** ✓ COMPLETE (5/5 plans executed + 2 gap closures, goal verified)
+
 **Dependencies:** Phase 1 (PostgreSQL schema), Phase 3 (orchestrator), Phase 4 (desktop agent)
 
 **Requirements Mapped:**
@@ -171,7 +195,22 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 
 ### Phase 6: Infrastructure Agent (Ansible Integration)
 
-**Goal:** Agent accepts deployment tasks, maps to existing Ansible playbooks in ~/CascadeProjects/homelab-infra, executes playbooks, streams output, suggests improvements.
+**Goal:** Agent accepts deployment tasks, maps to existing Ansible playbooks in ~/CascadeProjects/homelab-infra, executes playbooks, returns structured summaries, suggests improvements.
+
+**Status:** PLANNED (6 plans in 3 waves)
+
+**Plans:**
+- [ ] 06-01-PLAN.md — Infrastructure Agent Foundation (InfraAgent class, PlaybookDiscovery service)
+- [ ] 06-02-PLAN.md — Task-to-Playbook Mapping (TaskMapper with FAISS semantic matching)
+- [ ] 06-03-PLAN.md — Playbook Execution & Output (PlaybookExecutor with ansible-runner)
+- [ ] 06-04-PLAN.md — Improvement Suggestions (PlaybookAnalyzer with ansible-lint)
+- [ ] 06-05-PLAN.md — Template Generation (TemplateGenerator with Jinja2 + Galaxy patterns)
+- [ ] 06-06-PLAN.md — E2E Integration & Tests (Full workflow tests, orchestrator integration)
+
+**Wave Structure:**
+- Wave 1: Plans 01, 02 (independent foundation — can run in parallel)
+- Wave 2: Plans 03, 04, 05 (depend on Wave 1 — can run in parallel)
+- Wave 3: Plan 06 (depends on all prior — integration testing)
 
 **Dependencies:** Phase 2 (message bus), Phase 3 (orchestrator)
 
@@ -185,20 +224,35 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 
 1. **Playbook discovery works** — Agent scans ~/CascadeProjects/homelab-infra/ansible for playbooks, indexes by service name (kuma, portainer, etc.), caches with refresh every 1h; orchestrator can query playbook catalog
 2. **Task → playbook mapping** — Orchestrator sends task "Deploy Kuma Uptime", agent parses intent, identifies kuma-deployment.yml playbook, verifies playbook exists; if no match, suggests closest match or "custom playbook needed"
-3. **Execution and output streaming** — Agent runs ansible-playbook with task, streams output line-by-line back to orchestrator; orchestrator displays in real-time or stores for later; exit code captured
-4. **Improvement suggestions generated** — After playbook execution, agent analyzes for patterns: "Config not idempotent", "Missing handler for service restart", suggests improvement with reasoning; suggestions stored, can be applied to playbook
+3. **Execution and output summary** — Agent runs ansible-playbook with task, returns structured summary (status, duration, changed count, errors); exit code captured
+4. **Improvement suggestions generated** — After playbook execution failure, agent analyzes for patterns: "Config not idempotent", "Missing handler for service restart", suggests improvement with reasoning; suggestions stored, can be applied to playbook
 5. **Playbook templates generated** — Agent receives "Generate template for deploying [service]", produces YAML playbook scaffold with roles, handlers, variables, comments; user can copy to homelab-infra and customize
 
 **Risks & Notes:**
 - Playbook inventory must be accurate and up-to-date
 - Ansible execution must use orchestrator context (user, privileges, vault access)
-- Output streaming must not overwhelm MQ (buffer, batch if needed)
+- Silent execution with high-level summaries preferred over line-by-line streaming (reduces MQ overhead)
 
 ---
 
 ### Phase 7: User Interface & Approval
 
 **Goal:** Chat interface accepts natural language deployment requests. Orchestrator presents plan for approval. User can approve, reject, or request modifications before execution.
+
+**Status:** ✓ COMPLETE (6/6 plans executed, goal verified)
+
+**Plans:**
+- [x] 07-01-PLAN.md — Dashboard Backend API (FastAPI, session management, orchestrator proxy)
+- [x] 07-02-PLAN.md — WebSocket Real-time Layer (connection manager, execution streaming)
+- [x] 07-03-PLAN.md — Chat Interface Frontend (React, TypeScript, Vite, TailwindCSS)
+- [x] 07-04-PLAN.md — Plan Review & Approval UI (plan display, approve/reject/modify)
+- [x] 07-05-PLAN.md — Execution Monitoring UI (real-time updates, abort, summary)
+- [x] 07-06-PLAN.md — E2E Integration Tests (full workflow, requirement verification)
+
+**Wave Structure:**
+- Wave 1: Plans 01, 02 (independent backend foundation — can run in parallel)
+- Wave 2: Plans 03, 04 (frontend components — depend on Wave 1)
+- Wave 3: Plans 05, 06 (integration and testing — depend on Waves 1 and 2)
 
 **Dependencies:** Phase 3 (orchestrator), Phase 6 (infra agent)
 
@@ -226,6 +280,16 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 ### Phase 8: End-to-End Integration (Kuma Deployment)
 
 **Goal:** Complete workflow: user requests Kuma deployment, system finds existing configs, presents plan, executes via infra agent, suggests improvements, commits to git, tracks state. All components integrated and working.
+
+**Status:** PLANNED (2 plans in 2 waves)
+
+**Plans:**
+- [ ] 08-01-PLAN.md — Full E2E Integration Tests (comprehensive test suite covering all integration points)
+- [ ] 08-02-PLAN.md — Kuma Deployment Validation (real-world scenario validation with v1 validation report)
+
+**Wave Structure:**
+- Wave 1: Plan 01 (E2E integration test suite — autonomous)
+- Wave 2: Plan 02 (Kuma deployment validation with human verification checkpoint — sequential)
 
 **Dependencies:** All prior phases (1-7)
 
@@ -260,37 +324,37 @@ Chiffon is an agentic orchestration platform for autonomous infrastructure deliv
 
 ### Requirement → Phase Mapping
 
-| Requirement | Phase | Category |
-|-------------|-------|----------|
-| STATE-01 | Phase 1, 5 | State & Audit |
-| STATE-02 | Phase 1 | State & Audit |
-| STATE-03 | Phase 5 | State & Audit |
-| STATE-04 | Phase 5 | State & Audit |
-| MSG-01 | Phase 2 | Message Bus |
-| MSG-02 | Phase 2 | Message Bus |
-| MSG-03 | Phase 2 | Message Bus |
-| MSG-04 | Phase 1, 2 | Message Bus |
-| ORCH-01 | Phase 3 | Orchestrator |
-| ORCH-02 | Phase 3 | Orchestrator |
-| ORCH-03 | Phase 5 | Orchestrator |
-| ORCH-04 | Phase 5 | Orchestrator |
-| ORCH-05 | Phase 3 | Orchestrator |
-| DESK-01 | Phase 4 | Desktop Agent |
-| DESK-02 | Phase 4 | Desktop Agent |
-| DESK-03 | Phase 4 | Desktop Agent |
-| DESK-04 | Phase 4 | Orchestrator |
-| INFRA-01 | Phase 6 | Infrastructure Agent |
-| INFRA-02 | Phase 6 | Infrastructure Agent |
-| INFRA-03 | Phase 6 | Infrastructure Agent |
-| INFRA-04 | Phase 6 | Infrastructure Agent |
-| UI-01 | Phase 7 | User Interface |
-| UI-02 | Phase 7 | User Interface |
-| UI-03 | Phase 7 | User Interface |
-| UI-04 | Phase 7 | User Interface |
-| E2E-01 | Phase 8 | Integration |
-| E2E-02 | Phase 8 | Integration |
-| E2E-03 | Phase 8 | Integration |
-| E2E-04 | Phase 8 | Integration |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| STATE-01 | Phase 1, 5 | Phase 1: Complete, Phase 5: Complete |
+| STATE-02 | Phase 1 | Complete |
+| STATE-03 | Phase 5 | Complete |
+| STATE-04 | Phase 5 | Complete |
+| MSG-01 | Phase 2 | Complete |
+| MSG-02 | Phase 2 | Complete |
+| MSG-03 | Phase 2 | Complete |
+| MSG-04 | Phase 1, 2 | Complete |
+| ORCH-01 | Phase 3 | Complete |
+| ORCH-02 | Phase 3 | Complete |
+| ORCH-03 | Phase 5 | Complete |
+| ORCH-04 | Phase 5 | Complete |
+| ORCH-05 | Phase 3 | Complete |
+| DESK-01 | Phase 4 | Complete |
+| DESK-02 | Phase 4 | Complete |
+| DESK-03 | Phase 4 | Complete |
+| DESK-04 | Phase 4 | Complete |
+| INFRA-01 | Phase 6 | Planned |
+| INFRA-02 | Phase 6 | Planned |
+| INFRA-03 | Phase 6 | Planned |
+| INFRA-04 | Phase 6 | Planned |
+| UI-01 | Phase 7 | Complete |
+| UI-02 | Phase 7 | Complete |
+| UI-03 | Phase 7 | Complete |
+| UI-04 | Phase 7 | Complete |
+| E2E-01 | Phase 8 | Planned |
+| E2E-02 | Phase 8 | Planned |
+| E2E-03 | Phase 8 | Planned |
+| E2E-04 | Phase 8 | Planned |
 
 ---
 
@@ -332,7 +396,7 @@ Each phase has observable completion criteria. Phase 8 success means:
 
 ---
 
-**Roadmap Version:** 1.0
+**Roadmap Version:** 1.5
 **Created:** 2026-01-18
-**Plans Created:** 2026-01-19 (Phase 1: 5 plans in 3 waves)
-**Next Step:** Execute Phase 1 via `/gsd:execute-phase 1`
+**Last Updated:** 2026-01-22 (Phase 8 planned: 2 plans in 2 waves)
+**Current Status:** 36/48 plans complete (75%) — Phase 6 in progress, Phase 7 complete, Phase 8 planned

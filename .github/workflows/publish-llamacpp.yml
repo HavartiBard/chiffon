@@ -1,0 +1,34 @@
+name: Publish llamacpp
+
+on:
+  push:
+    branches:
+      - main
+      - phase/01-foundation
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Gitea Registry
+        uses: docker/login-action@v3
+        with:
+          registry: registry.klsll.com
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push llama.cpp image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: Dockerfile.llamacpp
+          push: true
+          tags: |
+            registry.klsll.com/havartibard/chiffon-llamacpp:latest
+            registry.klsll.com/havartibard/chiffon-llamacpp:${{ github.sha }}

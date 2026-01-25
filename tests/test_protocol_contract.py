@@ -10,7 +10,6 @@ from uuid import uuid4
 import pytest
 
 from src.common.exceptions import (
-    AgentProtocolError,
     AgentUnavailableError,
     AuthenticationFailedError,
     InvalidMessageFormatError,
@@ -27,7 +26,6 @@ from src.common.protocol import (
     WorkResult,
     WorkStatus,
 )
-
 
 # Fixtures
 
@@ -83,12 +81,20 @@ def valid_resources_used():
 @pytest.fixture
 def valid_work_result(sample_task_id, valid_resources_used):
     """Valid WorkResult instance."""
+    from uuid import uuid4
+
     return WorkResult(
         task_id=sample_task_id,
-        status="success",
+        status="completed",
         exit_code=0,
         output="Deployment successful",
-        resources_used=valid_resources_used,
+        duration_ms=87000,
+        agent_id=uuid4(),
+        resources_used={
+            "duration_seconds": valid_resources_used.duration_seconds,
+            "gpu_vram_mb": valid_resources_used.gpu_vram_mb,
+            "cpu_time_ms": valid_resources_used.cpu_time_ms,
+        },
     )
 
 
@@ -249,29 +255,41 @@ class TestWorkResult:
 
     def test_work_result_success(self, sample_task_id, valid_resources_used):
         """Create and serialize successful WorkResult."""
+        from uuid import uuid4
+
         result = WorkResult(
             task_id=sample_task_id,
-            status="success",
+            status="completed",
             exit_code=0,
             output="All done",
-            resources_used=valid_resources_used,
+            duration_ms=5000,
+            agent_id=uuid4(),
+            resources_used={
+                "duration_seconds": valid_resources_used.duration_seconds,
+                "gpu_vram_mb": valid_resources_used.gpu_vram_mb,
+            },
         )
 
         json_str = result.model_dump_json()
         json_obj = json.loads(json_str)
 
-        assert json_obj["status"] == "success"
+        assert json_obj["status"] == "completed"
         assert json_obj["exit_code"] == 0
         assert json_obj["resources_used"]["duration_seconds"] == 87
 
     def test_work_result_failure(self, sample_task_id, valid_resources_used):
         """Create and serialize failed WorkResult."""
+        from uuid import uuid4
+
         result = WorkResult(
             task_id=sample_task_id,
             status="failed",
             exit_code=1,
             output="Error occurred",
-            resources_used=valid_resources_used,
+            error_message="Deployment failed",
+            duration_ms=3000,
+            agent_id=uuid4(),
+            resources_used={"gpu_vram_mb": 0},
         )
 
         assert result.status == "failed"
@@ -279,13 +297,21 @@ class TestWorkResult:
 
     def test_work_result_status_values(self, sample_task_id, valid_resources_used):
         """Test all valid status values."""
-        for status_val in ["success", "failed"]:
-            result = WorkResult(
-                task_id=sample_task_id,
-                status=status_val,
-                exit_code=0,
-                resources_used=valid_resources_used,
-            )
+        from uuid import uuid4
+
+        for status_val in ["completed", "failed", "cancelled"]:
+            kwargs = {
+                "task_id": sample_task_id,
+                "status": status_val,
+                "exit_code": 0,
+                "duration_ms": 1000,
+                "agent_id": uuid4(),
+                "resources_used": {"cpu_time_ms": 100},
+            }
+            # error_message required for failed status
+            if status_val == "failed":
+                kwargs["error_message"] = "Task failed"
+            result = WorkResult(**kwargs)
             assert result.status == status_val
 
 
@@ -327,7 +353,7 @@ class TestErrorMessage:
         error = ErrorMessage(
             error_code=5001,
             error_message="Timeout occurred",
-            error_context={"retries": 3},
+            context={"retries": 3},
         )
 
         json_str = error.model_dump_json()
@@ -335,7 +361,7 @@ class TestErrorMessage:
 
         assert json_obj["error_code"] == 5001
         assert json_obj["error_message"] == "Timeout occurred"
-        assert json_obj["error_context"]["retries"] == 3
+        assert json_obj["context"]["retries"] == 3
 
     def test_error_message_no_context(self):
         """Test ErrorMessage without context."""
@@ -345,7 +371,7 @@ class TestErrorMessage:
         )
 
         assert error.error_code == 5003
-        assert error.error_context is None
+        assert error.context == {}
 
     def test_error_codes_all_valid(self):
         """Test all valid error codes."""
@@ -360,7 +386,7 @@ class TestErrorMessage:
         """Test error code below minimum is rejected."""
         with pytest.raises(ValueError):
             ErrorMessage(
-                error_code=5000,
+                error_code=999,
                 error_message="Below range",
             )
 
@@ -368,7 +394,7 @@ class TestErrorMessage:
         """Test error code above maximum is rejected."""
         with pytest.raises(ValueError):
             ErrorMessage(
-                error_code=6000,
+                error_code=10000,
                 error_message="Above range",
             )
 
@@ -596,6 +622,8 @@ class TestRoundTripSerialization:
 
     def test_work_result_envelope_round_trip(self, sample_task_id):
         """Test work_result message round-trip."""
+        from uuid import uuid4
+
         # Create payload
         resources = ResourcesUsed(
             duration_seconds=100,
@@ -603,9 +631,14 @@ class TestRoundTripSerialization:
         )
         payload = WorkResult(
             task_id=sample_task_id,
-            status="success",
+            status="completed",
             exit_code=0,
-            resources_used=resources,
+            duration_ms=100000,
+            agent_id=uuid4(),
+            resources_used={
+                "duration_seconds": resources.duration_seconds,
+                "gpu_vram_mb": resources.gpu_vram_mb,
+            },
         ).model_dump()
 
         # Wrap in envelope
@@ -624,5 +657,5 @@ class TestRoundTripSerialization:
         restored = MessageEnvelope(**json_obj)
 
         # Verify
-        assert restored.payload["status"] == "success"
+        assert restored.payload["status"] == "completed"
         assert restored.payload["resources_used"]["duration_seconds"] == 100

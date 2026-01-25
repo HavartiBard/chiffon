@@ -1,0 +1,23 @@
+---
+# Default variables for {{ service_name }} role
+
+# Service configuration
+{{ service_name }}_version: "latest"
+{{ service_name }}_port: {{ service_port | default(8080) }}
+{{ service_name }}_bind_address: "0.0.0.0"
+
+# User and permissions
+service_user: "{{ service_name }}"
+service_group: "{{ service_name }}"
+
+# Paths
+config_dir: "/etc/{{ service_name }}"
+data_dir: "/var/lib/{{ service_name }}"
+log_dir: "/var/log/{{ service_name }}"
+
+# Logging
+{{ service_name }}_log_level: "info"
+
+# Resource limits
+{{ service_name }}_memory_limit: "512M"
+{{ service_name }}_cpu_quota: "100%"

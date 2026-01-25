@@ -79,6 +79,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: Build Docker Image
+    # Only build Docker images on main/master branches, not on PRs
+    # PR validation uses tests + linting which are sufficient
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     steps:
       - uses: actions/checkout@v4
 
@@ -92,6 +95,10 @@ jobs:
           file: ./Dockerfile
           push: false
           tags: agent-deploy:latest
+
+      - name: Clean Docker resources
+        run: docker system prune -af --volumes
+        if: always()
 
       - name: Build Dockerfile.litellm
         uses: docker/build-push-action@v4

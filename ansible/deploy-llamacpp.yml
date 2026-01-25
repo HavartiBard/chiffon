@@ -1,0 +1,42 @@
+- name: Deploy llama.cpp from Gitea Registry
+  hosts: windows_gpu
+  gather_facts: false
+  vars:
+    registry_owner: HavartiBard
+    registry_image_name: chiffon-llamacpp
+    registry_tag: latest
+    registry_url: registry.klsll.com
+    compose_dir: "{{ ansible_env.HOME | default('/home/james') }}/chiffon"
+    registry_image: "{{ registry_url }}/{{ registry_owner }}/{{ registry_image_name }}:{{ registry_tag }}"
+  tasks:
+    - name: Ensure chiffon root directory exists
+      file:
+        path: "{{ compose_dir }}"
+        state: directory
+
+    - name: Ensure model directory exists
+      file:
+        path: "{{ compose_dir }}/models"
+        state: directory
+
+    - name: Ensure cache directory exists
+      file:
+        path: "{{ compose_dir }}/cache"
+        state: directory
+
+    - name: Upload Gitea Registry-aware docker-compose
+      template:
+        src: ansible/templates/docker-compose.gitea.yml.j2
+        dest: "{{ compose_dir }}/docker-compose.yml"
+
+    - name: Pull llama.cpp image from Gitea Registry
+      shell: |
+        docker pull {{ registry_image }}
+      args:
+        chdir: "{{ compose_dir }}"
+
+    - name: Start llama.cpp stack
+      shell: |
+        docker compose -f docker-compose.yml up -d
+      args:
+        chdir: "{{ compose_dir }}"

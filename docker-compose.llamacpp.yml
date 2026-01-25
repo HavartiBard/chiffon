@@ -1,0 +1,170 @@
+version: "3.9"
+
+# llama.cpp GPU inference service
+# Deploy to: spraycheese.lab.klsll.com (Windows 11 + WSL2 + Docker Desktop)
+# GPU: NVIDIA RTX 5080
+# Purpose: High-performance local LLM inference (20-30% faster than Ollama)
+#          Exposes OpenAI-compatible API for LiteLLM to consume
+
+services:
+  llamacpp:
+    # Build llama.cpp with NVIDIA CUDA support from our Dockerfile
+    # Ensures NVIDIA GPU integration for RTX 5080
+    build:
+      context: .
+      dockerfile: Dockerfile.llamacpp
+    image: chiffon-llamacpp:latest
+    container_name: chiffon-llamacpp
+    restart: unless-stopped
+
+    # GPU support - required for RTX 5080
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    # Environment variables for llama.cpp server
+    environment:
+      # GPU layers to offload (higher = more GPU, less CPU)
+      # RTX 5080 can handle 50-99 (16GB VRAM)
+      LLAMA_ARG_N_GPU_LAYERS: "99"
+
+      # Number of threads to use for CPU computation
+      LLAMA_ARG_N_THREADS: "8"
+
+      # Context size (tokens the model can see)
+      LLAMA_ARG_N_CTX: "2048"
+
+      # Number of parallel requests to handle
+      LLAMA_ARG_N_PARALLEL: "4"
+
+      # Server bind address (0.0.0.0 = accessible from anywhere on VLAN)
+      LLAMA_ARG_LISTEN: "0.0.0.0"
+
+    ports:
+      # REST API accessible from entire VLAN (Unraid, other services)
+      # OpenAI-compatible endpoint (LiteLLM talks to this)
+      - "8000:8000"
+
+    volumes:
+      # Persistent model storage (don't re-download on restart)
+      # Models go here: /models/mistral-7b-instruct.gguf, etc
+      - llamacpp_models:/models
+
+      # Optional: Cache directory for faster model loading
+      - llamacpp_cache:/tmp
+
+    # Start with a default model (optional - can also load via API)
+    # Override with: docker-compose run llamacpp -m /models/your-model.gguf
+    # Or load dynamically via LiteLLM configuration
+    command: >
+      --model /models/mistral-7b-instruct.gguf
+      --threads 8
+      --n-gpu-layers 99
+      --ctx-size 2048
+      --parallel 4
+      --listen 0.0.0.0
+      --port 8000
+
+    networks:
+      - chiffon
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+    labels:
+      com.example.description: "llama.cpp server - High-performance LLM inference on RTX 5080"
+
+volumes:
+  llamacpp_models:
+    driver: local
+  llamacpp_cache:
+    driver: local
+
+networks:
+  chiffon:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.26.0.0/16
+
+# ============================================================================
+# Pre-deployment Setup
+# ============================================================================
+#
+# 1. Prepare models directory with GGUF files:
+#    - Download quantized model: https://huggingface.co/TheBloke
+#    - Example: mistral-7b-instruct.Q5_K_M.gguf (good balance of speed/quality)
+#    - Place in docker volume or mount point
+#
+# 2. Verify NVIDIA Docker support in WSL2:
+#    docker run --rm --runtime=nvidia nvidia/cuda:11.0-runtime nvidia-smi
+#
+# 3. Start the service:
+#    docker-compose -f docker-compose.llamacpp.yml up -d
+#
+# 4. Load a model (if not using default):
+#    curl http://localhost:8000/loadmodel \
+#      -H "Content-Type: application/json" \
+#      -d '{"model": "/models/mistral-7b-instruct.gguf"}'
+#
+# 5. Test inference:
+#    curl http://localhost:8000/v1/completions \
+#      -H "Content-Type: application/json" \
+#      -d '{
+#        "model": "mistral",
+#        "prompt": "Hello world",
+#        "max_tokens": 100
+#      }'
+#
+# 6. Verify from Unraid:
+#    curl http://spraycheese.lab.klsll.com:8000/health
+#
+# ============================================================================
+# Recommended Models (from TheBloke on Hugging Face)
+# ============================================================================
+#
+# Mistral 7B Instruct (good general purpose):
+#   mistral-7b-instruct.Q5_K_M.gguf (~5GB, good speed/quality)
+#   mistral-7b-instruct.Q4_K_M.gguf (~4GB, faster)
+#
+# Neural Chat (optimized for chat):
+#   neural-chat-7b-v3-1.Q5_K_M.gguf (~5GB)
+#
+# Llama 2 Chat (Meta's model):
+#   llama-2-7b-chat.Q5_K_M.gguf (~5GB)
+#
+# Larger models for RTX 5080:
+#   mistral-7b-instruct.gguf (full precision, ~16GB - fills VRAM)
+#   mixtral-8x7b models (if you want MoE, ~40GB - won't fit)
+#
+# ============================================================================
+# LiteLLM Configuration (see config/litellm-config.json)
+# ============================================================================
+#
+# Add to litellm config to route to llama.cpp:
+#
+# {
+#   "model_list": [
+#     {
+#       "model_name": "local-mistral",
+#       "litellm_params": {
+#         "model": "openai/mistral",
+#         "api_base": "http://spraycheese.lab.klsll.com:8000/v1",
+#         "api_key": "no-key-needed"
+#       }
+#     }
+#   ]
+# }
+#
+# Then Orchestrator can use:
+#   LITELLM_DEFAULT_MODEL=local-mistral
+#
+# ============================================================================
