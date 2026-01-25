@@ -1,13 +1,13 @@
-- name: Deploy llama.cpp from GHCR
+- name: Deploy llama.cpp from Gitea Registry
   hosts: windows_gpu
   gather_facts: false
   vars:
-    ghcr_owner: HavartiBard
-    ghcr_image_name: chiffon-llamacpp
-    ghcr_tag: latest
-    ghcr_registry: ghcr.io
+    registry_owner: HavartiBard
+    registry_image_name: chiffon-llamacpp
+    registry_tag: latest
+    registry_url: registry.klsll.com
     compose_dir: "{{ ansible_env.HOME | default('/home/james') }}/chiffon"
-    ghcr_image: "{{ ghcr_registry }}/{{ ghcr_owner }}/{{ ghcr_image_name }}:{{ ghcr_tag }}"
+    registry_image: "{{ registry_url }}/{{ registry_owner }}/{{ registry_image_name }}:{{ registry_tag }}"
   tasks:
     - name: Ensure chiffon root directory exists
       file:
@@ -24,14 +24,14 @@
         path: "{{ compose_dir }}/cache"
         state: directory
 
-    - name: Upload GHCR-aware docker-compose
+    - name: Upload Gitea Registry-aware docker-compose
       template:
-        src: ansible/templates/docker-compose.ghcr.yml.j2
+        src: ansible/templates/docker-compose.gitea.yml.j2
         dest: "{{ compose_dir }}/docker-compose.yml"
 
-    - name: Pull llama.cpp image from GHCR
+    - name: Pull llama.cpp image from Gitea Registry
       shell: |
-        docker pull {{ ghcr_image }}
+        docker pull {{ registry_image }}
       args:
         chdir: "{{ compose_dir }}"
 

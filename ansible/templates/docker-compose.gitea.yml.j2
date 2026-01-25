@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  llamacpp:
+    image: "{{ registry_image }}"
+    container_name: chiffon-llamacpp
+    restart: unless-stopped
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      LLAMA_ARG_N_GPU_LAYERS: "99"
+      LLAMA_ARG_N_THREADS: "8"
+      LLAMA_ARG_N_CTX: "2048"
+      LLAMA_ARG_N_PARALLEL: "4"
+      LLAMA_ARG_LISTEN: "0.0.0.0"
+    ports:
+      - "8000:8000"
+    volumes:
+      - llamacpp_models:/models
+      - llamacpp_cache:/tmp
+    command: >
+      --model /models/mistral-7b-instruct.gguf
+      --threads 8
+      --n-gpu-layers 99
+      --ctx-size 2048
+      --parallel 4
+      --listen 0.0.0.0
+      --port 8000
+    networks:
+      - chiffon
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  llamacpp_models:
+    driver: local
+  llamacpp_cache:
+    driver: local
+
+networks:
+  chiffon:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.26.0.0/16
