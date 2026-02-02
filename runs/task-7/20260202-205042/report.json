@@ -1,0 +1,8 @@
+{
+  "task_id": "task-7",
+  "goal": "Enforce scope and safety constraints during execution.",
+  "branch": "chiffon/task-7/20260202-205042",
+  "commit_hash": "55920cad13cf0e1eb0fecc31d0da361536282003",
+  "timestamp": "20260202-205042",
+  "verify_results": []
+}
