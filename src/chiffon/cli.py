@@ -19,7 +19,8 @@ app = typer.Typer()
 
 async def update_gitea_issue(issue_number: int, state: str, message: str) -> None:
     """Update Gitea issue state and add comment."""
-    token = os.getenv("CHIFFON_ORCHESTRATOR_TOKEN")
+    # Use executor token, fall back to orchestrator or GITEA_TOKEN
+    token = os.getenv("CHIFFON_EXECUTOR01_TOKEN") or os.getenv("GITEA_TOKEN") or os.getenv("CHIFFON_ORCHESTRATOR_TOKEN")
     if not token:
         return
 
