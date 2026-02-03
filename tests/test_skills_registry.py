@@ -3,7 +3,7 @@
 import pytest
 import yaml
 from pathlib import Path
-from src.chiffon.skills.registry import SkillsRegistry
+from chiffon.skills.registry import SkillsRegistry
 
 
 @pytest.fixture
