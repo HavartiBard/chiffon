@@ -1,5 +1,16 @@
 # Repository Guidelines
 
+## Session Start
+
+When beginning a new session without a specific task, offer to review open Gitea issues:
+
+```bash
+curl -s "https://code.klsll.com/api/v1/repos/HavartiBard/chiffon/issues?state=open&type=issues&limit=20" \
+  -H "Authorization: token $GITEA_TOKEN" | jq '.[] | {number, title, labels: [.labels[].name]}'
+```
+
+Present the issues as a numbered list and ask which one to work on. If the user already has a task, skip this.
+
 ## Project Structure & Module Organization
 - `src/` hosts the FastAPI orchestrator (`src/orchestrator/main.py`), agents, and shared helpers (`common/`, `config.py`, `database.py`, `models.py`).
 - `tests/` mirrors `src/` modules and keeps end-to-end checks; add new suites here before expanding coverage.
