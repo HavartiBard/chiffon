@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Orchestrated AI Agents for Homelab Automation"
 authors = ["James <james@example.com>"]
 readme = "README.md"
-packages = [{include = "src"}]
+packages = [{include = "src"}, {include = "chiffon", from = "src"}]
 
 [tool.poetry.scripts]
 orchestrator = "src.orchestrator.main:app"
