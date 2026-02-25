@@ -288,3 +288,17 @@ def test_health_check_never_raises():
         result = client.health_check()
 
     assert result is False
+
+
+def test_health_check_uses_fast_timeout():
+    """health_check() passes timeout=5.0 to the GET call, not the 5-minute client default."""
+    client = LlamaClient(base_url="http://test-llama:8000")
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+
+    with patch.object(client.client, "get", return_value=mock_response) as mock_get:
+        client.health_check()
+
+    _, kwargs = mock_get.call_args
+    assert kwargs.get("timeout") == 5.0

@@ -39,19 +39,26 @@ class LlamaClient:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _format_prompt(self, prompt: str) -> dict:
+    def _format_prompt(
+        self,
+        prompt: str,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> dict:
         """Format a raw prompt string into a llama.cpp /completion payload.
 
         Args:
             prompt: Raw prompt text to send to the model.
+            max_tokens: Maximum number of tokens to generate (default: 4096).
+            temperature: Sampling temperature (default: 0.7).
 
         Returns:
             Dict ready to JSON-encode and POST to ``/completion``.
         """
         return {
             "prompt": prompt,
-            "n_predict": 4096,
-            "temperature": 0.7,
+            "n_predict": max_tokens,
+            "temperature": temperature,
             "top_p": 0.9,
             "repeat_penalty": 1.1,
             "stop": ["## ", "\n---"],
@@ -80,14 +87,7 @@ class LlamaClient:
         Raises:
             ValueError: If the server is unreachable or returns an error status.
         """
-        payload = {
-            "prompt": prompt,
-            "n_predict": max_tokens,
-            "temperature": temperature,
-            "top_p": 0.9,
-            "repeat_penalty": 1.1,
-            "stop": ["## ", "\n---"],
-        }
+        payload = self._format_prompt(prompt, max_tokens, temperature)
 
         try:
             response = self.client.post(
@@ -109,7 +109,7 @@ class LlamaClient:
             ``True`` if the server responds with HTTP 200, ``False`` otherwise.
         """
         try:
-            response = self.client.get(f"{self.base_url}/health")
+            response = self.client.get(f"{self.base_url}/health", timeout=5.0)
             return response.status_code == 200
         except Exception:
             return False
