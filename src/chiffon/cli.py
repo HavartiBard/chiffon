@@ -13,6 +13,8 @@ import httpx
 
 from src.chiffon.engine.run_once import run as run_engine
 from src.chiffon.gitea_client import GiteaClient
+from chiffon.executor.executor import TaskExecutor
+from chiffon.queue.file_queue import Task
 
 app = typer.Typer()
 
@@ -48,11 +50,25 @@ async def update_gitea_issue(issue_number: int, state: str, message: str) -> Non
 def run_once(
     project: str = typer.Option(..., help="Project name (e.g., orchestrator-core)"),
     repo: str = typer.Option(".", help="Repository path"),
+    use_llm: bool = typer.Option(
+        False,
+        "--use-llm",
+        help="Use LLM inference via TaskExecutor instead of the plain engine.",
+    ),
+    llm_url: str = typer.Option(
+        None,
+        "--llm-url",
+        help="URL for the llama.cpp server (default: LLAMA_SERVER_URL env or http://localhost:8000).",
+    ),
 ) -> None:
     """Run a single task from the queue.
 
     Finds the first task in tasks/queue/<project>/, executes it, and writes
     the report to tasks/runs/<task-id>/.
+
+    When --use-llm is passed, the task is forwarded to TaskExecutor which
+    calls a local llama.cpp server to generate a plan, code, and verification
+    strategy.  When omitted the existing rule-based engine is used unchanged.
     """
     try:
         repo_path = Path(repo).resolve()
@@ -80,7 +96,10 @@ def run_once(
         task_id = task_data.get("id", "")
         issue_number = None
         if task_id.startswith("task-"):
-            issue_number = int(task_id.split("-")[1])
+            try:
+                issue_number = int(task_id.split("-")[1])
+            except (IndexError, ValueError):
+                issue_number = None
 
         # Update Gitea issue - mark as in progress
         if issue_number:
@@ -88,40 +107,92 @@ def run_once(
                 asyncio.run(update_gitea_issue(
                     issue_number,
                     "open",
-                    f"🔄 Chiffon orchestrator taking ownership of this task. Execution started."
+                    "Chiffon orchestrator taking ownership of this task. Execution started."
                 ))
             except Exception as e:
                 typer.echo(f"Warning: Could not update Gitea issue: {e}", err=True)
 
-        # Call the engine
-        run_engine(str(repo_path), str(queue_dir))
+        if use_llm:
+            # --- LLM execution path ---
+            executor = TaskExecutor(
+                repo_path=repo_path,
+                queue_path=queue_dir,
+                llm_server_url=llm_url or None,
+            )
 
-        # Check if task succeeded or failed
-        if issue_number:
-            report_file = repo_path / "runs" / task_id
-            if report_file.exists():
-                report_path = sorted(report_file.glob("*/report.json"))
-                if report_path:
-                    with open(report_path[0]) as f:
-                        report = json.load(f)
+            # Health check before attempting execution
+            try:
+                executor.check_health()
+            except RuntimeError as e:
+                typer.echo(f"Error: {e}", err=True)
+                raise SystemExit(1)
 
-                    all_passed = all(r.get("exit_code") == 0 for r in report.get("verify_results", []))
-                    status = "✓ PASSED" if all_passed else "✗ FAILED"
+            task = Task.from_dict(task_data)
+            result = asyncio.run(executor.execute_task(task))
 
+            if result["success"]:
+                typer.echo("Task completed via LLM")
+                typer.echo(f"Plan:\n{result['plan']}")
+                if issue_number:
+                    try:
+                        summary = (
+                            "LLM execution completed.\n\n"
+                            f"**Plan:**\n{result['plan']}\n\n"
+                            f"**Code:**\n```python\n{result['code']}\n```\n\n"
+                            f"**Verification:**\n{result['verification']}"
+                        )
+                        asyncio.run(update_gitea_issue(issue_number, "closed", summary))
+                    except Exception as e:
+                        typer.echo(f"Warning: Could not update Gitea issue: {e}", err=True)
+            else:
+                typer.echo(f"Error: LLM execution failed: {result.get('error', 'unknown')}", err=True)
+                if issue_number:
                     try:
                         asyncio.run(update_gitea_issue(
                             issue_number,
-                            "closed" if all_passed else "open",
-                            f"{status}\n\nTask execution completed:\n```json\n{json.dumps(report, indent=2)}\n```"
+                            "open",
+                            f"LLM execution failed: {result.get('error', 'unknown')}",
                         ))
                     except Exception as e:
-                        typer.echo(f"Warning: Could not update Gitea issue with results: {e}", err=True)
+                        typer.echo(f"Warning: Could not update Gitea issue: {e}", err=True)
+                raise SystemExit(1)
 
-        typer.echo(f"✓ Task completed")
+        else:
+            # --- Plain engine path (original behaviour) ---
+            run_engine(str(repo_path), str(queue_dir))
+
+            # Check if task succeeded or failed by inspecting the report
+            if issue_number:
+                report_file = repo_path / "runs" / task_id
+                if report_file.exists():
+                    report_path = sorted(report_file.glob("*/report.json"))
+                    if report_path:
+                        with open(report_path[0]) as f:
+                            report = json.load(f)
+
+                        all_passed = all(
+                            r.get("exit_code") == 0 for r in report.get("verify_results", [])
+                        )
+                        status = "PASSED" if all_passed else "FAILED"
+
+                        try:
+                            asyncio.run(update_gitea_issue(
+                                issue_number,
+                                "closed" if all_passed else "open",
+                                f"{status}\n\nTask execution completed:\n```json\n{json.dumps(report, indent=2)}\n```",
+                            ))
+                        except Exception as e:
+                            typer.echo(
+                                f"Warning: Could not update Gitea issue with results: {e}", err=True
+                            )
+
+        typer.echo("Task completed")
 
     except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
+    except SystemExit:
+        raise
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
