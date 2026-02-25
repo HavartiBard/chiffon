@@ -36,3 +36,19 @@ def test_select_skills_by_domains():
         max_tokens=1000
     )
     assert "test-driven-development" in selected
+
+
+def test_get_skill_content_returns_content_for_all_skills():
+    """Test that get_skill_content() returns non-None for all 5 registered skills."""
+    registry = SkillsRegistry(Path("src/chiffon/skills"))
+    all_skills = [
+        "yaml-validation",
+        "test-driven-development",
+        "error-reporting",
+        "python-style",
+        "git-workflow",
+    ]
+    for skill_name in all_skills:
+        content = registry.get_skill_content(skill_name)
+        assert content is not None, f"Expected content for skill '{skill_name}', got None"
+        assert len(content) > 0, f"Expected non-empty content for skill '{skill_name}'"
