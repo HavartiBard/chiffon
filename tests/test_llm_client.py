@@ -1,4 +1,4 @@
-"""Tests for LlamaClient - HTTP client for llama.cpp inference server."""
+"""Tests for LlamaClient - HTTP client for LM Studio inference server."""
 import os
 import pytest
 from unittest.mock import MagicMock, patch
@@ -13,31 +13,31 @@ from chiffon.executor.llm_client import LlamaClient
 
 
 def test_init_with_default_url():
-    """LlamaClient defaults to localhost:8000 when no URL is provided and env is unset."""
+    """LlamaClient defaults to spraycheese.lab.klsll.com:1234 when no URL is provided and env is unset."""
     with patch.dict(os.environ, {}, clear=False):
-        os.environ.pop("LLAMA_SERVER_URL", None)
+        os.environ.pop("LMSTUDIO_URL", None)
         client = LlamaClient()
-    assert "localhost:8000" in client.base_url or "127.0.0.1:8000" in client.base_url
+    assert "spraycheese.lab.klsll.com:1234" in client.base_url
 
 
 def test_init_with_custom_url():
     """LlamaClient accepts an explicit base_url."""
-    client = LlamaClient(base_url="http://192.168.20.154:8000")
-    assert "192.168.20.154:8000" in client.base_url
+    client = LlamaClient(base_url="http://192.168.20.154:1234")
+    assert "192.168.20.154:1234" in client.base_url
 
 
 def test_init_reads_env_var():
-    """LlamaClient reads LLAMA_SERVER_URL env var when no base_url is passed."""
-    with patch.dict(os.environ, {"LLAMA_SERVER_URL": "http://gpu-box:9000"}):
+    """LlamaClient reads LMSTUDIO_URL env var when no base_url is passed."""
+    with patch.dict(os.environ, {"LMSTUDIO_URL": "http://gpu-box:9000"}):
         client = LlamaClient()
     assert client.base_url == "http://gpu-box:9000"
 
 
 def test_init_explicit_url_overrides_env():
     """Explicit base_url takes precedence over environment variable."""
-    with patch.dict(os.environ, {"LLAMA_SERVER_URL": "http://gpu-box:9000"}):
-        client = LlamaClient(base_url="http://override:8000")
-    assert client.base_url == "http://override:8000"
+    with patch.dict(os.environ, {"LMSTUDIO_URL": "http://gpu-box:9000"}):
+        client = LlamaClient(base_url="http://override:1234")
+    assert client.base_url == "http://override:1234"
 
 
 def test_init_default_model():
@@ -57,24 +57,40 @@ def test_init_custom_model():
 # ---------------------------------------------------------------------------
 
 
-def test_formats_prompt_for_llama():
-    """_format_prompt returns a dict with a 'prompt' key."""
+def test_formats_prompt_as_messages():
+    """_format_prompt returns a dict with a 'messages' key containing the prompt."""
     client = LlamaClient()
     result = client._format_prompt("This is a test prompt")
     assert isinstance(result, dict)
-    assert "prompt" in result
-    assert result["prompt"] == "This is a test prompt"
+    assert "messages" in result
+    assert result["messages"][0]["role"] == "user"
+    assert result["messages"][0]["content"] == "This is a test prompt"
 
 
 def test_format_prompt_includes_required_params():
-    """_format_prompt includes n_predict, temperature, top_p, repeat_penalty, stop."""
+    """_format_prompt includes model, messages, max_tokens, temperature, top_p, stop."""
     client = LlamaClient()
     result = client._format_prompt("hello")
-    assert "n_predict" in result
+    assert "model" in result
+    assert "messages" in result
+    assert "max_tokens" in result
     assert "temperature" in result
     assert "top_p" in result
-    assert "repeat_penalty" in result
     assert "stop" in result
+
+
+def test_format_prompt_no_n_predict():
+    """_format_prompt does not include llama.cpp-specific n_predict key."""
+    client = LlamaClient()
+    result = client._format_prompt("hello")
+    assert "n_predict" not in result
+
+
+def test_format_prompt_no_repeat_penalty():
+    """_format_prompt does not include llama.cpp-specific repeat_penalty key."""
+    client = LlamaClient()
+    result = client._format_prompt("hello")
+    assert "repeat_penalty" not in result
 
 
 def test_format_prompt_stop_tokens():
@@ -85,18 +101,27 @@ def test_format_prompt_stop_tokens():
     assert "\n---" in result["stop"]
 
 
+def test_format_prompt_includes_model_name():
+    """_format_prompt uses the client's model name."""
+    client = LlamaClient(model="my-model")
+    result = client._format_prompt("hello")
+    assert result["model"] == "my-model"
+
+
 # ---------------------------------------------------------------------------
 # generate() tests — mock HTTP
 # ---------------------------------------------------------------------------
 
 
-def test_generate_posts_to_completion_endpoint():
-    """generate() POSTs to /completion and returns the 'content' field."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+def test_generate_posts_to_chat_completions_endpoint():
+    """generate() POSTs to /v1/chat/completions and returns the message content."""
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     mock_response = MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"content": "Generated text here"}
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": "Generated text here"}}]
+    }
     mock_response.raise_for_status.return_value = None
 
     with patch.object(client.client, "post", return_value=mock_response) as mock_post:
@@ -104,31 +129,35 @@ def test_generate_posts_to_completion_endpoint():
 
     mock_post.assert_called_once()
     call_args = mock_post.call_args
-    assert call_args[0][0] == "http://test-llama:8000/completion"
+    assert call_args[0][0] == "http://test-lmstudio:1234/v1/chat/completions"
     assert result == "Generated text here"
 
 
 def test_generate_passes_max_tokens():
-    """generate() forwards max_tokens as n_predict in the request body."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+    """generate() forwards max_tokens as max_tokens in the request body."""
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     mock_response = MagicMock()
-    mock_response.json.return_value = {"content": "ok"}
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": "ok"}}]
+    }
     mock_response.raise_for_status.return_value = None
 
     with patch.object(client.client, "post", return_value=mock_response) as mock_post:
         client.generate("prompt", max_tokens=512)
 
     payload = mock_post.call_args[1]["json"]
-    assert payload["n_predict"] == 512
+    assert payload["max_tokens"] == 512
 
 
 def test_generate_passes_temperature():
     """generate() forwards temperature in the request body."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     mock_response = MagicMock()
-    mock_response.json.return_value = {"content": "ok"}
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": "ok"}}]
+    }
     mock_response.raise_for_status.return_value = None
 
     with patch.object(client.client, "post", return_value=mock_response) as mock_post:
@@ -140,26 +169,30 @@ def test_generate_passes_temperature():
 
 def test_generate_default_parameters():
     """generate() uses max_tokens=4096 and temperature=0.7 by default."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     mock_response = MagicMock()
-    mock_response.json.return_value = {"content": "ok"}
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": "ok"}}]
+    }
     mock_response.raise_for_status.return_value = None
 
     with patch.object(client.client, "post", return_value=mock_response) as mock_post:
         client.generate("prompt")
 
     payload = mock_post.call_args[1]["json"]
-    assert payload["n_predict"] == 4096
+    assert payload["max_tokens"] == 4096
     assert payload["temperature"] == 0.7
 
 
 def test_generate_includes_stop_tokens():
     """generate() includes stop tokens in the request payload."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     mock_response = MagicMock()
-    mock_response.json.return_value = {"content": "ok"}
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": "ok"}}]
+    }
     mock_response.raise_for_status.return_value = None
 
     with patch.object(client.client, "post", return_value=mock_response) as mock_post:
@@ -170,12 +203,33 @@ def test_generate_includes_stop_tokens():
     assert "\n---" in payload["stop"]
 
 
-def test_generate_returns_string():
-    """generate() always returns a string."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+def test_generate_sends_messages_array():
+    """generate() sends a messages array with the prompt as user content."""
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     mock_response = MagicMock()
-    mock_response.json.return_value = {"content": "some output"}
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": "ok"}}]
+    }
+    mock_response.raise_for_status.return_value = None
+
+    with patch.object(client.client, "post", return_value=mock_response) as mock_post:
+        client.generate("my input prompt")
+
+    payload = mock_post.call_args[1]["json"]
+    assert isinstance(payload["messages"], list)
+    assert payload["messages"][0]["role"] == "user"
+    assert payload["messages"][0]["content"] == "my input prompt"
+
+
+def test_generate_returns_string():
+    """generate() always returns a string."""
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": "some output"}}]
+    }
     mock_response.raise_for_status.return_value = None
 
     with patch.object(client.client, "post", return_value=mock_response):
@@ -186,7 +240,7 @@ def test_generate_returns_string():
 
 def test_generate_raises_on_http_error():
     """generate() raises ValueError when the HTTP call fails."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     with patch.object(client.client, "post", side_effect=httpx.ConnectError("refused")):
         with pytest.raises(ValueError, match="Failed to call llama.cpp"):
@@ -195,7 +249,7 @@ def test_generate_raises_on_http_error():
 
 def test_generate_raises_on_bad_status():
     """generate() raises ValueError when the server returns a non-2xx status."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     mock_response = MagicMock()
     mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
@@ -221,7 +275,7 @@ def test_generate_method_exists_and_callable():
 
 def test_health_check_returns_true_on_200():
     """health_check() returns True when server responds 200."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -234,7 +288,7 @@ def test_health_check_returns_true_on_200():
 
 def test_health_check_returns_false_on_non_200():
     """health_check() returns False when server responds with non-200 status."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     mock_response = MagicMock()
     mock_response.status_code = 503
@@ -247,7 +301,7 @@ def test_health_check_returns_false_on_non_200():
 
 def test_health_check_returns_false_on_connection_error():
     """health_check() returns False (no exception) when server is unreachable."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     with patch.object(client.client, "get", side_effect=httpx.ConnectError("refused")):
         result = client.health_check()
@@ -257,7 +311,7 @@ def test_health_check_returns_false_on_connection_error():
 
 def test_health_check_returns_false_on_timeout():
     """health_check() returns False (no exception) on timeout."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     with patch.object(client.client, "get", side_effect=httpx.TimeoutException("timed out")):
         result = client.health_check()
@@ -266,8 +320,8 @@ def test_health_check_returns_false_on_timeout():
 
 
 def test_health_check_calls_correct_endpoint():
-    """health_check() GETs the /health endpoint."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+    """health_check() GETs the /v1/models endpoint."""
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -277,12 +331,12 @@ def test_health_check_calls_correct_endpoint():
 
     mock_get.assert_called_once()
     url_called = mock_get.call_args[0][0]
-    assert url_called == "http://test-llama:8000/health"
+    assert url_called == "http://test-lmstudio:1234/v1/models"
 
 
 def test_health_check_never_raises():
     """health_check() must never raise any exception."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     with patch.object(client.client, "get", side_effect=Exception("unexpected error")):
         result = client.health_check()
@@ -292,7 +346,7 @@ def test_health_check_never_raises():
 
 def test_health_check_uses_fast_timeout():
     """health_check() passes timeout=5.0 to the GET call, not the 5-minute client default."""
-    client = LlamaClient(base_url="http://test-llama:8000")
+    client = LlamaClient(base_url="http://test-lmstudio:1234")
 
     mock_response = MagicMock()
     mock_response.status_code = 200

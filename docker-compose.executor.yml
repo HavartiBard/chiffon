@@ -10,7 +10,7 @@ services:
       QUEUE_PATH: /work/tasks/queue
       CRON_SCHEDULE: "*/30 * * * *"
       EXECUTION_MODE: cron
-      LLAMA_SERVER_URL: ${LLAMA_SERVER_URL:-http://llamacpp:8000}
+      LMSTUDIO_URL: ${LMSTUDIO_URL:-http://spraycheese.lab.klsll.com:1234}
       GITEA_BASE_URL: ${GITEA_BASE_URL:-https://code.klsll.com}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
