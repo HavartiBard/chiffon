@@ -21,7 +21,7 @@ fi
 REPO_PATH="${REPO_PATH:-.}"
 QUEUE_PATH="${QUEUE_PATH:-$REPO_PATH/tasks/queue}"
 CRON_SCHEDULE="${CRON_SCHEDULE:-*/30 * * * *}"
-EXECUTION_MODE="${EXECUTION_MODE:-ad-hoc}"
+EXECUTION_MODE="${EXECUTION_MODE:-cron}"
 GITEA_BASE_URL="${GITEA_BASE_URL:-https://code.klsll.com}"
 LLAMA_SERVER_URL="${LLAMA_SERVER_URL:-http://localhost:8000}"
 
@@ -40,9 +40,9 @@ if ! git -C "$REPO_PATH" status > /dev/null 2>&1; then
 fi
 log "Git repository accessible at $REPO_PATH"
 
-# Mode: ad-hoc — run once and exit
-if [ "$EXECUTION_MODE" = "ad-hoc" ]; then
-    log "Running in ad-hoc mode (execute once, then exit)"
+# Mode: adhoc — run once and exit
+if [ "$EXECUTION_MODE" = "adhoc" ]; then
+    log "Running in adhoc mode (execute once, then exit)"
     python -m chiffon.cli run-once --project "$PROJECT" --use-llm
     exit $?
 fi
@@ -56,6 +56,8 @@ CRON_JOB="$CRON_SCHEDULE python -m chiffon.cli run-once --project $PROJECT --use
 echo "$CRON_JOB" | crontab -
 log "Cron job installed: $CRON_JOB"
 
-# Start cron in foreground
+# Start cron in foreground, bridging log file to stdout for docker logs
 log "Starting cron daemon"
+touch /var/log/chiffon-cron.log
+tail -f /var/log/chiffon-cron.log &
 exec cron -f
