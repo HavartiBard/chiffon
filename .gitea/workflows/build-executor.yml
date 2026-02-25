@@ -1,0 +1,30 @@
+name: Build and Push Executor Image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile.executor'
+      - 'src/**'
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - '.gitea/workflows/build-executor.yml'
+
+jobs:
+  build:
+    runs-on: docker
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build executor image
+        run: |
+          docker build \
+            -f Dockerfile.executor \
+            -t registry.klsll.com/havartibard/chiffon-executor:latest \
+            -t registry.klsll.com/havartibard/chiffon-executor:${{ gitea.sha }} \
+            .
+
+      - name: Push executor image
+        run: |
+          docker push registry.klsll.com/havartibard/chiffon-executor:latest
+          docker push registry.klsll.com/havartibard/chiffon-executor:${{ gitea.sha }}
