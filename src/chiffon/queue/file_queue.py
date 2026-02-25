@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import pathlib
 from dataclasses import dataclass, field
-from typing import Iterable, List
+from typing import Any, Dict, Iterable, List, Optional
 
 import yaml
 
@@ -68,7 +68,7 @@ class TaskVerify:
     cmd: str
 
 
-@dataclass(slots=True)
+@dataclass
 class Task:
     """Top‑level task representation.
 
@@ -78,16 +78,93 @@ class Task:
         Unique identifier for the task.
     goal: str
         Human readable description of what the task should achieve.
-    edits: List[TaskEdit] | None
+    edits: List[TaskEdit]
         Optional list of file edit operations.
-    verifies: List[TaskVerify] | None
+    verifies: List[TaskVerify]
         Optional list of verification commands.
+
+    LLM execution fields (all optional with safe defaults)
+    -------------------------------------------------------
+    applicable_skills: List[str]
+        Skill names to inject into the LLM prompt (e.g. ``["yaml-validation"]``).
+    source: str
+        Trace origin, e.g. ``"gitea:chiffon:7"``.
+    parent_issue: Optional[int]
+        Parent issue number for subtask tracking.
+    subtask: Optional[str]
+        Subtask index string, e.g. ``"1/4"``.
+    description: str
+        Thin description forwarded to the LLM for context.
+    suggested_approach: str
+        Hint from the orchestrator to guide the LLM's reasoning.
+    scope: Dict[str, Any]
+        Filesystem access constraints, e.g. ``allowed_write_globs``.
+    constraints: Dict[str, Any]
+        Execution constraints, e.g. ``timeout_seconds``, ``max_files_changed``.
     """
 
+    # Core fields (pre-existing)
     id: str
     goal: str
     edits: List[TaskEdit] = field(default_factory=list)
     verifies: List[TaskVerify] = field(default_factory=list)
+
+    # New LLM execution fields
+    applicable_skills: List[str] = field(default_factory=list)
+    source: str = ""
+    parent_issue: Optional[int] = None
+    subtask: Optional[str] = None
+    description: str = ""
+    suggested_approach: str = ""
+    scope: Dict[str, Any] = field(default_factory=dict)
+    constraints: Dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Task":
+        """Create a :class:`Task` from a raw dictionary (e.g. parsed YAML).
+
+        Handles the ``verify`` → ``verifies`` key rename and delegates
+        edit/verify list parsing to the module-level helpers so that
+        :class:`TaskEdit` and :class:`TaskVerify` objects are constructed
+        correctly.
+
+        Parameters
+        ----------
+        data:
+            Dictionary with at minimum ``"id"`` and ``"goal"`` keys.
+
+        Returns
+        -------
+        Task
+            Fully constructed task instance.
+
+        Raises
+        ------
+        KeyError
+            If ``"id"`` or ``"goal"`` are absent.
+        ValueError
+            If an edit entry has an invalid ``op`` value or is malformed.
+        """
+        id_ = data["id"]
+        goal = data["goal"]
+
+        edits = _parse_edits(data.get("edits"))
+        verifies = _parse_verify(data.get("verify"))
+
+        return cls(
+            id=id_,
+            goal=goal,
+            edits=edits,
+            verifies=verifies,
+            applicable_skills=list(data.get("applicable_skills") or []),
+            source=data.get("source", ""),
+            parent_issue=data.get("parent_issue"),
+            subtask=data.get("subtask"),
+            description=data.get("description", ""),
+            suggested_approach=data.get("suggested_approach", ""),
+            scope=dict(data.get("scope") or {}),
+            constraints=dict(data.get("constraints") or {}),
+        )
 
 
 # ---------------------------------------------------------------------------
