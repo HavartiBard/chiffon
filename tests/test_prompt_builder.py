@@ -154,3 +154,25 @@ def test_default_skills_is_none_or_empty(builder):
     prompt = builder.build_prompt(task_yaml=task_yaml)
 
     assert "task-1" in prompt
+
+
+def test_max_context_tokens_excludes_skills_over_budget(builder):
+    """Skills whose content would exceed max_context_tokens are not injected.
+
+    With max_context_tokens=1, even a single character of skill content would
+    push the total over the budget (the system message alone already uses far
+    more than 1 token).  Therefore no skill content should appear under the
+    REFERENCE PATTERNS header, and the header itself should be absent.
+    """
+    task_yaml = "id: task-1\ngoal: Test budget enforcement"
+
+    prompt = builder.build_prompt(
+        task_yaml=task_yaml,
+        skills=["yaml-validation"],
+        max_context_tokens=1,
+    )
+
+    # Task YAML is always present regardless of budget
+    assert "task-1" in prompt
+    # No skill content should have been injected
+    assert "REFERENCE PATTERNS" not in prompt

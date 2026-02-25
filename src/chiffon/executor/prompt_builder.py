@@ -54,14 +54,26 @@ Always structure your response as:
 
         prompt = self.SYSTEM_MESSAGE + "\n\n"
 
-        # Inject skills with headers
+        # Inject skills with headers, gated by the token budget.
+        # The system message and task YAML are always included; only skill
+        # content is subject to the limit.  Approximation: 4 chars ≈ 1 token.
         if skills:
-            prompt += "## REFERENCE PATTERNS\n\n"
+            tokens_used = len(prompt) // 4  # chars already committed
+            skills_block = ""
             for skill_name in skills:
                 content = self.registry.get_skill_content(skill_name)
-                if content:
-                    prompt += f"### Pattern: {skill_name.replace('-', ' ').title()} ({skill_name})\n"
-                    prompt += content + "\n\n"
+                if not content:
+                    continue
+                header = f"### Pattern: {skill_name.replace('-', ' ').title()} ({skill_name})\n"
+                skill_chunk = header + content + "\n\n"
+                skill_tokens = len(skill_chunk) // 4
+                if tokens_used + skill_tokens > max_context_tokens:
+                    continue
+                skills_block += skill_chunk
+                tokens_used += skill_tokens
+            if skills_block:
+                prompt += "## REFERENCE PATTERNS\n\n"
+                prompt += skills_block
 
         # Add task
         prompt += "## YOUR TASK\n\n"
