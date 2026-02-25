@@ -44,11 +44,11 @@ def validate_yaml(content):
 
 ```python
 import json
-import yaml
 from pathlib import Path
 from typing import Any, Dict, List
 
 import httpx
+import yaml
 
 from chiffon.skills import SkillsRegistry
 from src.common import logger
