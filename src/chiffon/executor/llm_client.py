@@ -32,8 +32,12 @@ class LlamaClient:
             "LMSTUDIO_URL", "http://spraycheese.lab.klsll.com:1234"
         )
         self.model = model
+        self.api_key = os.getenv("LMSTUDIO_API_KEY", "")
         # 5-minute timeout covers long generation tasks
-        self.client = httpx.Client(timeout=300.0)
+        headers = {}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        self.client = httpx.Client(timeout=300.0, headers=headers)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -106,11 +110,12 @@ class LlamaClient:
         unhealthy server.
 
         Returns:
-            ``True`` if the server responds with HTTP 200, ``False`` otherwise.
+            ``True`` if the server is reachable (HTTP 200 or 401), ``False`` otherwise.
+            A 401 means the server is up but auth is required — still healthy.
         """
         try:
             response = self.client.get(f"{self.base_url}/v1/models", timeout=5.0)
-            return response.status_code == 200
+            return response.status_code in (200, 401)
         except Exception:
             return False
 

@@ -11,6 +11,7 @@ services:
       CRON_SCHEDULE: "*/30 * * * *"
       EXECUTION_MODE: cron
       LMSTUDIO_URL: ${LMSTUDIO_URL:-http://spraycheese.lab.klsll.com:1234}
+      LMSTUDIO_API_KEY: ${LMSTUDIO_API_KEY:-}
       GITEA_BASE_URL: ${GITEA_BASE_URL:-https://code.klsll.com}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
