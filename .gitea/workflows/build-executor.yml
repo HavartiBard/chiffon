@@ -18,16 +18,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Log in to Gitea container registry
+        run: echo "${{ gitea.token }}" | docker login code.klsll.com -u ${{ gitea.actor }} --password-stdin
+
       - name: Build executor image
         run: |
           docker build \
             -f Dockerfile.executor \
-            -t registry.klsll.com/havartibard/chiffon-executor:latest \
-            -t registry.klsll.com/havartibard/chiffon-executor:${{ gitea.sha }} \
+            -t code.klsll.com/havartibard/chiffon-executor:latest \
+            -t code.klsll.com/havartibard/chiffon-executor:${{ gitea.sha }} \
             .
 
       - name: Push executor image
         run: |
-          docker push registry.klsll.com/havartibard/chiffon-executor:latest
-          docker push registry.klsll.com/havartibard/chiffon-executor:${{ gitea.sha }}
+          docker push code.klsll.com/havartibard/chiffon-executor:latest
+          docker push code.klsll.com/havartibard/chiffon-executor:${{ gitea.sha }}
 
