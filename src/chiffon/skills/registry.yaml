@@ -1,0 +1,35 @@
+skills:
+  yaml-validation:
+    domains: [configuration, data-validation]
+    languages: [python]
+    patterns: [parsing, schema-validation]
+    description: "Safely validate YAML files with schema"
+    tokens: 200
+
+  test-driven-development:
+    domains: [testing, implementation]
+    languages: [python, typescript, go]
+    patterns: [testing, red-green-refactor]
+    description: "Write failing test first, then implementation"
+    tokens: 400
+
+  error-reporting:
+    domains: [validation, logging]
+    languages: [python]
+    patterns: [structured-errors, messaging]
+    description: "Format errors consistently for user consumption"
+    tokens: 150
+
+  python-style:
+    domains: [code-quality, implementation]
+    languages: [python]
+    patterns: [type-hints, docstrings, linting]
+    description: "Follow Python best practices and style guidelines"
+    tokens: 250
+
+  git-workflow:
+    domains: [version-control, implementation]
+    languages: [shell, python]
+    patterns: [commits, branching, tagging]
+    description: "Proper git workflow for task branches and commits"
+    tokens: 200

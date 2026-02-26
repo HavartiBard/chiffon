@@ -1,0 +1,54 @@
+# Dockerfile.executor
+# Worker-agent container for executing chiffon tasks
+
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+# Install Poetry
+RUN pip install --no-cache-dir poetry
+
+# Copy project files
+COPY pyproject.toml poetry.lock ./
+
+# Install dependencies into in-project venv (no dev dependencies)
+RUN poetry config virtualenvs.in-project true && \
+    poetry install --no-root --only main
+
+# Runtime stage
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies: git, cron, curl
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    cron \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy venv from builder
+COPY --from=builder /app/.venv /app/.venv
+
+# Copy application code
+COPY src/ /app/src/
+COPY pyproject.toml ./
+
+# Set environment
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    LOG_LEVEL=INFO
+
+# Copy entrypoint script with executable permissions
+COPY --chmod=755 docker-entrypoint-executor.sh /usr/local/bin/entrypoint.sh
+
+# Health check: verify LlamaClient is importable and server is reachable
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD python -c "from chiffon.executor import LlamaClient; exit(0 if LlamaClient().health_check() else 1)" || exit 1
+
+# Volume for task queue and git repo
+VOLUME ["/work"]
+
+# Entrypoint
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ln:*)",
+      "mcp__notion__notion-search",
+      "mcp__notion__notion-fetch"
+    ]
+  }
+}
