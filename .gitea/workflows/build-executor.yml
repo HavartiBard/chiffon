@@ -30,3 +30,4 @@ jobs:
         run: |
           docker push registry.klsll.com/havartibard/chiffon-executor:latest
           docker push registry.klsll.com/havartibard/chiffon-executor:${{ gitea.sha }}
+
