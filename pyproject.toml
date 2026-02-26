@@ -35,6 +35,12 @@ python-socketio = "^5.12.0"
 typer = "^0.9.0"
 pyyaml = "^6.0"
 
+[tool.poetry.group.executor.dependencies]
+httpx = "^0.24.0"
+typer = "^0.9.0"
+pyyaml = "^6.0"
+python-dotenv = "^1.0.0"
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
 pytest-asyncio = "^0.21.0"

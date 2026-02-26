@@ -11,9 +11,9 @@ RUN pip install --no-cache-dir poetry
 # Copy project files
 COPY pyproject.toml poetry.lock ./
 
-# Install dependencies into in-project venv (no dev dependencies)
+# Install only executor dependencies (avoids torch/ML packages from main group)
 RUN poetry config virtualenvs.in-project true && \
-    poetry install --no-root --only main
+    poetry install --no-root --only executor
 
 # Runtime stage
 FROM python:3.11-slim
