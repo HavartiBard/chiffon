@@ -40,8 +40,9 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     LOG_LEVEL=INFO
 
-# Copy entrypoint script with executable permissions
-COPY --chmod=755 docker-entrypoint-executor.sh /usr/local/bin/entrypoint.sh
+# Copy entrypoint script and make executable (--chmod requires BuildKit)
+COPY docker-entrypoint-executor.sh /usr/local/bin/entrypoint.sh
+RUN chmod 755 /usr/local/bin/entrypoint.sh
 
 # Health check: verify LlamaClient is importable and server is reachable
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
