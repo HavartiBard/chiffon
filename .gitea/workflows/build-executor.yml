@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Log in to Gitea container registry
-        run: echo "${{ gitea.token }}" | docker login code.klsll.com -u ${{ gitea.actor }} --password-stdin
+        run: echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login code.klsll.com -u HavartiBard --password-stdin
 
       - name: Build executor image
         run: |
