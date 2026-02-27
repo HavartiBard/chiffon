@@ -148,7 +148,12 @@ async def post_gitea_comment(issue_number: int | None, state: str, message: str)
 
 
 def _fire(coro) -> None:
-    """Run an async Gitea notification coroutine, swallowing all exceptions."""
+    """Run an async Gitea notification coroutine, swallowing all exceptions.
+
+    Note: Uses asyncio.run() which requires no running event loop. Safe for
+    the current synchronous CLI context. If chiffon is ever embedded in an
+    async scheduler, this will need to use loop.run_until_complete() instead.
+    """
     try:
         asyncio.run(coro)
     except Exception as e:
@@ -234,7 +239,10 @@ def run_once(
             ))
 
             task = Task.from_dict(task_data)
-            result = asyncio.run(executor.execute_task(task))
+            try:
+                result = asyncio.run(executor.execute_task(task))
+            except Exception as exc:
+                result = {"success": False, "error": str(exc)}
 
             if result["success"]:
                 typer.echo("Task completed via LLM")
