@@ -46,6 +46,58 @@ async def update_gitea_issue(issue_number: int, state: str, message: str) -> Non
         )
 
 
+async def get_or_create_label(
+    client: httpx.AsyncClient,
+    base_url: str,
+    repo_owner: str,
+    repo_name: str,
+    token: str,
+    label_name: str,
+    color: str = "#e11d48",
+) -> int | None:
+    """Return ID of label_name in repo, creating it if absent."""
+    headers = {"Authorization": f"token {token}"}
+    resp = await client.get(
+        f"{base_url}/api/v1/repos/{repo_owner}/{repo_name}/labels",
+        headers=headers,
+    )
+    if resp.status_code == 200:
+        for label in resp.json():
+            if label["name"] == label_name:
+                return label["id"]
+    resp = await client.post(
+        f"{base_url}/api/v1/repos/{repo_owner}/{repo_name}/labels",
+        json={"name": label_name, "color": color},
+        headers=headers,
+    )
+    if resp.status_code in (200, 201):
+        return resp.json()["id"]
+    return None
+
+
+async def add_issue_label(
+    client: httpx.AsyncClient,
+    base_url: str,
+    repo_owner: str,
+    repo_name: str,
+    token: str,
+    issue_number: int,
+    label_name: str,
+    color: str = "#e11d48",
+) -> None:
+    """Attach label_name to an issue, creating the label in the repo if needed."""
+    label_id = await get_or_create_label(
+        client, base_url, repo_owner, repo_name, token, label_name, color
+    )
+    if label_id is None:
+        return
+    await client.post(
+        f"{base_url}/api/v1/repos/{repo_owner}/{repo_name}/issues/{issue_number}/labels",
+        json={"labels": [label_id]},
+        headers={"Authorization": f"token {token}"},
+    )
+
+
 @app.command(name="run-once")
 def run_once(
     project: str = typer.Option(..., help="Project name (e.g., orchestrator-core)"),
