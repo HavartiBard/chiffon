@@ -98,6 +98,63 @@ async def add_issue_label(
     )
 
 
+def _extract_issue_number(task_data: dict) -> int | None:
+    """Return Gitea issue number from task data, or None.
+
+    Checks ``gitea_issue`` field first, then falls back to parsing ``task-N`` ids.
+    """
+    if "gitea_issue" in task_data:
+        try:
+            return int(task_data["gitea_issue"])
+        except (TypeError, ValueError):
+            pass
+    task_id = task_data.get("id", "")
+    if task_id.startswith("task-"):
+        try:
+            return int(task_id.split("-")[1])
+        except (IndexError, ValueError):
+            pass
+    return None
+
+
+async def post_gitea_comment(issue_number: int | None, state: str, message: str) -> None:
+    """Post a comment to a Gitea issue and optionally update its state.
+
+    No-ops silently if no token is configured or issue_number is None.
+    """
+    token = (
+        os.getenv("CHIFFON_EXECUTOR_TOKEN")
+        or os.getenv("CHIFFON_EXECUTOR01_TOKEN")
+        or os.getenv("GITEA_TOKEN")
+        or os.getenv("CHIFFON_ORCHESTRATOR_TOKEN")
+    )
+    if not token or issue_number is None:
+        return
+    base_url = "https://code.klsll.com"
+    repo_owner = "HavartiBard"
+    repo_name = "chiffon"
+    async with httpx.AsyncClient() as client:
+        if state:
+            await client.patch(
+                f"{base_url}/api/v1/repos/{repo_owner}/{repo_name}/issues/{issue_number}",
+                json={"state": state},
+                headers={"Authorization": f"token {token}"},
+            )
+        await client.post(
+            f"{base_url}/api/v1/repos/{repo_owner}/{repo_name}/issues/{issue_number}/comments",
+            json={"body": message},
+            headers={"Authorization": f"token {token}"},
+        )
+
+
+def _fire(coro) -> None:
+    """Run an async Gitea notification coroutine, swallowing all exceptions."""
+    try:
+        asyncio.run(coro)
+    except Exception as e:
+        typer.echo(f"Warning: Gitea notification failed: {e}", err=True)
+
+
 @app.command(name="run-once")
 def run_once(
     project: str = typer.Option(..., help="Project name (e.g., orchestrator-core)"),
@@ -146,67 +203,65 @@ def run_once(
             task_data = yaml.safe_load(f)
 
         task_id = task_data.get("id", "")
-        issue_number = None
-        if task_id.startswith("task-"):
-            try:
-                issue_number = int(task_id.split("-")[1])
-            except (IndexError, ValueError):
-                issue_number = None
-
-        # Update Gitea issue - mark as in progress
-        if issue_number:
-            try:
-                asyncio.run(update_gitea_issue(
-                    issue_number,
-                    "open",
-                    "Chiffon orchestrator taking ownership of this task. Execution started."
-                ))
-            except Exception as e:
-                typer.echo(f"Warning: Could not update Gitea issue: {e}", err=True)
+        issue_number = _extract_issue_number(task_data)
 
         if use_llm:
-            # --- LLM execution path ---
+            # Milestone 1: picked up
+            _fire(post_gitea_comment(
+                issue_number, "open",
+                f"⚙️ Task `{task_id}` picked up — running LLM health check…",
+            ))
+
             executor = TaskExecutor(
                 repo_path=repo_path,
                 queue_path=queue_dir,
                 llm_server_url=llm_url or None,
             )
-
-            # Health check before attempting execution
             try:
                 executor.check_health()
             except RuntimeError as e:
                 typer.echo(f"Error: {e}", err=True)
+                _fire(post_gitea_comment(
+                    issue_number, "open",
+                    f"❌ LLM health check failed for `{task_id}`:\n\n```\n{e}\n```",
+                ))
                 raise SystemExit(1)
+
+            # Milestone 2: inference started
+            _fire(post_gitea_comment(
+                issue_number, "open",
+                f"🤖 LLM health OK — inference started for `{task_id}`…",
+            ))
 
             task = Task.from_dict(task_data)
             result = asyncio.run(executor.execute_task(task))
 
             if result["success"]:
                 typer.echo("Task completed via LLM")
-                typer.echo(f"Plan:\n{result['plan']}")
-                if issue_number:
-                    try:
-                        summary = (
-                            "LLM execution completed.\n\n"
-                            f"**Plan:**\n{result['plan']}\n\n"
-                            f"**Code:**\n```python\n{result['code']}\n```\n\n"
-                            f"**Verification:**\n{result['verification']}"
-                        )
-                        asyncio.run(update_gitea_issue(issue_number, "closed", summary))
-                    except Exception as e:
-                        typer.echo(f"Warning: Could not update Gitea issue: {e}", err=True)
+                plan = result.get("plan", "").strip()
+                code = result.get("code", "").strip()
+                verification = result.get("verification", "").strip()
+                sections = []
+                if plan:
+                    sections.append(f"## Plan\n{plan}")
+                if code:
+                    sections.append(f"## Generated files\n```\n{code}\n```")
+                if verification:
+                    sections.append(f"## Verification\n{verification}")
+                summary = (
+                    f"✅ LLM execution complete for `{task_id}`.\n\n"
+                    + "\n\n".join(sections)
+                )
+                # Milestone 3: success
+                _fire(post_gitea_comment(issue_number, "closed", summary))
             else:
-                typer.echo(f"Error: LLM execution failed: {result.get('error', 'unknown')}", err=True)
-                if issue_number:
-                    try:
-                        asyncio.run(update_gitea_issue(
-                            issue_number,
-                            "open",
-                            f"LLM execution failed: {result.get('error', 'unknown')}",
-                        ))
-                    except Exception as e:
-                        typer.echo(f"Warning: Could not update Gitea issue: {e}", err=True)
+                # Milestone 4 (blocked) is handled in _handle_blocked — added in Task 3
+                error = result.get("error", "unknown")
+                typer.echo(f"Error: LLM execution failed: {error}", err=True)
+                _fire(post_gitea_comment(
+                    issue_number, "open",
+                    f"❌ LLM execution failed for `{task_id}`:\n\n```\n{error}\n```",
+                ))
                 raise SystemExit(1)
 
         else:
@@ -252,6 +307,49 @@ def run_once(
 
 # Entry point for console script
 def main(argv: list[str] | None = None) -> Any:
+    """Parse CLI arguments and dispatch to run_once.
+
+    Accepts both ``chiffon run-once --project foo`` and ``chiffon --project foo``
+    forms (the leading "run-once" subcommand is optional for backward
+    compatibility).  Uses argparse directly to avoid a typer 0.9 / click 8
+    incompatibility where ``flag_value=None`` causes all options to be treated
+    as boolean flags.
+    """
+    import argparse
+
     if argv is None:
         argv = sys.argv[1:]
-    return app(argv)
+
+    # Strip optional leading subcommand name so callers can pass either form.
+    if argv and argv[0] == "run-once":
+        argv = argv[1:]
+
+    parser = argparse.ArgumentParser(prog="chiffon run-once")
+    parser.add_argument("--project", required=True, help="Project name")
+    parser.add_argument("--repo", default=".", help="Repository path")
+    parser.add_argument(
+        "--use-llm",
+        action="store_true",
+        default=False,
+        help="Use LLM inference via TaskExecutor",
+    )
+    parser.add_argument("--llm-url", default=None, help="llama.cpp server URL")
+
+    # Print help and exit 0 when --help is requested (matches typer behaviour).
+    if "--help" in argv or "-h" in argv:
+        parser.print_help()
+        raise SystemExit(0)
+
+    # Unknown argv (e.g. bare "chiffon run-once" with no args) exits with code 2.
+    args, unknown = parser.parse_known_args(argv)
+    if unknown:
+        parser.print_usage(sys.stderr)
+        sys.stderr.write(f"error: unrecognized arguments: {' '.join(unknown)}\n")
+        raise SystemExit(2)
+
+    run_once(
+        project=args.project,
+        repo=args.repo,
+        use_llm=args.use_llm,
+        llm_url=args.llm_url,
+    )
