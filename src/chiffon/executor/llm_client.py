@@ -33,11 +33,11 @@ class LlamaClient:
         )
         self.model = os.getenv("LMSTUDIO_MODEL", model)
         self.api_key = os.getenv("LMSTUDIO_API_KEY", "")
-        # 5-minute timeout covers long generation tasks
+        # 15-minute timeout for complex generation tasks with large prompts
         headers = {}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
-        self.client = httpx.Client(timeout=300.0, headers=headers)
+        self.client = httpx.Client(timeout=900.0, headers=headers)
 
     # ------------------------------------------------------------------
     # Internal helpers
