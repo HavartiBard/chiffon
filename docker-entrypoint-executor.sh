@@ -50,7 +50,7 @@ fi
 # Mode: cron — install cron job and start daemon in foreground
 log "Running in cron mode (schedule: $CRON_SCHEDULE)"
 
-CRON_JOB="$CRON_SCHEDULE /app/.venv/bin/python3 -m chiffon run-once --project $PROJECT --repo $REPO_PATH --use-llm >> /var/log/chiffon-cron.log 2>&1"
+CRON_JOB="$CRON_SCHEDULE PYTHONPATH=/app/src /app/.venv/bin/python3 -m chiffon run-once --project $PROJECT --repo $REPO_PATH --use-llm >> /var/log/chiffon-cron.log 2>&1"
 
 # Install cron job for root
 echo "$CRON_JOB" | crontab -
