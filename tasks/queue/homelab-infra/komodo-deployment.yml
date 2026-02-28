@@ -1,6 +1,7 @@
 id: komodo-deployment
 goal: Generate Ansible roles to deploy Komodo multi-host Docker management on Proxmox LXC with Periphery agents on Unraid and spraycheese
 source: obsidian:projects/homelab-infra/komodo-deployment
+gitea_issue: 16
 
 description: |
   Deploy Komodo (https://github.com/moghtech/komodo) as the central Docker management
