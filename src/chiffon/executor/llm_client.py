@@ -46,14 +46,14 @@ class LlamaClient:
     def _format_prompt(
         self,
         prompt: str,
-        max_tokens: int = 4096,
+        max_tokens: int = 12288,
         temperature: float = 0.7,
     ) -> dict:
         """Format a raw prompt string into an OpenAI-compatible chat completions payload.
 
         Args:
             prompt: Raw prompt text to send to the model.
-            max_tokens: Maximum number of tokens to generate (default: 4096).
+            max_tokens: Maximum number of tokens to generate (default: 12288).
             temperature: Sampling temperature (default: 0.7).
 
         Returns:
@@ -75,14 +75,14 @@ class LlamaClient:
     def generate(
         self,
         prompt: str,
-        max_tokens: int = 4096,
+        max_tokens: int = 12288,
         temperature: float = 0.7,
     ) -> str:
         """Generate text from a prompt using the LM Studio server.
 
         Args:
             prompt: Input prompt text.
-            max_tokens: Maximum number of tokens to generate (default: 4096).
+            max_tokens: Maximum number of tokens to generate (default: 12288).
             temperature: Sampling temperature (default: 0.7).
 
         Returns:
