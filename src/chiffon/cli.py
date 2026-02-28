@@ -22,7 +22,8 @@ app = typer.Typer()
 async def update_gitea_issue(issue_number: int, state: str, message: str) -> None:
     """Update Gitea issue state and add comment."""
     # Use executor token, fall back to orchestrator or GITEA_TOKEN
-    token = os.getenv("CHIFFON_EXECUTOR01_TOKEN") or os.getenv("GITEA_TOKEN") or os.getenv("CHIFFON_ORCHESTRATOR_TOKEN")
+    token = (os.getenv("CHIFFON_EXECUTOR_TOKEN") or os.getenv("CHIFFON_EXECUTOR01_TOKEN")
+             or os.getenv("GITEA_TOKEN") or os.getenv("CHIFFON_ORCHESTRATOR_TOKEN"))
     if not token:
         return
 
@@ -329,7 +330,7 @@ def run_once(
             run_engine(str(repo_path), str(queue_dir))
 
             # Check if task succeeded or failed by inspecting the report
-            if issue_number:
+            if issue_number is not None:
                 report_file = repo_path / "runs" / task_id
                 if report_file.exists():
                     report_path = sorted(report_file.glob("*/report.json"))
