@@ -31,7 +31,7 @@ class LlamaClient:
         self.base_url = base_url or os.getenv(
             "LMSTUDIO_URL", "http://spraycheese.lab.klsll.com:1234"
         )
-        self.model = model
+        self.model = os.getenv("LMSTUDIO_MODEL", model)
         self.api_key = os.getenv("LMSTUDIO_API_KEY", "")
         # 5-minute timeout covers long generation tasks
         headers = {}
