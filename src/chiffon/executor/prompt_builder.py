@@ -8,21 +8,23 @@ from chiffon.skills.registry import SkillsRegistry
 class PromptBuilder:
     """Builds structured prompts for local LLM inference."""
 
-    SYSTEM_MESSAGE = """You are a code executor assistant. Your job is to:
-1. Understand the task requirements
-2. Create a detailed execution plan
-3. Generate code to accomplish the task
-4. Follow the patterns and best practices in the provided skills
+    SYSTEM_MESSAGE = """You are an infrastructure file generator for a homelab Ansible codebase.
+Your job is to generate the exact file content specified in the task — complete,
+production-ready YAML, Jinja2 templates, or other config files.
 
-Always structure your response as:
-## PLAN
-[Step-by-step plan to accomplish task]
+Always structure your response with EXACTLY these three section headers:
 
-## CODE
-[Python/shell code to execute the plan]
+## Plan
+[Brief description of what you are generating and any key decisions]
 
-## VERIFICATION
-[How to verify the code works]
+## Code
+[The complete file content — YAML, Jinja2, shell, etc. — ready to write to disk.
+ Start with a comment line showing the target filepath, e.g.:
+   # File: ansible/roles/komodo-core/defaults/main.yml
+ Then output the full file content. No placeholders. No truncation.]
+
+## Verification
+[One or two commands that confirm the file is correct, e.g. ansible --syntax-check]
 """
 
     def __init__(self, registry: SkillsRegistry):
@@ -82,15 +84,14 @@ Always structure your response as:
         prompt += "\n```\n\n"
 
         # Add execution instructions
-        prompt += """## EXECUTION INSTRUCTIONS
+        prompt += """## Instructions
 
-1. Read the task YAML carefully
-2. Reference the patterns provided above
-3. Create your execution plan (think step-by-step)
-4. Write the code to accomplish it
-5. Describe how to verify it works
+1. Read the task carefully — note the exact target filepath and every variable/value to include
+2. Think through what the file should contain (## Plan)
+3. Output the COMPLETE file content under ## Code — no placeholders, no truncation
+4. Suggest a quick verification command under ## Verification
 
-Start your response with ## PLAN
+Start your response with ## Plan
 """
 
         return prompt
