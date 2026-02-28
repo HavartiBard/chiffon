@@ -1,6 +1,6 @@
 """Build prompts for local LLM with injected skills."""
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from chiffon.skills.registry import SkillsRegistry
 
@@ -31,11 +31,6 @@ ansible-playbook playbooks/deploy.yml --syntax-check
 """
 
     def __init__(self, registry: SkillsRegistry):
-        """Initialize prompt builder with skills registry.
-
-        Args:
-            registry: SkillsRegistry instance for loading skills
-        """
         self.registry = registry
 
     def build_prompt(
@@ -43,27 +38,20 @@ ansible-playbook playbooks/deploy.yml --syntax-check
         task_yaml: str,
         skills: Optional[List[str]] = None,
         max_context_tokens: int = 4000,
-    ) -> str:
-        """Build complete prompt with task and injected skills.
-
-        Args:
-            task_yaml: Task YAML content
-            skills: List of skill names to inject
-            max_context_tokens: Maximum tokens for skill injection
+    ) -> Tuple[str, str]:
+        """Build system and user messages for the LLM.
 
         Returns:
-            Complete prompt for LLM
+            (system_message, user_message) tuple for use in the messages array.
         """
         if skills is None:
             skills = []
 
-        prompt = self.SYSTEM_MESSAGE + "\n\n"
+        user_message = ""
 
-        # Inject skills with headers, gated by the token budget.
-        # The system message and task YAML are always included; only skill
-        # content is subject to the limit.  Approximation: 4 chars ≈ 1 token.
+        # Inject skills into the user message, gated by token budget.
         if skills:
-            tokens_used = len(prompt) // 4  # chars already committed
+            tokens_used = 0
             skills_block = ""
             for skill_name in skills:
                 content = self.registry.get_skill_content(skill_name)
@@ -77,17 +65,13 @@ ansible-playbook playbooks/deploy.yml --syntax-check
                 skills_block += skill_chunk
                 tokens_used += skill_tokens
             if skills_block:
-                prompt += "## REFERENCE PATTERNS\n\n"
-                prompt += skills_block
+                user_message += "## REFERENCE PATTERNS\n\n"
+                user_message += skills_block
 
-        # Add task
-        prompt += "## YOUR TASK\n\n"
-        prompt += "```yaml\n"
-        prompt += task_yaml
-        prompt += "\n```\n\n"
+        user_message += "## YOUR TASK\n\n"
+        user_message += "```yaml\n"
+        user_message += task_yaml
+        user_message += "\n```\n\n"
+        user_message += "Now generate the file. Start with ## Plan, then ## Code, then ## Verification.\n"
 
-        # Add execution instructions
-        prompt += """Now generate the file. Start with ## Plan, then ## Code, then ## Verification.
-"""
-
-        return prompt
+        return self.SYSTEM_MESSAGE.strip(), user_message

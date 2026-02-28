@@ -72,8 +72,8 @@ class TaskExecutor:
         logger.info("LLM health check passed: %s", self.llm.base_url)
         return True
 
-    def build_execution_prompt(self, task: Task) -> str:
-        """Build the full prompt for a task.
+    def build_execution_prompt(self, task: Task) -> tuple:
+        """Build the system and user messages for a task.
 
         Converts *task* to an inline YAML snippet and delegates to
         :class:`PromptBuilder` with the task's ``applicable_skills``.
@@ -82,7 +82,7 @@ class TaskExecutor:
             task: Task whose details and skills will be embedded.
 
         Returns:
-            Complete prompt string ready to send to the LLM.
+            (system_message, user_message) tuple ready to send to the LLM.
         """
         task_yaml = (
             f"id: {task.id}\n"
@@ -171,11 +171,11 @@ class TaskExecutor:
         logger.info("Executing task: %s", task.id)
 
         try:
-            prompt = self.build_execution_prompt(task)
-            logger.debug("Prompt length: %d chars", len(prompt))
+            system, user = self.build_execution_prompt(task)
+            logger.debug("Prompt length: system=%d user=%d chars", len(system), len(user))
 
             logger.info("Calling LLM for task reasoning...")
-            response = self.llm.generate(prompt)
+            response = self.llm.generate(system, user)
 
             sections = self.parse_llm_response(response)
             logger.info("LLM response parsed successfully")

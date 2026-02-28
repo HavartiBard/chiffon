@@ -45,14 +45,16 @@ class LlamaClient:
 
     def _format_prompt(
         self,
-        prompt: str,
+        system: str,
+        user: str,
         max_tokens: int = 12288,
         temperature: float = 0.7,
     ) -> dict:
-        """Format a raw prompt string into an OpenAI-compatible chat completions payload.
+        """Format system and user messages into an OpenAI-compatible chat completions payload.
 
         Args:
-            prompt: Raw prompt text to send to the model.
+            system: System message text (role instructions).
+            user: User message text (task content).
             max_tokens: Maximum number of tokens to generate (default: 12288).
             temperature: Sampling temperature (default: 0.7).
 
@@ -61,7 +63,10 @@ class LlamaClient:
         """
         return {
             "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
             "max_tokens": max_tokens,
             "temperature": temperature,
             "top_p": 0.9,
@@ -74,14 +79,16 @@ class LlamaClient:
 
     def generate(
         self,
-        prompt: str,
+        system: str,
+        user: str,
         max_tokens: int = 12288,
         temperature: float = 0.7,
     ) -> str:
-        """Generate text from a prompt using the LM Studio server.
+        """Generate text from system and user messages using the LM Studio server.
 
         Args:
-            prompt: Input prompt text.
+            system: System message (role/instruction context).
+            user: User message (task content).
             max_tokens: Maximum number of tokens to generate (default: 12288).
             temperature: Sampling temperature (default: 0.7).
 
@@ -91,7 +98,7 @@ class LlamaClient:
         Raises:
             ValueError: If the server is unreachable or returns an error status.
         """
-        payload = self._format_prompt(prompt, max_tokens, temperature)
+        payload = self._format_prompt(system, user, max_tokens, temperature)
 
         try:
             response = self.client.post(
