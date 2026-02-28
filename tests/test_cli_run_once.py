@@ -106,3 +106,63 @@ def test_progress_comment_posted_on_pickup(tmp_path):
 
     assert any("picked up" in b.lower() for b in posted_bodies), \
         f"Expected a 'picked up' comment, got: {posted_bodies}"
+
+
+# --- New tests for Task 3 ---
+
+def test_format_blocked_comment_contains_required_content():
+    """Blocked comment body contains task id, error, label name, and debug instructions."""
+    from src.chiffon.cli import _format_blocked_comment
+
+    body = _format_blocked_comment(
+        task_id="task-9",
+        task_data={"id": "task-9", "goal": "Deploy komodo"},
+        error="LLM returned malformed JSON",
+    )
+
+    assert "task-9" in body
+    assert "LLM returned malformed JSON" in body
+    assert "chiffon:blocked" in body
+    assert "docker logs" in body or "ssh" in body
+
+
+def test_blocked_label_applied_on_llm_failure(tmp_path):
+    """chiffon:blocked label is applied to the Gitea issue when LLM execution fails."""
+    from unittest.mock import patch, MagicMock, AsyncMock
+
+    queue_dir = tmp_path / "tasks" / "queue" / "test-project"
+    queue_dir.mkdir(parents=True)
+    _make_task_file(queue_dir, "task-9")
+
+    label_calls = []
+    comment_bodies = []
+
+    async def fake_add_label(client, base_url, owner, repo, token, issue_number, label_name, **kw):
+        label_calls.append((issue_number, label_name))
+
+    async def fake_post_comment(issue_number, state, message):
+        comment_bodies.append(message)
+
+    with patch("src.chiffon.cli.add_issue_label", side_effect=fake_add_label), \
+         patch("src.chiffon.cli.post_gitea_comment", side_effect=fake_post_comment), \
+         patch("src.chiffon.cli.TaskExecutor") as mock_exec_cls:
+
+        mock_exec = MagicMock()
+        mock_exec.check_health.return_value = True
+        mock_exec.execute_task = AsyncMock(return_value={
+            "success": False,
+            "error": "JSON parse error: unexpected token",
+        })
+        mock_exec_cls.return_value = mock_exec
+
+        from src.chiffon.cli import main
+        try:
+            main(["run-once", "--project", "test-project",
+                  "--repo", str(tmp_path), "--use-llm"])
+        except SystemExit:
+            pass
+
+    assert any(label == "chiffon:blocked" for (_, label) in label_calls), \
+        f"Expected chiffon:blocked label to be applied, got: {label_calls}"
+    assert any("task-9" in b for b in comment_bodies), \
+        f"Expected a comment mentioning task-9, got: {comment_bodies}"

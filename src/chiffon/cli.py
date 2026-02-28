@@ -160,6 +160,64 @@ def _fire(coro) -> None:
         typer.echo(f"Warning: Gitea notification failed: {e}", err=True)
 
 
+def _format_blocked_comment(task_id: str, task_data: dict, error: str) -> str:
+    """Format the structured blocked comment body for a stuck task."""
+    goal = task_data.get("goal", "(no goal)")
+    source = task_data.get("source", "")
+    source_line = f"\n**Source:** `{source}`" if source else ""
+    return (
+        f"🚧 **Chiffon is blocked on `{task_id}`**{source_line}\n\n"
+        f"**Goal:** {goal}\n\n"
+        f"**Error:**\n```\n{error}\n```\n\n"
+        "---\n"
+        "**Raclette — to investigate:**\n\n"
+        "```bash\n"
+        "# Tail executor logs\n"
+        "ssh root@192.168.20.14 docker logs chiffon-executor --tail 50\n\n"
+        "# Read the task file\n"
+        f"ssh root@192.168.20.14 "
+        f"cat /mnt/user/appdata/chiffon-executor/repo/tasks/queue/*/{task_id}.yml\n"
+        "```\n\n"
+        "**To retry:** fix the task YAML, commit to main, then remove the `chiffon:blocked` "
+        "label from this issue. Chiffon will re-attempt on the next cron cycle."
+    )
+
+
+def _handle_blocked(
+    issue_number: int | None,
+    task_id: str,
+    task_data: dict,
+    error: str,
+) -> None:
+    """Post a structured blocked comment and apply the chiffon:blocked label."""
+    typer.echo(f"Error: LLM execution failed: {error}", err=True)
+
+    token = (
+        os.getenv("CHIFFON_EXECUTOR_TOKEN")
+        or os.getenv("CHIFFON_EXECUTOR01_TOKEN")
+        or os.getenv("GITEA_TOKEN")
+        or os.getenv("CHIFFON_ORCHESTRATOR_TOKEN")
+    )
+    if not token or issue_number is None:
+        return
+
+    body = _format_blocked_comment(task_id, task_data, error)
+    _fire(post_gitea_comment(issue_number, "open", body))
+
+    base_url = "https://code.klsll.com"
+    repo_owner = "HavartiBard"
+    repo_name = "chiffon"
+
+    async def _apply_label() -> None:
+        async with httpx.AsyncClient() as client:
+            await add_issue_label(
+                client, base_url, repo_owner, repo_name, token,
+                issue_number, "chiffon:blocked", color="#e11d48",
+            )
+
+    _fire(_apply_label())
+
+
 @app.command(name="run-once")
 def run_once(
     project: str = typer.Option(..., help="Project name (e.g., orchestrator-core)"),
@@ -263,13 +321,7 @@ def run_once(
                 # Milestone 3: success
                 _fire(post_gitea_comment(issue_number, "closed", summary))
             else:
-                # Milestone 4 (blocked) is handled in _handle_blocked — added in Task 3
-                error = result.get("error", "unknown")
-                typer.echo(f"Error: LLM execution failed: {error}", err=True)
-                _fire(post_gitea_comment(
-                    issue_number, "open",
-                    f"❌ LLM execution failed for `{task_id}`:\n\n```\n{error}\n```",
-                ))
+                _handle_blocked(issue_number, task_id, task_data, result.get("error", "unknown"))
                 raise SystemExit(1)
 
         else:
