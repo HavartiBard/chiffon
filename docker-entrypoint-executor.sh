@@ -43,14 +43,14 @@ log "Git repository accessible at $REPO_PATH"
 # Mode: adhoc — run once and exit
 if [ "$EXECUTION_MODE" = "adhoc" ]; then
     log "Running in adhoc mode (execute once, then exit)"
-    python -m chiffon.cli run-once --project "$PROJECT" --use-llm
+    /app/.venv/bin/python3 -m chiffon.cli run-once --project "$PROJECT" --use-llm
     exit $?
 fi
 
 # Mode: cron — install cron job and start daemon in foreground
 log "Running in cron mode (schedule: $CRON_SCHEDULE)"
 
-CRON_JOB="$CRON_SCHEDULE python -m chiffon.cli run-once --project $PROJECT --use-llm >> /var/log/chiffon-cron.log 2>&1"
+CRON_JOB="$CRON_SCHEDULE /app/.venv/bin/python3 -m chiffon.cli run-once --project $PROJECT --use-llm >> /var/log/chiffon-cron.log 2>&1"
 
 # Install cron job for root
 echo "$CRON_JOB" | crontab -
