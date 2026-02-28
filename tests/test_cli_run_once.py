@@ -145,6 +145,7 @@ def test_blocked_label_applied_on_llm_failure(tmp_path):
 
     with patch("src.chiffon.cli.add_issue_label", side_effect=fake_add_label), \
          patch("src.chiffon.cli.post_gitea_comment", side_effect=fake_post_comment), \
+         patch.dict("os.environ", {"CHIFFON_EXECUTOR_TOKEN": "test-token"}), \
          patch("src.chiffon.cli.TaskExecutor") as mock_exec_cls:
 
         mock_exec = MagicMock()
