@@ -65,7 +65,7 @@ class LlamaClient:
             "max_tokens": max_tokens,
             "temperature": temperature,
             "top_p": 0.9,
-            "stop": ["## ", "\n---"],
+            "stop": ["\n---"],
         }
 
     # ------------------------------------------------------------------

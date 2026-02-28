@@ -3,6 +3,7 @@
 import sys
 import json
 import asyncio
+import shutil
 import os
 from typing import Any
 from pathlib import Path
@@ -321,8 +322,16 @@ def run_once(
                 )
                 # Milestone 3: success
                 _fire(post_gitea_comment(issue_number, "closed", summary))
+                # Move task to done/ so it won't be re-queued
+                done_dir = queue_dir / "done"
+                done_dir.mkdir(exist_ok=True)
+                shutil.move(str(task_file), str(done_dir / task_file.name))
             else:
                 _handle_blocked(issue_number, task_id, task_data, result.get("error", "unknown"))
+                # Move task to failed/ so it won't be re-queued
+                failed_dir = queue_dir / "failed"
+                failed_dir.mkdir(exist_ok=True)
+                shutil.move(str(task_file), str(failed_dir / task_file.name))
                 raise SystemExit(1)
 
         else:
