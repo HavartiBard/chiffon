@@ -1,0 +1,41 @@
+id: komodo-playbook
+goal: Generate ansible/playbooks/platform/deploy-komodo.yml to orchestrate Komodo core and periphery deployment
+source: obsidian:projects/homelab-infra/komodo-deployment
+gitea_issue: 16
+
+description: |
+  Generate the deployment playbook for Komodo.
+  Target repo: homelab-infra/ansible.
+
+  File to generate: ansible/playbooks/platform/deploy-komodo.yml
+
+  Two plays:
+    Play 1:
+      name: Deploy Komodo core
+      hosts: komodo-lxc
+      gather_facts: true
+      roles:
+        - komodo-core
+
+    Play 2:
+      name: Deploy Komodo periphery
+      hosts: unraid-server
+      gather_facts: false
+      roles:
+        - komodo-periphery
+
+  Follow the pattern from ansible/playbooks/platform/deploy-gitea.yml or similar
+  playbooks in the same directory.
+
+  No variables block needed — all vars come from group_vars and role defaults.
+
+scope:
+  allowed_write_globs:
+    - ansible/playbooks/platform/deploy-komodo.yml
+
+constraints:
+  max_files_changed: 1
+  timeout_seconds: 120
+
+edits: []
+verify: []

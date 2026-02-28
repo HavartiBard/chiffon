@@ -1,0 +1,38 @@
+id: komodo-core-tasks
+goal: Generate ansible/roles/komodo-core/tasks/main.yml to deploy Komodo core via docker compose on the LXC
+source: obsidian:projects/homelab-infra/komodo-deployment
+gitea_issue: 16
+
+description: |
+  Generate the tasks file for the komodo-core Ansible role.
+  Target repo: homelab-infra/ansible.
+  Host: komodo-lxc at 192.168.20.62 (Ubuntu 24.04, has Python — use ansible.builtin modules).
+
+  File to generate: ansible/roles/komodo-core/tasks/main.yml
+
+  Tasks to include:
+    1. Create directories: komodo_appdata_dir, komodo_stack_dir, komodo_backups_dir
+       (use ansible.builtin.file with state: directory)
+    2. Template docker-compose.yml.j2 to {{ komodo_stack_dir }}/docker-compose.yml
+    3. Template compose.env.j2 to {{ komodo_stack_dir }}/compose.env
+    4. docker compose pull (community.docker.docker_compose_v2 or ansible.builtin.command)
+    5. docker compose up -d
+    6. Health check: curl http://localhost:{{ komodo_core_port }}/auth/config until 200
+       (10 retries, 5s delay, use ansible.builtin.uri or loop with until)
+    7. Show last 20 lines of komodo-core container logs
+       (ansible.builtin.command: docker logs --tail 20 komodo-core)
+    8. Display container logs with ansible.builtin.debug
+
+  Reference pattern: ansible/roles/gitea/tasks/main.yml (docker compose pattern on Python host).
+  Use ansible.builtin modules throughout (NOT raw).
+
+scope:
+  allowed_write_globs:
+    - ansible/roles/komodo-core/tasks/main.yml
+
+constraints:
+  max_files_changed: 1
+  timeout_seconds: 120
+
+edits: []
+verify: []

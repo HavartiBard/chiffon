@@ -1,0 +1,50 @@
+id: komodo-core-compose
+goal: Generate ansible/roles/komodo-core/templates/docker-compose.yml.j2 for the Komodo core stack
+source: obsidian:projects/homelab-infra/komodo-deployment
+gitea_issue: 16
+
+description: |
+  Generate the docker-compose Jinja2 template for the komodo-core Ansible role.
+  Target repo: homelab-infra/ansible.
+
+  File to generate: ansible/roles/komodo-core/templates/docker-compose.yml.j2
+
+  Services (no local periphery — all managed hosts are remote):
+    postgres:
+      image: {{ komodo_postgres_image }}
+      restart: unless-stopped
+      labels: [komodo.skip: "true"]
+      volumes: [postgres-data:/var/lib/postgresql/data]
+      environment: from compose.env (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB)
+
+    ferretdb:
+      image: {{ komodo_ferretdb_image }}
+      restart: unless-stopped
+      depends_on: [postgres]
+      labels: [komodo.skip: "true"]
+      environment: FERRETDB_POSTGRESQL_URL pointing to postgres
+
+    core:
+      image: {{ komodo_core_image }}
+      restart: unless-stopped
+      depends_on: [ferretdb]
+      labels: [komodo.skip: "true"]
+      ports: ["{{ komodo_core_port }}:9120"]
+      env_file: [./compose.env]
+      volumes: ["{{ komodo_backups_dir }}:/backups"]
+
+  Named volumes: postgres-data, ferretdb-state
+
+  The compose.env file handles all secrets — nothing hardcoded in this template.
+  Use standard docker compose v2 format (no version: key at top).
+
+scope:
+  allowed_write_globs:
+    - ansible/roles/komodo-core/templates/docker-compose.yml.j2
+
+constraints:
+  max_files_changed: 1
+  timeout_seconds: 120
+
+edits: []
+verify: []

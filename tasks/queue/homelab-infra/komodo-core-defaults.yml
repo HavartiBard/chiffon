@@ -1,0 +1,44 @@
+id: komodo-core-defaults
+goal: Generate ansible/roles/komodo-core/defaults/main.yml with all default variables for the Komodo core role
+source: obsidian:projects/homelab-infra/komodo-deployment
+gitea_issue: 16
+
+description: |
+  Generate the defaults file for the komodo-core Ansible role.
+  Target repo: homelab-infra/ansible.
+
+  File to generate: ansible/roles/komodo-core/defaults/main.yml
+
+  Variables to define:
+    komodo_core_image: ghcr.io/moghtech/komodo-core:latest
+    komodo_ferretdb_image: ghcr.io/ferretdb/ferretdb:latest
+    komodo_postgres_image: ghcr.io/ferretdb/postgres-documentdb:latest
+    komodo_core_port: 9120
+    komodo_appdata_dir: /opt/komodo
+    komodo_stack_dir: /opt/komodo/stack
+    komodo_backups_dir: /opt/komodo/backups
+    komodo_host: https://komodo.klsll.com
+    komodo_title: Komodo
+    komodo_monitoring_interval: 15-sec
+    komodo_resource_poll_interval: 1-hr
+    komodo_db_username: komodo
+    komodo_db_password: "{{ vault_komodo_db_password }}"
+    komodo_passkey: "{{ vault_komodo_passkey }}"
+    komodo_admin_username: admin
+    komodo_admin_password: "{{ vault_komodo_admin_password }}"
+    komodo_first_server: "https://192.168.20.14:8120"
+    komodo_first_server_name: Unraid
+
+  Follow the pattern from ansible/roles/chiffon-executor/defaults/main.yml for formatting.
+  All vault references use "{{ vault_* }}" syntax.
+
+scope:
+  allowed_write_globs:
+    - ansible/roles/komodo-core/defaults/main.yml
+
+constraints:
+  max_files_changed: 1
+  timeout_seconds: 120
+
+edits: []
+verify: []

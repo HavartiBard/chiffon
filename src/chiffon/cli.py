@@ -162,26 +162,42 @@ def _fire(coro) -> None:
         typer.echo(f"Warning: Gitea notification failed: {e}", err=True)
 
 
+def _classify_error(error: str) -> str:
+    """Return a human-readable error type and suggested action from an error string."""
+    e = error.lower()
+    if "timed out" in e or "timeout" in e:
+        return "⏱️ **Timeout** — the LLM took too long to respond. Consider splitting the task into smaller files or using a faster model."
+    if "401" in e or "unauthorized" in e:
+        return "🔑 **Auth failure** — LM Studio rejected the API key. Check `LMSTUDIO_API_KEY` in the container environment."
+    if "400" in e or "bad request" in e:
+        return "❌ **Bad request** — LM Studio rejected the request. Check that `LMSTUDIO_MODEL` matches a loaded model."
+    if "connection refused" in e or "connect" in e:
+        return "🔌 **Connection refused** — LM Studio is unreachable. Check that spraycheese is on and LM Studio is running."
+    return "⚠️ **Unknown error** — see raw error below."
+
+
 def _format_blocked_comment(task_id: str, task_data: dict, error: str) -> str:
     """Format the structured blocked comment body for a stuck task."""
     goal = task_data.get("goal", "(no goal)")
     source = task_data.get("source", "")
     source_line = f"\n**Source:** `{source}`" if source else ""
+    llm_url = os.getenv("LMSTUDIO_URL", "http://spraycheese.lab.klsll.com:1234")
+    llm_model = os.getenv("LMSTUDIO_MODEL", "local-model")
+    diagnosis = _classify_error(error)
     return (
         f"🚧 **Chiffon is blocked on `{task_id}`**{source_line}\n\n"
         f"**Goal:** {goal}\n\n"
-        f"**Error:**\n```\n{error}\n```\n\n"
+        f"**LLM:** `{llm_model}` at `{llm_url}`\n\n"
+        f"**Diagnosis:** {diagnosis}\n\n"
+        f"**Raw error:**\n```\n{error}\n```\n\n"
         "---\n"
         "**Raclette — to investigate:**\n\n"
-        "```bash\n"
-        "# Tail executor logs\n"
-        "ssh root@192.168.20.14 docker logs chiffon-executor --tail 50\n\n"
-        "# Read the task file\n"
-        f"ssh root@192.168.20.14 "
-        f"cat /mnt/user/appdata/chiffon-executor/repo/tasks/queue/*/{task_id}.yml\n"
-        "```\n\n"
-        "**To retry:** fix the task YAML, commit to main, then remove the `chiffon:blocked` "
-        "label from this issue. Chiffon will re-attempt on the next cron cycle."
+        "Read the task file via Gitea MCP:\n"
+        f"`director.get_file_content(owner=\"HavartiBard\", repo=\"chiffon\", "
+        f"filepath=\"tasks/queue/homelab-infra/{task_id}.yml\")`\n\n"
+        "For executor logs, escalate to human (needs SSH to Unraid).\n\n"
+        "**To retry:** fix the task YAML, commit to `main`, then remove the `chiffon:blocked` "
+        "label. Chiffon will re-attempt on the next cron cycle."
     )
 
 

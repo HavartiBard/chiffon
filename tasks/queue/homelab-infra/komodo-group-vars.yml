@@ -1,0 +1,34 @@
+id: komodo-group-vars
+goal: Generate ansible/group_vars/komodo/komodo.yml with connection vars for the komodo-lxc host
+source: obsidian:projects/homelab-infra/komodo-deployment
+gitea_issue: 16
+
+description: |
+  Generate the group_vars file for the komodo Ansible group.
+  Target repo: homelab-infra/ansible.
+
+  File to generate: ansible/group_vars/komodo/komodo.yml
+
+  Contents:
+    ---
+    ansible_user: root
+    ansible_ssh_private_key_file: ~/.ssh/id_ed25519_homelab
+
+  Include a comment explaining that vault_komodo_* variables (vault_komodo_db_password,
+  vault_komodo_passkey, vault_komodo_admin_password) must be added to
+  ansible/group_vars/komodo/vault.yml, encrypted with ansible-vault.
+
+  Do NOT generate vault.yml — that file is encrypted and managed separately.
+
+  Follow the pattern from ansible/group_vars/unraid/unraid.yml for formatting.
+
+scope:
+  allowed_write_globs:
+    - ansible/group_vars/komodo/komodo.yml
+
+constraints:
+  max_files_changed: 1
+  timeout_seconds: 120
+
+edits: []
+verify: []

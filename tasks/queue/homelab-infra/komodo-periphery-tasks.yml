@@ -1,0 +1,55 @@
+id: komodo-periphery-tasks
+goal: Generate ansible/roles/komodo-periphery/tasks/main.yml to deploy Komodo Periphery on Unraid using raw commands
+source: obsidian:projects/homelab-infra/komodo-deployment
+gitea_issue: 16
+
+description: |
+  Generate the tasks file for the komodo-periphery Ansible role.
+  Target repo: homelab-infra/ansible.
+  Host: Unraid at 192.168.20.14 — NO Python installed, ALL tasks must use ansible.builtin.raw.
+
+  File to generate: ansible/roles/komodo-periphery/tasks/main.yml
+
+  Tasks (all using ansible.builtin.raw):
+    1. Stop existing container: docker stop {{ komodo_periphery_container_name }} 2>/dev/null || true
+       changed_when: false
+    2. Remove existing container: docker rm {{ komodo_periphery_container_name }} 2>/dev/null || true
+       changed_when: false
+    3. Pull image: docker pull {{ komodo_periphery_image }}
+       register: pull_result
+       changed_when: "'Downloaded newer image' in pull_result.stdout or 'Pull complete' in pull_result.stdout"
+    4. Run container:
+       docker run -d \
+         --name {{ komodo_periphery_container_name }} \
+         --restart unless-stopped \
+         -p {{ komodo_periphery_port }}:8120 \
+         -v /var/run/docker.sock:/var/run/docker.sock \
+         -v /proc:/proc \
+         -v {{ komodo_periphery_root_dir }}:{{ komodo_periphery_root_dir }} \
+         -e PERIPHERY_PASSKEYS={{ komodo_passkey }} \
+         -e PERIPHERY_SSL_ENABLED=true \
+         -e PERIPHERY_ROOT_DIRECTORY={{ komodo_periphery_root_dir }} \
+         -e PERIPHERY_INCLUDE_DISK_MOUNTS=/etc/hostname \
+         {{ komodo_periphery_image }}
+       changed_when: true
+    5. Wait for container: sleep 5, changed_when: false
+    6. Health check: docker ps --filter "name={{ komodo_periphery_container_name }}" --filter "status=running" -q
+       register: container_check
+       failed_when: container_check.stdout | trim == ""
+       changed_when: false
+    7. Get logs: docker logs --tail 10 {{ komodo_periphery_container_name }}
+       register: container_logs, changed_when: false
+    8. Display logs: ansible.builtin.debug, msg: "{{ container_logs.stdout | default('') }}"
+
+  Reference pattern: ansible/roles/chiffon-executor/tasks/main.yml (same Unraid raw pattern).
+
+scope:
+  allowed_write_globs:
+    - ansible/roles/komodo-periphery/tasks/main.yml
+
+constraints:
+  max_files_changed: 1
+  timeout_seconds: 120
+
+edits: []
+verify: []

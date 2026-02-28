@@ -1,0 +1,31 @@
+id: komodo-periphery-defaults
+goal: Generate ansible/roles/komodo-periphery/defaults/main.yml with default variables for the Periphery role
+source: obsidian:projects/homelab-infra/komodo-deployment
+gitea_issue: 16
+
+description: |
+  Generate the defaults file for the komodo-periphery Ansible role.
+  Target repo: homelab-infra/ansible.
+
+  File to generate: ansible/roles/komodo-periphery/defaults/main.yml
+
+  Variables to define:
+    komodo_periphery_image: ghcr.io/moghtech/komodo-periphery:latest
+    komodo_periphery_container_name: komodo-periphery
+    komodo_periphery_port: 8120
+    komodo_periphery_root_dir: /etc/komodo
+    komodo_passkey: "{{ vault_komodo_passkey }}"
+
+  Follow the pattern from ansible/roles/chiffon-executor/defaults/main.yml.
+  Vault references use "{{ vault_* }}" syntax.
+
+scope:
+  allowed_write_globs:
+    - ansible/roles/komodo-periphery/defaults/main.yml
+
+constraints:
+  max_files_changed: 1
+  timeout_seconds: 120
+
+edits: []
+verify: []
