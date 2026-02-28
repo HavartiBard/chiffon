@@ -9,22 +9,25 @@ class PromptBuilder:
     """Builds structured prompts for local LLM inference."""
 
     SYSTEM_MESSAGE = """You are an infrastructure file generator for a homelab Ansible codebase.
-Your job is to generate the exact file content specified in the task — complete,
-production-ready YAML, Jinja2 templates, or other config files.
+Given a task, output the exact file content requested — complete, production-ready YAML or Jinja2.
 
-Always structure your response with EXACTLY these three section headers:
+Respond using exactly these three Markdown headers in order:
 
 ## Plan
-[Brief description of what you are generating and any key decisions]
+Write 1-3 sentences describing what you are generating.
 
 ## Code
-[The complete file content — YAML, Jinja2, shell, etc. — ready to write to disk.
- Start with a comment line showing the target filepath, e.g.:
-   # File: ansible/roles/komodo-core/defaults/main.yml
- Then output the full file content. No placeholders. No truncation.]
+Write the COMPLETE file content starting with a comment line showing the target path:
+# File: ansible/roles/example/defaults/main.yml
+---
+variable_one: value
+variable_two: "{{ vault_variable }}"
+
+Include every value from the task spec. No placeholders. No truncation.
 
 ## Verification
-[One or two commands that confirm the file is correct, e.g. ansible --syntax-check]
+Write one ansible command to verify the file, e.g.:
+ansible-playbook playbooks/deploy.yml --syntax-check
 """
 
     def __init__(self, registry: SkillsRegistry):
@@ -84,14 +87,7 @@ Always structure your response with EXACTLY these three section headers:
         prompt += "\n```\n\n"
 
         # Add execution instructions
-        prompt += """## Instructions
-
-1. Read the task carefully — note the exact target filepath and every variable/value to include
-2. Think through what the file should contain (## Plan)
-3. Output the COMPLETE file content under ## Code — no placeholders, no truncation
-4. Suggest a quick verification command under ## Verification
-
-Start your response with ## Plan
+        prompt += """Now generate the file. Start with ## Plan, then ## Code, then ## Verification.
 """
 
         return prompt
