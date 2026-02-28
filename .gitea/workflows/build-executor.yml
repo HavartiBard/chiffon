@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'Dockerfile.executor'
+      - 'docker-entrypoint-executor.sh'
       - 'src/**'
       - 'pyproject.toml'
       - 'poetry.lock'
