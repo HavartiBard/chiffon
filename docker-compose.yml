@@ -5,9 +5,9 @@ services:
     image: postgres:15-alpine
     container_name: agent-deploy-postgres
     environment:
-      POSTGRES_USER: agent
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: agent_deploy
+      POSTGRES_USER: ${DB_USER:-agent}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD required}
+      POSTGRES_DB: ${DB_NAME:-agent_deploy}
     ports:
       - "5432:5432"
     volumes:
@@ -24,8 +24,8 @@ services:
     image: rabbitmq:3.12-management-alpine
     container_name: agent-deploy-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-agent}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD required}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -62,7 +62,7 @@ services:
     environment:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-dev-key}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY required}
     volumes:
       - ./config/litellm-config.json:/app/config.json
     healthcheck:
@@ -83,14 +83,14 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://agent:password@postgres:5432/agent_deploy
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      DATABASE_URL: postgresql://${DB_USER:-agent}:${DB_PASSWORD:?DB_PASSWORD required}@postgres:5432/${DB_NAME:-agent_deploy}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-agent}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD required}@rabbitmq:5672/
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-dev-key}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY required}
       LITELLM_URL: http://litellm:8000
-      OLLAMA_BASE_URL: http://ollama:11434
-      LOG_LEVEL: INFO
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     depends_on:
       postgres:
         condition: service_healthy
